@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { SheetDetailToolbar } from '@/features/shared'
+import { SheetDetailToolbar, DangerZone, DangerZoneItem } from '@/features/shared'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -357,30 +357,26 @@ export function GroupQuickView({
                 </Button>
               </div>
 
-              {/* Danger Zone */}
               <Can permission={Permission.AssetGroupsDelete}>
-                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-red-500">Danger Zone</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Permanently delete this group and unassign all assets
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-red-500/30 text-red-500 hover:bg-red-500/10"
-                      onClick={() => {
-                        onClose()
-                        onDelete(group)
-                      }}
-                    >
-                      <Trash2 className="me-2 h-4 w-4" />
-                      Delete
-                    </Button>
-                  </div>
-                </div>
+                <DangerZone as="h3">
+                  <DangerZoneItem
+                    title="Delete group"
+                    description="Permanently delete this group and unassign all assets."
+                    action={
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          onClose()
+                          onDelete(group)
+                        }}
+                      >
+                        <Trash2 className="me-2 h-4 w-4" />
+                        Delete
+                      </Button>
+                    }
+                  />
+                </DangerZone>
               </Can>
             </div>
           </>

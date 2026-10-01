@@ -7,7 +7,7 @@ import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Save, Building, Shield, Key, Upload, Loader2, AlertCircle, Lock } from 'lucide-react'
+import { Save, Building, Upload, Loader2, AlertCircle, Lock } from 'lucide-react'
 import { usePermissions, Permission } from '@/lib/permissions'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,19 +33,18 @@ import {
   useUpdateTenant,
   useUpdateGeneralSettings,
   useUpdateSecuritySettings,
-  useUpdateAPISettings,
   useUpdateBrandingSettings,
-  useTenantLogo,
+} from '../api/use-tenant-settings'
+import { useTenantLogo } from '../hooks/use-tenant-logo'
+import {
   VALID_TIMEZONES,
   VALID_LANGUAGES,
   VALID_INDUSTRIES,
   SESSION_TIMEOUT_OPTIONS,
-  WEBHOOK_EVENTS,
-  type WebhookEvent,
-  AccessRestrictionsCard,
-  isIpLockoutError,
-  parseLines,
-} from '@/features/organization'
+} from '../types/settings.types'
+import { AccessRestrictionsCard, isIpLockoutError, parseLines } from './access-restrictions-card'
+import { DeleteOrganization } from './delete-organization'
+import { SsoManagedNotice } from '@/features/sso/components/sso-managed-by-platform'
 
 const STORAGE_FORM_ID = 'storage-config-form'
 
@@ -218,10 +217,20 @@ function StorageConfigTab({ onStatusChange }: { onStatusChange: (s: StorageStatu
   )
 }
 
-const PAGE_TITLE = 'Tenant settings'
-const PAGE_DESCRIPTION =
-  "Manage your organization's profile, sign-in security, API access and file storage."
-const TABS = ['general', 'security', 'api', 'storage'] as const
+export type OrganizationSettingsView = 'general' | 'authentication'
+
+const VIEW_HEADER: Record<OrganizationSettingsView, { title: string; description: string }> = {
+  general: {
+    title: 'General',
+    description: "Your organization's name, branding, localization and file storage.",
+  },
+  authentication: {
+    title: 'Authentication',
+    description:
+      'How members sign in: two-factor, session length, sign-in restrictions and data scope.',
+  },
+}
+const GENERAL_TABS = ['general', 'storage'] as const
 
 /**
  * The active tab's one Save, in the page header like every settings page. A
@@ -276,9 +285,25 @@ function HeaderSaveButton({
   )
 }
 
-export default function TenantPage() {
+/**
+ * Organization settings, two pages over one settings load:
+ * - /settings/general: organization info, branding, localization and file
+ *   storage (tabs), and the owner-only danger zone;
+ * - /settings/authentication: two-factor, session, e-mail verification,
+ *   access restrictions and data scope, plus where SSO is configured.
+ * Was /settings/tenant with four tabs; its API & Webhooks tab is gone: those
+ * fields were stored and read back but nothing in the API acted on them.
+ * Outbound webhooks live under Integrations > Notification channels.
+ */
+export function OrganizationSettings({ view }: { view: OrganizationSettingsView }) {
+  const { title: PAGE_TITLE, description: PAGE_DESCRIPTION } = VIEW_HEADER[view]
   const [tabParam, setTabParam] = useUrlFilter('tab', 'general')
-  const activeTab = (TABS as readonly string[]).includes(tabParam) ? tabParam : 'general'
+  const activeTab =
+    view === 'authentication'
+      ? 'security'
+      : (GENERAL_TABS as readonly string[]).includes(tabParam)
+        ? tabParam
+        : 'general'
   const setActiveTab = (next: string) => setTabParam(next === 'general' ? '' : next)
   const [storageStatus, setStorageStatus] = useState<StorageStatus>({
     canSave: false,
@@ -292,8 +317,8 @@ export default function TenantPage() {
   // Permission check - can user update tenant settings?
   const { can, isOwner } = usePermissions()
   const canUpdateTenant = can(Permission.TeamUpdate)
-  // Security and API/webhook settings are owner-only on the backend
-  // (RequireTeamOwner) — TeamUpdate alone renders a dead control for admins.
+  // Security settings are owner-only on the backend (RequireTeamOwner);
+  // TeamUpdate alone would render a dead control for admins.
   const canManageSecurityAndAPI = canUpdateTenant && isOwner()
 
   // Fetch settings
@@ -305,17 +330,12 @@ export default function TenantPage() {
     useUpdateGeneralSettings(tenantId)
   const { updateSecuritySettings, isUpdating: isUpdatingSecurity } =
     useUpdateSecuritySettings(tenantId)
-  const { updateAPISettings, isUpdating: isUpdatingAPI } = useUpdateAPISettings(tenantId)
   const { updateBrandingSettings, isUpdating: isUpdatingBranding } =
     useUpdateBrandingSettings(tenantId)
 
   // Combined loading state (for potential future use in global loading indicator)
   const _isUpdating =
-    isUpdatingTenant ||
-    isUpdatingGeneral ||
-    isUpdatingSecurity ||
-    isUpdatingAPI ||
-    isUpdatingBranding
+    isUpdatingTenant || isUpdatingGeneral || isUpdatingSecurity || isUpdatingBranding
 
   // Organization info form state (name, slug)
   const [orgInfoForm, setOrgInfoForm] = useState({
@@ -348,14 +368,6 @@ export default function TenantPage() {
     allowed_domains: '',
     email_verification_mode: 'auto' as 'auto' | 'always' | 'never',
     restricted_data_scope: false,
-  })
-
-  const [apiForm, setApiForm] = useState({
-    api_key_enabled: false,
-    webhook_url: '',
-    webhook_events: [] as WebhookEvent[],
-    // Write-only: sent only when the owner types a new value.
-    webhook_secret: '',
   })
 
   const [brandingForm, setBrandingForm] = useState({
@@ -394,12 +406,6 @@ export default function TenantPage() {
         email_verification_mode:
           (settings.security.email_verification_mode as 'auto' | 'always' | 'never') || 'auto',
         restricted_data_scope: settings.security.restricted_data_scope || false,
-      })
-      setApiForm({
-        api_key_enabled: settings.api.api_key_enabled || false,
-        webhook_url: settings.api.webhook_url || '',
-        webhook_events: settings.api.webhook_events || [],
-        webhook_secret: '',
       })
       setBrandingForm({
         primary_color: settings.branding.primary_color || '#3B82F6',
@@ -531,37 +537,6 @@ export default function TenantPage() {
     }
   }
 
-  const handleSaveAPI = async () => {
-    try {
-      const result = await updateAPISettings({
-        api_key_enabled: apiForm.api_key_enabled,
-        webhook_url: apiForm.webhook_url,
-        webhook_events: apiForm.webhook_events,
-        ...(apiForm.webhook_secret ? { webhook_secret: apiForm.webhook_secret } : {}),
-      })
-      if (result) {
-        setApiForm((f) => ({ ...f, webhook_secret: '' }))
-        mutate(result)
-        toast.success('API settings saved successfully')
-      }
-    } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to save API settings'))
-    }
-  }
-
-  const handleTestWebhook = () => {
-    toast.info('Webhook test coming soon')
-  }
-
-  const toggleWebhookEvent = (event: WebhookEvent) => {
-    setApiForm((prev) => ({
-      ...prev,
-      webhook_events: prev.webhook_events.includes(event)
-        ? prev.webhook_events.filter((e) => e !== event)
-        : [...prev.webhook_events, event],
-    }))
-  }
-
   // Loading state
   if (isLoading) {
     return (
@@ -608,7 +583,7 @@ export default function TenantPage() {
               onClick={handleSaveGeneral}
               busy={isUpdatingGeneral}
               locked={!canUpdateTenant}
-              lockedReason="You do not have permission to update tenant settings"
+              lockedReason="You do not have permission to update organization settings"
             />
           )}
           {activeTab === 'security' && (
@@ -616,15 +591,7 @@ export default function TenantPage() {
               onClick={handleSaveSecurity}
               busy={isUpdatingSecurity}
               locked={!canManageSecurityAndAPI}
-              lockedReason="Only the tenant owner can change these settings"
-            />
-          )}
-          {activeTab === 'api' && (
-            <HeaderSaveButton
-              onClick={handleSaveAPI}
-              busy={isUpdatingAPI}
-              locked={!canManageSecurityAndAPI}
-              lockedReason="Only the tenant owner can change these settings"
+              lockedReason="Only the organization owner can change these settings"
             />
           )}
           {activeTab === 'storage' && (
@@ -636,325 +603,8 @@ export default function TenantPage() {
           )}
         </PageHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="overflow-x-auto">
-            <TabsTrigger value="general">
-              <Building className="me-2 h-4 w-4" />
-              General
-            </TabsTrigger>
-            <TabsTrigger value="security">
-              <Shield className="me-2 h-4 w-4" />
-              Security
-            </TabsTrigger>
-            <TabsTrigger value="api">
-              <Key className="me-2 h-4 w-4" />
-              API & Webhooks
-            </TabsTrigger>
-            <TabsTrigger value="storage">
-              <Upload className="me-2 h-4 w-4" />
-              File storage
-            </TabsTrigger>
-          </TabsList>
-
-          {/* General Tab */}
-          <TabsContent value="general" className="mt-5 space-y-5">
-            <Card>
-              <CardHeader>
-                <CardTitle>Organization information</CardTitle>
-                <CardDescription>Basic information about your organization</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {/* 2-Column Layout: Logo | Details */}
-                <div className="flex flex-col lg:flex-row gap-8">
-                  {/* Left Column - Logo */}
-                  <div className="flex flex-col items-center lg:items-start gap-3 lg:border-r lg:pe-8">
-                    {/* Logo with Hover Upload */}
-                    <div className="relative group">
-                      <Avatar className="h-24 w-24 ring-2 ring-border">
-                        <AvatarImage src={brandingForm.logo_data || logoSrc || undefined} />
-                        <AvatarFallback className="text-3xl bg-primary/10">
-                          {currentTenant?.name?.charAt(0) || 'T'}
-                        </AvatarFallback>
-                      </Avatar>
-                      {canUpdateTenant ? (
-                        <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
-                          <Upload className="h-6 w-6 text-white" />
-                          <input
-                            type="file"
-                            accept="image/png,image/jpeg,image/jpg,image/webp"
-                            className="hidden"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0]
-                              if (!file) return
-                              const img = new Image()
-                              const canvas = document.createElement('canvas')
-                              const reader = new FileReader()
-                              reader.onload = (ev) => {
-                                img.onload = () => {
-                                  const maxSize = 200
-                                  let w = img.width,
-                                    h = img.height
-                                  if (w > maxSize) {
-                                    h = (h * maxSize) / w
-                                    w = maxSize
-                                  }
-                                  if (h > maxSize) {
-                                    w = (w * maxSize) / h
-                                    h = maxSize
-                                  }
-                                  canvas.width = w
-                                  canvas.height = h
-                                  const ctx = canvas.getContext('2d')
-                                  ctx?.drawImage(img, 0, 0, w, h)
-                                  const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
-                                  setBrandingForm({ ...brandingForm, logo_data: dataUrl })
-                                }
-                                img.src = ev.target?.result as string
-                              }
-                              reader.readAsDataURL(file)
-                              e.target.value = ''
-                            }}
-                          />
-                        </label>
-                      ) : (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 cursor-not-allowed transition-opacity">
-                                <Lock className="h-6 w-6 text-white" />
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>You do not have permission to update logo</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                    </div>
-
-                    {/* Logo Actions */}
-                    <div className="flex flex-col items-center gap-2">
-                      {brandingForm.logo_data ? (
-                        <>
-                          <span className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
-                            Unsaved changes
-                          </span>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setBrandingForm({ ...brandingForm, logo_data: null })}
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={async () => {
-                                try {
-                                  // PATCH /settings/branding is a full-struct
-                                  // replace — omitted fields reset to "". Echo
-                                  // back primary_color/logo_dark_url so saving
-                                  // the logo doesn't wipe them.
-                                  const result = await updateBrandingSettings({
-                                    primary_color: brandingForm.primary_color,
-                                    logo_dark_url: brandingForm.logo_dark_url,
-                                    logo_data: brandingForm.logo_data,
-                                  })
-                                  if (result) {
-                                    mutate(result)
-                                    updateLogo(brandingForm.logo_data)
-                                    toast.success('Logo updated')
-                                  }
-                                } catch {
-                                  toast.error('Failed to update logo')
-                                }
-                              }}
-                              disabled={isUpdatingBranding}
-                            >
-                              {isUpdatingBranding ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                'Save'
-                              )}
-                            </Button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-xs text-muted-foreground text-center">
-                            {canUpdateTenant ? (
-                              <>
-                                Hover to upload
-                                <br />
-                                Max 200x200px
-                              </>
-                            ) : (
-                              <>
-                                Logo upload disabled
-                                <br />
-                                Insufficient permissions
-                              </>
-                            )}
-                          </p>
-                          {(logoSrc || currentTenant?.logo_url) && canUpdateTenant && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              onClick={async () => {
-                                try {
-                                  const result = await updateBrandingSettings({
-                                    primary_color: brandingForm.primary_color,
-                                    logo_dark_url: brandingForm.logo_dark_url,
-                                    logo_data: null,
-                                  })
-                                  if (result) {
-                                    mutate(result)
-                                    updateLogo(null)
-                                    toast.success('Logo removed')
-                                  }
-                                } catch {
-                                  toast.error('Failed to remove logo')
-                                }
-                              }}
-                              disabled={isUpdatingBranding}
-                            >
-                              Remove
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right Column - Organization Details */}
-                  <div className="flex-1 space-y-4">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Organization name</Label>
-                        <Input
-                          id="name"
-                          value={orgInfoForm.name}
-                          onChange={(e) => handleOrgInfoChange('name', e.target.value)}
-                          placeholder="My Organization"
-                          disabled={!canUpdateTenant}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="slug">URL slug</Label>
-                        <div className="flex">
-                          <span className="inline-flex items-center px-3 text-sm text-muted-foreground bg-muted border border-r-0 rounded-l-md">
-                            app.openctem.io/
-                          </span>
-                          <Input
-                            id="slug"
-                            value={orgInfoForm.slug}
-                            onChange={(e) => handleOrgInfoChange('slug', e.target.value)}
-                            className="rounded-l-none"
-                            placeholder="my-org"
-                            disabled={!canUpdateTenant}
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Lowercase letters, numbers, and hyphens only
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="website">Website</Label>
-                        <Input
-                          id="website"
-                          type="url"
-                          placeholder="https://example.com"
-                          value={generalForm.website}
-                          onChange={(e) =>
-                            setGeneralForm({ ...generalForm, website: e.target.value })
-                          }
-                          disabled={!canUpdateTenant}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="industry">Industry</Label>
-                        <Select
-                          value={generalForm.industry}
-                          onValueChange={(value) =>
-                            setGeneralForm({ ...generalForm, industry: value })
-                          }
-                          disabled={!canUpdateTenant}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select industry" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {VALID_INDUSTRIES.map((ind) => (
-                              <SelectItem key={ind.value} value={ind.value}>
-                                {ind.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Localization */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Localization</CardTitle>
-                <CardDescription>Language and timezone settings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="timezone">Timezone</Label>
-                    <Select
-                      value={generalForm.timezone}
-                      onValueChange={(value) => setGeneralForm({ ...generalForm, timezone: value })}
-                      disabled={!canUpdateTenant}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {VALID_TIMEZONES.map((tz) => (
-                          <SelectItem key={tz.value} value={tz.value}>
-                            {tz.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="language">Default language</Label>
-                    <Select
-                      value={generalForm.language}
-                      onValueChange={(value) => setGeneralForm({ ...generalForm, language: value })}
-                      disabled={!canUpdateTenant}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {VALID_LANGUAGES.map((lang) => (
-                          <SelectItem key={lang.value} value={lang.value}>
-                            {lang.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Security Tab */}
-          <TabsContent value="security" className="mt-5 space-y-5">
+        {view === 'authentication' ? (
+          <div className="mt-5 space-y-5">
             <Card>
               <CardHeader>
                 <CardTitle>Authentication</CardTitle>
@@ -1105,124 +755,333 @@ export default function TenantPage() {
               ipAllowlistError={ipAllowlistError}
               disabled={!canManageSecurityAndAPI}
             />
-          </TabsContent>
+            <SsoManagedNotice />
+          </div>
+        ) : (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+            <TabsList className="overflow-x-auto">
+              <TabsTrigger value="general">
+                <Building className="me-2 h-4 w-4" />
+                General
+              </TabsTrigger>
+              <TabsTrigger value="storage">
+                <Upload className="me-2 h-4 w-4" />
+                File storage
+              </TabsTrigger>
+            </TabsList>
 
-          {/* API Tab */}
-          <TabsContent value="api" className="mt-5 space-y-5">
-            <Card>
-              <CardHeader>
-                <CardTitle>API access</CardTitle>
-                <CardDescription>Enable and manage API key access</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="tenant-api-access">Enable API access</Label>
-                    <p className="text-sm text-muted-foreground" id="tenant-api-access-desc">
-                      Allow programmatic access via API keys
-                    </p>
-                  </div>
-                  <Switch
-                    id="tenant-api-access"
-                    aria-describedby="tenant-api-access-desc"
-                    checked={apiForm.api_key_enabled}
-                    onCheckedChange={(checked) =>
-                      setApiForm({ ...apiForm, api_key_enabled: checked })
-                    }
-                    disabled={!canManageSecurityAndAPI}
-                  />
-                </div>
+            {/* General Tab */}
+            <TabsContent value="general" className="mt-5 space-y-5">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Organization information</CardTitle>
+                  <CardDescription>Basic information about your organization</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* 2-Column Layout: Logo | Details */}
+                  <div className="flex flex-col lg:flex-row gap-8">
+                    {/* Left Column - Logo */}
+                    <div className="flex flex-col items-center lg:items-start gap-3 lg:border-r lg:pe-8">
+                      {/* Logo with Hover Upload */}
+                      <div className="relative group">
+                        <Avatar className="h-24 w-24 ring-2 ring-border">
+                          <AvatarImage src={brandingForm.logo_data || logoSrc || undefined} />
+                          <AvatarFallback className="text-3xl bg-primary/10">
+                            {currentTenant?.name?.charAt(0) || 'T'}
+                          </AvatarFallback>
+                        </Avatar>
+                        {canUpdateTenant ? (
+                          <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                            <Upload className="h-6 w-6 text-white" />
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/jpg,image/webp"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0]
+                                if (!file) return
+                                const img = new Image()
+                                const canvas = document.createElement('canvas')
+                                const reader = new FileReader()
+                                reader.onload = (ev) => {
+                                  img.onload = () => {
+                                    const maxSize = 200
+                                    let w = img.width,
+                                      h = img.height
+                                    if (w > maxSize) {
+                                      h = (h * maxSize) / w
+                                      w = maxSize
+                                    }
+                                    if (h > maxSize) {
+                                      w = (w * maxSize) / h
+                                      h = maxSize
+                                    }
+                                    canvas.width = w
+                                    canvas.height = h
+                                    const ctx = canvas.getContext('2d')
+                                    ctx?.drawImage(img, 0, 0, w, h)
+                                    const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+                                    setBrandingForm({ ...brandingForm, logo_data: dataUrl })
+                                  }
+                                  img.src = ev.target?.result as string
+                                }
+                                reader.readAsDataURL(file)
+                                e.target.value = ''
+                              }}
+                            />
+                          </label>
+                        ) : (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 cursor-not-allowed transition-opacity">
+                                  <Lock className="h-6 w-6 text-white" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>You do not have permission to update logo</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
 
-                {apiForm.api_key_enabled && (
-                  <>
-                    <Separator />
-                    <div className="space-y-2">
-                      <Label>API key</Label>
-                      <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                        API key generation and rotation are coming soon. Once available, you&apos;ll
-                        be able to create and manage keys here.
+                      {/* Logo Actions */}
+                      <div className="flex flex-col items-center gap-2">
+                        {brandingForm.logo_data ? (
+                          <>
+                            <span className="rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
+                              Unsaved changes
+                            </span>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  setBrandingForm({ ...brandingForm, logo_data: null })
+                                }
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    // PATCH /settings/branding is a full-struct
+                                    // replace — omitted fields reset to "". Echo
+                                    // back primary_color/logo_dark_url so saving
+                                    // the logo doesn't wipe them.
+                                    const result = await updateBrandingSettings({
+                                      primary_color: brandingForm.primary_color,
+                                      logo_dark_url: brandingForm.logo_dark_url,
+                                      logo_data: brandingForm.logo_data,
+                                    })
+                                    if (result) {
+                                      mutate(result)
+                                      updateLogo(brandingForm.logo_data)
+                                      toast.success('Logo updated')
+                                    }
+                                  } catch {
+                                    toast.error('Failed to update logo')
+                                  }
+                                }}
+                                disabled={isUpdatingBranding}
+                              >
+                                {isUpdatingBranding ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  'Save'
+                                )}
+                              </Button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-xs text-muted-foreground text-center">
+                              {canUpdateTenant ? (
+                                <>
+                                  Hover to upload
+                                  <br />
+                                  Max 200x200px
+                                </>
+                              ) : (
+                                <>
+                                  Logo upload disabled
+                                  <br />
+                                  Insufficient permissions
+                                </>
+                              )}
+                            </p>
+                            {(logoSrc || currentTenant?.logo_url) && canUpdateTenant && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                onClick={async () => {
+                                  try {
+                                    const result = await updateBrandingSettings({
+                                      primary_color: brandingForm.primary_color,
+                                      logo_dark_url: brandingForm.logo_dark_url,
+                                      logo_data: null,
+                                    })
+                                    if (result) {
+                                      mutate(result)
+                                      updateLogo(null)
+                                      toast.success('Logo removed')
+                                    }
+                                  } catch {
+                                    toast.error('Failed to remove logo')
+                                  }
+                                }}
+                                disabled={isUpdatingBranding}
+                              >
+                                Remove
+                              </Button>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
 
-            {/* Webhook */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Webhook configuration</CardTitle>
-                <CardDescription>Receive real-time notifications for events</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="webhook-url">Webhook URL</Label>
-                  <Input
-                    id="webhook-url"
-                    type="url"
-                    placeholder="https://your-server.com/webhook"
-                    value={apiForm.webhook_url}
-                    onChange={(e) => setApiForm({ ...apiForm, webhook_url: e.target.value })}
-                    disabled={!canManageSecurityAndAPI}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="webhook-secret">Signing secret</Label>
-                  <Input
-                    id="webhook-secret"
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder={
-                      settings?.api.webhook_secret_configured
-                        ? 'Configured — enter a new value to replace it'
-                        : 'Not set'
-                    }
-                    value={apiForm.webhook_secret}
-                    onChange={(e) => setApiForm({ ...apiForm, webhook_secret: e.target.value })}
-                    disabled={!canManageSecurityAndAPI}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Write-only. The secret is never shown again after it is saved.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Events to Send</Label>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {WEBHOOK_EVENTS.map((event) => (
-                      <div key={event.value} className="flex items-center space-x-2">
-                        <Switch
-                          checked={apiForm.webhook_events.includes(event.value)}
-                          onCheckedChange={() => toggleWebhookEvent(event.value)}
-                          id={event.value}
-                          disabled={!canManageSecurityAndAPI}
-                        />
-                        <Label htmlFor={event.value} className="font-mono text-sm cursor-pointer">
-                          {event.value}
-                        </Label>
+                    {/* Right Column - Organization Details */}
+                    <div className="flex-1 space-y-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Organization name</Label>
+                          <Input
+                            id="name"
+                            value={orgInfoForm.name}
+                            onChange={(e) => handleOrgInfoChange('name', e.target.value)}
+                            placeholder="My Organization"
+                            disabled={!canUpdateTenant}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="slug">URL slug</Label>
+                          <div className="flex">
+                            <span className="inline-flex items-center px-3 text-sm text-muted-foreground bg-muted border border-r-0 rounded-l-md">
+                              app.openctem.io/
+                            </span>
+                            <Input
+                              id="slug"
+                              value={orgInfoForm.slug}
+                              onChange={(e) => handleOrgInfoChange('slug', e.target.value)}
+                              className="rounded-l-none"
+                              placeholder="my-org"
+                              disabled={!canUpdateTenant}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Lowercase letters, numbers, and hyphens only
+                          </p>
+                        </div>
                       </div>
-                    ))}
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="website">Website</Label>
+                          <Input
+                            id="website"
+                            type="url"
+                            placeholder="https://example.com"
+                            value={generalForm.website}
+                            onChange={(e) =>
+                              setGeneralForm({ ...generalForm, website: e.target.value })
+                            }
+                            disabled={!canUpdateTenant}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="industry">Industry</Label>
+                          <Select
+                            value={generalForm.industry}
+                            onValueChange={(value) =>
+                              setGeneralForm({ ...generalForm, industry: value })
+                            }
+                            disabled={!canUpdateTenant}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select industry" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {VALID_INDUSTRIES.map((ind) => (
+                                <SelectItem key={ind.value} value={ind.value}>
+                                  {ind.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleTestWebhook}
-                  disabled={!canManageSecurityAndAPI}
-                >
-                  Test webhook
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              {/* Localization */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Localization</CardTitle>
+                  <CardDescription>Language and timezone settings</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="timezone">Timezone</Label>
+                      <Select
+                        value={generalForm.timezone}
+                        onValueChange={(value) =>
+                          setGeneralForm({ ...generalForm, timezone: value })
+                        }
+                        disabled={!canUpdateTenant}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {VALID_TIMEZONES.map((tz) => (
+                            <SelectItem key={tz.value} value={tz.value}>
+                              {tz.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="language">Default language</Label>
+                      <Select
+                        value={generalForm.language}
+                        onValueChange={(value) =>
+                          setGeneralForm({ ...generalForm, language: value })
+                        }
+                        disabled={!canUpdateTenant}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {VALID_LANGUAGES.map((lang) => (
+                            <SelectItem key={lang.value} value={lang.value}>
+                              {lang.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Storage Tab */}
-          <TabsContent value="storage" className="mt-5 space-y-5">
-            <StorageConfigTab onStatusChange={onStorageStatus} />
-          </TabsContent>
-        </Tabs>
+              {/* Owner only; renders nothing for anyone else. */}
+              <DeleteOrganization />
+            </TabsContent>
+
+            {/* Storage Tab */}
+            <TabsContent value="storage" className="mt-5 space-y-5">
+              <StorageConfigTab onStatusChange={onStorageStatus} />
+            </TabsContent>
+          </Tabs>
+        )}
       </Main>
     </>
   )

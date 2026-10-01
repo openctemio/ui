@@ -220,8 +220,6 @@ describe('settings shell', () => {
       '/settings/integrations/verified-domains',
       // Unlinked until the IAM model decision (owner decision D5).
       '/settings/access-control/permission-sets',
-      // Duplicate of the Localization card on /settings/tenant; not linked.
-      '/settings/general',
     ])
     const pages = [...staticPagesUnder('/settings'), ...staticPagesUnder('/account')].filter(
       (u) => u !== '/settings' && isSettingsShellPath(u)

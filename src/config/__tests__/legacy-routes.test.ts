@@ -104,5 +104,12 @@ describe('legacy route redirects', () => {
       '/settings/teams?tab=assignment-rules'
     )
     expect(redirectOnce('/settings/access-control/permission-sets')).toBeNull()
+    expect(redirectOnce('/settings/tenant')).toBe('/settings/general')
+    expect(redirectOnce('/settings/tenant?tab=storage')).toBe('/settings/general?tab=storage')
+    expect(redirectOnce('/settings/tenant?tab=security')).toBe(
+      '/settings/authentication?tab=security'
+    )
+    expect(redirectOnce('/settings/tenant/create')).toBeNull()
+    expect(redirectOnce('/settings/audit')).toBe('/settings/audit-log')
   })
 })

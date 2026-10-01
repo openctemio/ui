@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
-import { SheetDetailToolbar } from '@/features/shared'
+import { SheetDetailToolbar, DangerZone, DangerZoneItem } from '@/features/shared'
 import {
   Settings,
   KeyRound,
@@ -422,50 +422,38 @@ export function SensorDetailSheet({
               </div>
             </div>
 
-            {/* Danger Zone */}
             <Can permission={Permission.SensorsDelete}>
-              <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
-                <h4 className="mb-2 text-sm font-medium text-red-500">Danger Zone</h4>
-                <div className="space-y-3">
-                  {/* Revoke - only show if not already revoked */}
-                  {sensor.status !== 'revoked' && onRevoke && (
-                    <div>
-                      <p className="mb-2 text-xs text-muted-foreground">
-                        Permanently revoke this sensor&apos;s access. The sensor will not be able to
-                        authenticate.
-                      </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full border-red-500/50 text-red-500 hover:bg-red-500/10"
-                        onClick={() => onRevoke(sensor)}
-                      >
+              <DangerZone as="h3">
+                {sensor.status !== 'revoked' && onRevoke && (
+                  <DangerZoneItem
+                    title="Revoke access"
+                    description="The sensor can no longer authenticate. It stays listed."
+                    action={
+                      <Button variant="outline" size="sm" onClick={() => onRevoke(sensor)}>
                         <AlertCircle className="me-2 h-4 w-4" />
-                        Revoke Access
+                        Revoke access
                       </Button>
-                    </div>
-                  )}
-
-                  {/* Delete */}
-                  <div>
-                    <p className="mb-2 text-xs text-muted-foreground">
-                      Permanently delete this sensor and invalidate its API key.
-                    </p>
+                    }
+                  />
+                )}
+                <DangerZoneItem
+                  title="Delete sensor"
+                  description="Permanently delete this sensor and invalidate its API key."
+                  action={
                     <Button
                       variant="destructive"
                       size="sm"
-                      className="w-full"
                       onClick={() => {
                         onDelete(sensor)
                         onOpenChange(false)
                       }}
                     >
                       <Trash2 className="me-2 h-4 w-4" />
-                      Delete Sensor
+                      Delete sensor
                     </Button>
-                  </div>
-                </div>
-              </div>
+                  }
+                />
+              </DangerZone>
             </Can>
           </TabsContent>
         </Tabs>

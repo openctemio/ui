@@ -39,6 +39,19 @@ export const LEGACY_SETTINGS_ROUTE_REDIRECTS: LegacyRouteRedirect[] = [
   { source: '/settings/integrations/api-keys', destination: '/settings/api-keys', permanent: true },
   { source: '/settings/integrations/scim-tokens', destination: '/settings/scim', permanent: true },
   { source: '/settings/integrations/mcp', destination: '/settings/mcp', permanent: true },
+  // Organization: /settings/tenant split into General and Authentication. The
+  // query-conditioned rule must come first (first match wins). Exact source,
+  // so /settings/tenant/create (new organization) is untouched. ?tab=storage
+  // carries over to General's storage tab; ?tab=api lands on General (the
+  // API & Webhooks tab is gone).
+  {
+    source: '/settings/tenant',
+    has: [{ type: 'query', key: 'tab', value: 'security' }],
+    destination: '/settings/authentication',
+    permanent: true,
+  },
+  { source: '/settings/tenant', destination: '/settings/general', permanent: true },
+  { source: '/settings/audit/:path*', destination: '/settings/audit-log/:path*', permanent: true },
 ]
 
 export const LEGACY_ROUTE_REDIRECTS: LegacyRouteRedirect[] = [
