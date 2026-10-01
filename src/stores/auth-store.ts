@@ -345,8 +345,10 @@ async function attemptTokenRefresh(): Promise<void> {
       devLog.log('[Auth] Token refreshed successfully')
       refreshRetryCount = 0
       useAuthStore.getState().updateToken(data.data.access_token)
-    } else if (response.status === 401) {
-      // 401 = refresh token itself is invalid — no point retrying
+    } else if (response.status === 401 || data.error?.code === 'MFA_ENROLLMENT_REQUIRED') {
+      // 401 = refresh token itself is invalid — no point retrying.
+      // MFA_ENROLLMENT_REQUIRED = the organization now requires two-factor
+      // authentication; signing in again leads to the enrollment step.
       devLog.warn('[Auth] Refresh token invalid (401), redirecting to login')
       authPermanentlyFailed = true
       useAuthStore.getState().clearAuth()

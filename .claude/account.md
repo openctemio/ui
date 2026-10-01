@@ -71,20 +71,23 @@ interface ChangePasswordInput {
   confirm_password: string
 }
 
+// GET /api/v1/users/me/2fa (backend: api docs/architecture/user-two-factor-authentication.md)
 interface TwoFactorStatus {
+  supported: boolean // false for SSO/OAuth accounts: the IdP owns 2FA
   enabled: boolean
-  verified_at?: string
+  enabled_at?: string
+  recovery_codes_remaining: number
+  required_by_organization: boolean
 }
 
+// GET /api/v1/users/me/sessions → { sessions: Session[] }
+// Device/browser labels come from describeUserAgent(user_agent).
 interface Session {
   id: string
-  device: string
-  browser: string
-  os: string
-  ip_address: string
-  location?: string
+  ip_address?: string
+  user_agent?: string
   created_at: string
-  last_active_at: string
+  last_activity_at: string
   is_current: boolean
 }
 ```
@@ -163,8 +166,9 @@ import {
   useChangePassword,
   useTwoFactorStatus,
   useSetupTwoFactor,
-  useVerifyTwoFactor,
+  useEnableTwoFactor,
   useDisableTwoFactor,
+  useRegenerateRecoveryCodes,
 } from '@/features/account'
 
 // Change password
@@ -178,17 +182,29 @@ await changePassword({
 // 2FA status
 const { status, isLoading, mutate } = useTwoFactorStatus()
 
-// Setup 2FA
-const { setupTwoFactor, isSettingUp } = useSetupTwoFactor()
-const { secret, qr_code_url, backup_codes } = await setupTwoFactor()
+// Setup 2FA: pending secret, nothing changes until enable
+const { setupTwoFactor } = useSetupTwoFactor()
+const { secret, otpauth_uri } = await setupTwoFactor() // render with <TotpQrCode uri=...>
 
-// Verify 2FA
-const { verifyTwoFactor, isVerifying } = useVerifyTwoFactor()
-await verifyTwoFactor({ code: '123456' })
+// Enable: returns recovery codes ONCE (render with <RecoveryCodesPanel>);
+// the server signs out every other session
+const { enableTwoFactor } = useEnableTwoFactor()
+const recoveryCodes = await enableTwoFactor('123456')
 
-// Disable 2FA
-const { disableTwoFactor, isDisabling } = useDisableTwoFactor()
-await disableTwoFactor('password')
+// Disable: current password + authenticator code or unused recovery code
+const { disableTwoFactor } = useDisableTwoFactor()
+await disableTwoFactor({ password, code })
+
+// New recovery codes (authenticator code only)
+const { regenerateRecoveryCodes } = useRegenerateRecoveryCodes()
+const fresh = await regenerateRecoveryCodes('123456')
+
+// UI: <PasswordCard>, <TwoFactorCard>, <SessionsCard> from '@/features/account';
+// shared pieces in '@/components/security' (TotpQrCode, RecoveryCodesPanel,
+// OneTimeCodeInput, SecretKey). The login second step is
+// src/features/auth/components/mfa-step.tsx (verifyMfaAction /
+// startMfaEnrollmentAction / confirmMfaEnrollmentAction; the challenge lives in
+// the httpOnly mfa_challenge cookie).
 ```
 
 ### Session Hooks
