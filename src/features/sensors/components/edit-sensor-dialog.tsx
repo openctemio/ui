@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, Settings } from 'lucide-react'
@@ -78,21 +78,28 @@ export function EditSensorDialog({ open, onOpenChange, sensor, onSuccess }: Edit
     category: t.category,
   }))
 
-  // Reset state when dialog opens
+  // Reset the form when the dialog opens or another sensor is edited, but not
+  // when the same sensor is refetched while open (that would wipe the user's
+  // edits). The latest sensor and form are read through a ref so the effect
+  // depends only on what should trigger a reset.
+  const latest = useRef({ sensor, form })
   useEffect(() => {
-    if (open) {
-      setSelectedTools(sensor.tools || [])
-      form.reset({
-        name: sensor.name,
-        description: sensor.description || '',
-        capabilities: sensor.capabilities || [],
-        tools: sensor.tools || [],
-        execution_mode: sensor.execution_mode,
-        status: sensor.status,
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, sensor.id])
+    latest.current = { sensor, form }
+  })
+  const sensorId = sensor.id
+  useEffect(() => {
+    if (!open) return
+    const { sensor: s, form: f } = latest.current
+    setSelectedTools(s.tools || [])
+    f.reset({
+      name: s.name,
+      description: s.description || '',
+      capabilities: s.capabilities || [],
+      tools: s.tools || [],
+      execution_mode: s.execution_mode,
+      status: s.status,
+    })
+  }, [open, sensorId])
 
   const onSubmit = async (data: UpdateSensorFormData) => {
     try {
