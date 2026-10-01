@@ -21,56 +21,40 @@ import {
   Settings2,
   Radar,
   Container,
-  GitBranch,
   KeyRound,
   Building2,
   Crown,
   Swords,
   ShieldCheck,
-  ListChecks,
   Workflow,
   FileWarning,
   FileText,
-  Users,
-  Puzzle,
   Command,
   AudioWaveform,
   Building,
-  Zap,
-  Boxes,
   Crosshair,
   ClipboardList,
   Bug,
   RotateCcw,
   BookTemplate,
   History,
-  Clock,
   Timer,
-  Bot,
   RadioTower,
-  FileSliders,
   Wrench,
   // New icons for CTEM architecture
   LayoutGrid,
   Package,
-  Scale,
   // CTEM Phase 1 icons
   TrendingUp,
   AlertTriangle,
   Link2,
   Fingerprint,
   // Access Control icons
-  FolderKey,
-  Key,
   // Integration icons
   Shield,
-  Bell,
   // Pipeline icons
   GitMerge,
   // Template & Secret Store icons
-  FolderGit2,
-  Lock,
-  FileCode2,
   // Attack path icons
   Route,
   Waypoints,
@@ -248,6 +232,17 @@ export const sidebarData: SidebarData = {
           icon: Radar,
           permission: Permission.ScansRead,
           module: 'scans',
+        },
+        // Sensors are a fleet operators open daily (offline sensors, keys,
+        // zones), not a preference, so they sit next to Scans rather than in
+        // Settings, as in Tenable VM (left nav > Sensors) and Rapid7 (Data
+        // Collection Management).
+        {
+          title: 'Sensors',
+          url: '/sensors',
+          icon: RadioTower,
+          permission: Permission.SensorsRead,
+          module: 'sensors',
         },
         // ----------------------------------------
         // ASSET INVENTORY
@@ -597,235 +592,18 @@ export const sidebarData: SidebarData = {
     },
 
     // ========================================
-    // SETTINGS - System configuration
+    // SETTINGS - one link, pinned last. Every settings page lives in the
+    // settings shell (src/config/settings-nav.ts), which takes over this
+    // sidebar on /settings and /account and lists them in groups.
     // ========================================
     {
-      title: 'Settings',
-      icon: Settings,
+      title: '',
+      cluster: 'end',
       items: [
-        // Sensors — the execution/data-collection runtime (Fleet-style). Sensors
-        // span recon/scan/validate/collect, so they are their own plane, not a
-        // sub-item of Scanning. Mirrors the Elastic Agent+Fleet / Datadog Agent
-        // model; "Scanning" below is narrowed to scan-job configuration.
         {
-          title: 'Sensors',
-          icon: RadioTower,
-          permission: Permission.SensorsRead,
-          module: 'sensors',
-          items: [
-            {
-              title: 'All Sensors',
-              url: '/sensors',
-              icon: RadioTower,
-              permission: Permission.SensorsRead,
-              module: 'sensors',
-            },
-            {
-              title: 'Capabilities',
-              url: '/capabilities',
-              icon: Zap,
-              permission: Permission.ToolsRead,
-              module: 'scans',
-            },
-            {
-              title: 'Tools',
-              url: '/tools',
-              icon: Wrench,
-              permission: Permission.ToolsRead,
-              module: 'scans',
-            },
-            {
-              title: 'Secret Store',
-              url: '/secret-store',
-              icon: Lock,
-              permission: Permission.SecretStoreRead,
-              module: 'scans',
-            },
-          ],
-        },
-        {
-          title: 'Scanning',
-          icon: Radar,
-          permission: Permission.ScansRead,
-          module: 'scans',
-          items: [
-            {
-              title: 'Profiles',
-              url: '/scan-profiles',
-              icon: FileSliders,
-              permission: Permission.ScanProfilesRead,
-              module: 'scans',
-            },
-            {
-              title: 'Scanner Templates',
-              url: '/scanner-templates',
-              icon: FileCode2,
-              permission: Permission.ScannerTemplatesRead,
-              module: 'scanner_templates',
-            },
-            {
-              title: 'Template Sources',
-              url: '/template-sources',
-              icon: FolderGit2,
-              permission: Permission.TemplateSourcesRead,
-              module: 'template_sources',
-            },
-          ],
-        },
-        {
-          title: 'Organization',
-          icon: Building,
-          permission: Permission.TeamRead,
-          items: [
-            {
-              title: 'General',
-              url: '/settings/tenant',
-              icon: Building,
-              // Requires team:update permission to modify tenant settings
-              permission: Permission.TeamUpdate,
-            },
-            {
-              title: 'Members',
-              url: '/settings/users',
-              icon: Users,
-              permission: Permission.MembersRead,
-            },
-            {
-              title: 'Roles',
-              url: '/settings/roles',
-              icon: Key,
-              // Requires roles:read permission (RBAC-based access)
-              permission: Permission.RolesRead,
-            },
-            {
-              title: 'Teams',
-              url: '/settings/access-control/groups',
-              icon: FolderKey,
-              // Requires groups:read permission (RBAC-based access)
-              permission: Permission.GroupsRead,
-            },
-            {
-              title: 'Assignment Rules',
-              url: '/settings/access-control/assignment-rules',
-              icon: GitBranch,
-              permission: Permission.AssignmentRulesRead,
-            },
-            {
-              title: 'Audit Log',
-              url: '/settings/audit',
-              icon: History,
-              // Requires audit:read permission (core feature - no module required)
-              permission: Permission.AuditRead,
-            },
-            {
-              title: 'Risk Scoring',
-              url: '/settings/scoring',
-              icon: Scale,
-              // Requires team:update permission (admin-level configuration)
-              permission: Permission.TeamUpdate,
-              module: 'risk_scoring',
-            },
-            {
-              title: 'Asset Lifecycle',
-              url: '/settings/asset-lifecycle',
-              icon: Clock,
-              // Admin-level config: worker transitions asset status without
-              // a human in the loop, so keep this gated to team:update.
-              permission: Permission.TeamUpdate,
-            },
-            {
-              title: 'Modules',
-              url: '/settings/modules',
-              icon: Boxes,
-              // Requires team:update permission (admin-level configuration)
-              permission: Permission.TeamUpdate,
-            },
-            {
-              title: 'Pentest',
-              url: '/settings/pentest',
-              icon: Crosshair,
-              // Same permission the route guard enforces on this page; with
-              // team:update here, a pentest lead saw no entry for a page they
-              // can open, and an admin without validation:write was shown an
-              // entry that ended in Access Denied.
-              permission: Permission.PentestWrite,
-              module: 'pentest',
-            },
-            {
-              title: 'SLA Policies',
-              url: '/settings/sla-policies',
-              icon: Timer,
-              permission: Permission.SLARead,
-              module: 'sla',
-            },
-          ],
-        },
-        {
-          title: 'Integrations',
-          icon: Puzzle,
-          // Integrations management requires integrations:read permission and integrations module
-          // RBAC-based access - no minRole restriction
-          permission: Permission.IntegrationsRead,
-          module: 'integrations',
-          items: [
-            {
-              title: 'Overview',
-              url: '/settings/integrations',
-              icon: Puzzle,
-            },
-            {
-              title: 'SCMs',
-              url: '/settings/integrations/scm',
-              icon: GitBranch,
-              subModuleKey: 'scm',
-            },
-            {
-              title: 'Notifications',
-              url: '/settings/integrations/notifications',
-              icon: Bell,
-              subModuleKey: 'notifications',
-            },
-            {
-              title: 'CI/CD',
-              url: '/settings/integrations/cicd',
-              // This route renders ComingSoonPage. The badge is what keeps the entry
-              // honest: without it the item looks like every other live integration
-              // and the click is a dead end.
-              badge: 'Soon',
-              icon: Workflow,
-              subModuleKey: 'pipelines_int',
-            },
-            {
-              title: 'Ticketing',
-              url: '/settings/integrations/ticketing',
-              icon: ListChecks,
-              subModuleKey: 'ticketing',
-            },
-            {
-              title: 'SIEM',
-              url: '/settings/integrations/siem',
-              // Shipped (Splunk HEC: create, test, delete), so no "Soon" badge.
-              // sidebar-no-scaffolds.test.ts now fails a "Soon" badge on a page
-              // that is not a ComingSoonPage, which is how this one went stale.
-              icon: Shield,
-              subModuleKey: 'siem',
-            },
-            {
-              // SCIM is run by the tenant's own IT (their IdP pushes users into
-              // their tenant), so it lives with tenant integrations, not /admin.
-              title: 'SCIM Provisioning',
-              url: '/settings/integrations/scim-tokens',
-              icon: Users,
-              // No subModuleKey: the API has no `scim` sub-module (see
-              // integrations sub-modules in api migrations/000004), so the
-              // key that was here hid this entry from every tenant.
-            },
-            {
-              title: 'AI Access (MCP)',
-              url: '/settings/integrations/mcp',
-              icon: Bot,
-            },
-          ],
+          title: 'Settings',
+          url: '/settings',
+          icon: Settings,
         },
       ],
     },

@@ -149,7 +149,7 @@ Rendered markdown (notes, finding descriptions, etc.) goes through `src/lib/sani
 
 ## Sensors (formerly "agents") — RFC-023
 
-The customer-side runtimes are **sensors**: route `/sensors` (Settings → Sensors,
+The customer-side runtimes are **sensors**: route `/sensors` (Discovery → Sensors,
 tabs by role), `src/features/sensors`, `src/lib/api/sensor-*`, API
 `/api/v1/sensors`, permissions `sensors:*`, module `sensors`. Contract:
 openctemio/api `docs/rfcs/RFC-023-sensor-rename-contract.md`.
@@ -164,6 +164,17 @@ openctemio/api `docs/rfcs/RFC-023-sensor-rename-contract.md`.
 - Audit rows written before the rename keep `agent.*`; label through
   `canonicalAuditAction` / `canonicalAuditResourceType` / `canonicalAuditMetadataKey`.
 - A branch written before the rename catches up with `node scripts/rename/sensor-rename.mjs`.
+
+## Settings navigation
+
+Every settings page is listed once, in `src/config/settings-nav.ts` (groups My
+account, Organization, Access, Policies, Scanning, Integrations). That config
+drives the settings rail (the left sidebar swaps to it on `/settings/*`,
+`/account/*` and each item's URL), the `/settings` overview and the Settings
+section of the command palette. The main sidebar keeps one "Settings" link.
+Adding a settings page: add the item (with the permission and module the route
+guard enforces, and en/vi strings); `settings-nav.test.ts` checks the rest.
+Moved pages get a 308 in `src/config/legacy-routes.ts`.
 
 ## Access Control (RBAC)
 

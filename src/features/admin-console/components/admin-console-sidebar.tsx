@@ -1,14 +1,11 @@
 'use client'
 
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LogOut, ShieldCheck } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -17,6 +14,7 @@ import {
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
 import { SidebarBrand } from '@/components/layout/sidebar-brand'
+import { GroupedNav, type GroupedNavSection } from '@/components/layout/grouped-nav'
 import { adminNav } from '../config/admin-nav'
 import { adminCan, type AdminIdentity } from '../types'
 
@@ -43,6 +41,18 @@ interface AdminConsoleSidebarProps {
  */
 export function AdminConsoleSidebar({ admin, onSignOut }: AdminConsoleSidebarProps) {
   const pathname = usePathname()
+  const sections: GroupedNavSection[] = adminNav.map((section, i) => ({
+    key: section.title ?? String(i),
+    label: section.title,
+    items: section.items
+      .filter((item) => !item.minRole || adminCan(admin.role, item.minRole))
+      .map((item) => ({ key: item.url, title: item.title, url: item.url, icon: item.icon })),
+  }))
+  // The deepest entry that owns the current path is the one marked current.
+  const activeUrl = sections
+    .flatMap((s) => s.items.map((i) => i.url))
+    .filter((url) => isActive(pathname, url))
+    .sort((x, y) => y.length - x.length)[0]
 
   return (
     <Sidebar collapsible="icon">
@@ -71,33 +81,7 @@ export function AdminConsoleSidebar({ admin, onSignOut }: AdminConsoleSidebarPro
       </SidebarHeader>
 
       <SidebarContent>
-        {adminNav.map((section, i) => {
-          const items = section.items.filter(
-            (item) => !item.minRole || adminCan(admin.role, item.minRole)
-          )
-          if (items.length === 0) return null
-          return (
-            <SidebarGroup key={section.title ?? i}>
-              {section.title && <SidebarGroupLabel>{section.title}</SidebarGroupLabel>}
-              <SidebarMenu>
-                {items.map((item) => (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(pathname, item.url)}
-                      tooltip={item.title}
-                    >
-                      <Link href={item.url}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroup>
-          )
-        })}
+        <GroupedNav sections={sections} activeUrl={activeUrl} />
       </SidebarContent>
 
       <SidebarFooter>

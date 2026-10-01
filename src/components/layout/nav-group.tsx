@@ -40,6 +40,7 @@ import {
 } from '@/features/integrations/api/use-tenant-modules'
 import { useTranslation } from '@/context/i18n-provider'
 import { cn } from '@/lib/utils'
+import { subModuleStatus } from '@/lib/permissions/sub-modules'
 
 /** Maps a sidebar group title to its i18n key, e.g. "Scoping" → "nav.group.scoping". */
 function groupTitleKey(title: string): string {
@@ -273,42 +274,15 @@ function useFilteredSubItems(
   parentModuleId: string | undefined,
   subModules: Record<string, LicensingModule[]>
 ) {
-  return useMemo(() => {
-    // If no parent module specified, return all items (e.g. Organization)
-    if (!parentModuleId) return items
-
-    // If sub-modules not loaded yet (API still fetching), show all items
-    // to prevent flash of empty content during initial load
-    if (Object.keys(subModules).length === 0) {
-      return items
-    }
-
-    // Get sub-modules for this parent from API response
-    const parentSubModules = subModules[parentModuleId] || []
-
-    return items
-      .map((item) => {
-        // Items without subModuleKey are always shown (like "Overview")
-        if (!item.subModuleKey) return item
-
-        // Find the sub-module that matches this item's key
-        const subModule = parentSubModules.find((m) => m.slug === item.subModuleKey)
-
-        // If sub-module not found in API response, hide the item
-        // API only returns enabled+active modules, so absence = not available
-        if (!subModule) return null
-
-        // If sub-module is disabled, hide completely
-        if (subModule.release_status === 'disabled') return null
-
-        // Apply release status from sub-module to the item
-        return {
-          ...item,
-          releaseStatus: subModule.release_status,
-        }
-      })
-      .filter((item): item is NavLink => item !== null)
-  }, [items, parentModuleId, subModules])
+  return useMemo(
+    () =>
+      items.flatMap((item) => {
+        const status = subModuleStatus(parentModuleId, item.subModuleKey, subModules)
+        if (status === false) return []
+        return [status === undefined ? item : { ...item, releaseStatus: status }]
+      }),
+    [items, parentModuleId, subModules]
+  )
 }
 
 /**
