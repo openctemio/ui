@@ -4,14 +4,18 @@
 
 const NEXT_KEY = 'openctem.admin.next'
 
-/** Only same-origin console paths are allowed as a post-sign-in target. */
+const CONSOLE_ROOT = '/admin'
+
+/**
+ * Only same-origin console paths are allowed as a post-sign-in target. The
+ * result is rebuilt behind the constant console root, so only the part after
+ * /admin comes from the input and it can never name another origin or scheme.
+ */
 export function safeConsolePath(raw: string | null | undefined): string {
   const next = raw ?? ''
-  return (next === '/admin' || next.startsWith('/admin/')) &&
-    !next.startsWith('//') &&
-    !next.includes('\\')
-    ? next
-    : '/admin'
+  const inConsole = next === CONSOLE_ROOT || next.startsWith(`${CONSOLE_ROOT}/`)
+  if (!inConsole || next.startsWith('//') || next.includes('\\')) return CONSOLE_ROOT
+  return CONSOLE_ROOT + next.slice(CONSOLE_ROOT.length)
 }
 
 /** The ?next= of the current page, sanitized. */
