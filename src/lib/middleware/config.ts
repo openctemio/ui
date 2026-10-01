@@ -18,6 +18,13 @@ export const PUBLIC_ROUTES = [
   '/register',
   '/forgot-password',
   '/reset-password',
+  // One-time setup link for an account an administrator created (the user has
+  // no session yet). Same token mechanism as /reset-password.
+  '/set-password',
+  // Invitation preview: an invited person without an account must be able to
+  // see it and choose "Sign in" or "Create your account". The page only calls
+  // the public preview endpoint until they act.
+  '/invitations',
   '/verify-email',
   '/auth/callback',
   '/auth/sso/callback',

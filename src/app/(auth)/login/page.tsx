@@ -1,6 +1,5 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import {
   Card,
   CardContent,
@@ -14,6 +13,7 @@ import { validateRedirectUrl } from '@/lib/redirect'
 
 // Use refactored LoginForm from features directory
 import { LoginForm } from '@/features/auth/components/login-form'
+import { SignUpPrompt } from '@/features/auth/components/sign-up-prompt'
 
 interface LoginPageProps {
   searchParams: Promise<{
@@ -24,8 +24,9 @@ interface LoginPageProps {
     // Preserved from the invitation flow — when a user clicks an
     // invite link and doesn't have an account, the invitation page
     // redirects to /login?email=alice@co.com&returnTo=/invitations/{token}.
-    // The login page passes this email through to the "Sign up" link
-    // so the register form can pre-fill it.
+    // The login page passes this email (and the invitation returnTo)
+    // through to the "Sign up" link so the register form can pre-fill it
+    // and send the invitation token.
     email?: string
   }>
 }
@@ -79,15 +80,11 @@ export default async function SignIn({ searchParams }: LoginPageProps) {
         <CardTitle className="text-lg tracking-tight">Sign in</CardTitle>
         <CardDescription>
           Enter your email and password below to <br />
-          log into your account. Don&apos;t have an account?{' '}
-          <Link
-            href={
-              params.email ? `/register?email=${encodeURIComponent(params.email)}` : '/register'
-            }
-            className="hover:text-primary underline underline-offset-4"
-          >
-            Sign up
-          </Link>
+          log into your account.
+          {/* Sign-up is offered only when the server allows it, or when the
+              visitor came from an invitation (accounts are otherwise created
+              by an administrator). */}
+          <SignUpPrompt returnTo={params.returnTo || params.redirect} email={params.email} />
         </CardDescription>
       </CardHeader>
       <CardContent>

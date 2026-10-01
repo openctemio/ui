@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
-import { useRouter, useParams } from 'next/navigation'
-import { Building2, Check, Loader2, X, LogIn, Clock, AlertTriangle } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Building2, Check, Loader2, X, LogIn, Clock, AlertTriangle, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { csrfFetch } from '@/lib/api/client'
+import { registerHref } from '@/features/auth/lib/self-register'
 
 interface InvitationData {
   invitation: {
@@ -29,16 +31,28 @@ interface InvitationData {
   }
 }
 
-export default function InvitationPage() {
+interface InvitationViewProps {
+  token: string
+  /**
+   * Whether the visitor has a session (auth or refresh cookie). Without one,
+   * Accept/Decline cannot work, so the page offers "Sign in" and "Create your
+   * account" instead — the latter works even with open registration disabled,
+   * because the invitation token admits the invited email.
+   */
+  hasSession: boolean
+}
+
+export function InvitationView({ token, hasSession }: InvitationViewProps) {
   const router = useRouter()
-  const params = useParams()
-  const token = params.token as string
 
   const [isPending, startTransition] = useTransition()
   const [isLoading, setIsLoading] = useState(true)
   const [invitation, setInvitation] = useState<InvitationData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [acceptError, setAcceptError] = useState<string | null>(null)
+
+  const invitationPath = `/invitations/${token}`
+  const invitationLoginHref = `/login?returnTo=${encodeURIComponent(invitationPath)}&email=${encodeURIComponent(invitation?.invitation.email || '')}`
 
   // Fetch invitation details using public preview endpoint
   useEffect(() => {
@@ -106,7 +120,7 @@ export default function InvitationPage() {
 
           if (refreshResponse.status === 401) {
             // No valid session - redirect to login (use window.location for full page reload)
-            window.location.href = `/login?returnTo=/invitations/${token}&email=${encodeURIComponent(invitation?.invitation.email || '')}`
+            window.location.href = invitationLoginHref
             return
           }
 
@@ -325,43 +339,70 @@ export default function InvitationPage() {
             </Alert>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex flex-col gap-2">
-            <Button className="w-full" size="lg" onClick={handleAccept} disabled={isPending}>
-              {isPending ? (
-                <Loader2 className="me-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Check className="me-2 h-4 w-4" />
-              )}
-              Accept Invitation
-            </Button>
+          {/* No session: sign in, or create the account for the invited email. */}
+          {!hasSession && invitation && (
+            <div className="flex flex-col gap-2">
+              <Button asChild className="w-full" size="lg">
+                <Link href={invitationLoginHref}>
+                  <LogIn className="me-2 h-4 w-4" />
+                  Sign in to accept
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full">
+                <Link
+                  href={registerHref({
+                    returnTo: invitationPath,
+                    email: invitation.invitation.email,
+                  })}
+                >
+                  <UserPlus className="me-2 h-4 w-4" />
+                  Create your account
+                </Link>
+              </Button>
+              <p className="text-center text-xs text-muted-foreground">
+                New here? Create an account for <strong>{invitation.invitation.email}</strong>, then
+                accept the invitation.
+              </p>
+            </div>
+          )}
 
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleDecline}
-              disabled={isPending}
-            >
-              <X className="me-2 h-4 w-4" />
-              Decline
-            </Button>
-          </div>
+          {/* Action Buttons */}
+          {hasSession && (
+            <div className="flex flex-col gap-2">
+              <Button className="w-full" size="lg" onClick={handleAccept} disabled={isPending}>
+                {isPending ? (
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="me-2 h-4 w-4" />
+                )}
+                Accept Invitation
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleDecline}
+                disabled={isPending}
+              >
+                <X className="me-2 h-4 w-4" />
+                Decline
+              </Button>
+            </div>
+          )}
 
           {/* Switch account link */}
-          <p className="text-xs text-center text-muted-foreground">
-            Not <strong>{invitation?.invitation.email}</strong>?{' '}
-            <button
-              type="button"
-              className="text-primary hover:underline"
-              onClick={() =>
-                router.push(
-                  `/login?returnTo=/invitations/${token}&email=${encodeURIComponent(invitation?.invitation.email || '')}`
-                )
-              }
-            >
-              Log in with different account
-            </button>
-          </p>
+          {hasSession && (
+            <p className="text-xs text-center text-muted-foreground">
+              Not <strong>{invitation?.invitation.email}</strong>?{' '}
+              <button
+                type="button"
+                className="text-primary hover:underline"
+                onClick={() => router.push(invitationLoginHref)}
+              >
+                Log in with different account
+              </button>
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
