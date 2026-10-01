@@ -46,6 +46,7 @@ export const PATHS_WITHOUT_PAGE: ReadonlySet<string> = new Set([
   '/settings/access-control',
   '/settings/tenant',
   '/settings/pentest/templates/[id]',
+  '/settings/scanning',
   '/simulation',
 ])
 

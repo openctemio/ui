@@ -220,7 +220,7 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.AssetsRead,
     module: Module.Assets,
   },
-  '/secret-store': {
+  '/settings/scanning/credentials': {
     // API enforces scans:secret_store:read (SecretStoreRead), not
     // findings:credentials:read — match the sidebar and the backend.
     permission: Permission.SecretStoreRead,
@@ -529,27 +529,27 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.SensorsRead,
     module: Module.Sensors,
   },
-  '/scan-profiles': {
+  '/settings/scanning/profiles': {
     permission: Permission.ScanProfilesRead,
     module: Module.Scans,
   },
-  '/scan-profiles/**': {
+  '/settings/scanning/profiles/**': {
     permission: Permission.ScanProfilesRead,
     module: Module.Scans,
   },
-  '/tools': {
+  '/settings/scanning/tools': {
     permission: Permission.ToolsRead,
     module: Module.Scans,
   },
-  '/tools/**': {
+  '/settings/scanning/tools/**': {
     permission: Permission.ToolsRead,
     module: Module.Scans,
   },
-  '/capabilities': {
+  '/settings/scanning/capabilities': {
     permission: Permission.ToolsRead,
     module: Module.Scans,
   },
-  '/capabilities/**': {
+  '/settings/scanning/capabilities/**': {
     permission: Permission.ToolsRead,
     module: Module.Scans,
   },
@@ -675,19 +675,19 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   // ========================================
   // Settings — scanner orchestration (each its own module post-000161)
   // ========================================
-  '/scanner-templates': {
+  '/settings/scanning/templates': {
     permission: Permission.ScannerTemplatesRead,
     module: Module.ScannerTemplates,
   },
-  '/scanner-templates/**': {
+  '/settings/scanning/templates/**': {
     permission: Permission.ScannerTemplatesRead,
     module: Module.ScannerTemplates,
   },
-  '/template-sources': {
+  '/settings/scanning/template-sources': {
     permission: Permission.TemplateSourcesRead,
     module: Module.TemplateSources,
   },
-  '/template-sources/**': {
+  '/settings/scanning/template-sources/**': {
     permission: Permission.TemplateSourcesRead,
     module: Module.TemplateSources,
   },
