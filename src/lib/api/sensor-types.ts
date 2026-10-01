@@ -9,6 +9,22 @@
 // runner = CI/CD one-shot, worker = daemon, collector = asset discovery, sensor = EASM
 export type SensorType = 'runner' | 'worker' | 'collector' | 'sensor'
 
+/**
+ * Sensor role (RFC-023 §9.1, decision D18): what a sensor does, as opposed to
+ * its legacy `type`, which mixes what it does with how it runs. The API does
+ * not send a role yet (it arrives with RFC-023 Phase 2, together with the
+ * endpoint-agent and monitor roles); until then the role is derived from the
+ * legacy type exactly as the RFC maps it: worker, runner and the old EASM
+ * 'sensor' type scan, a collector collects.
+ */
+export type SensorRole = 'scanner' | 'collector'
+
+export const SENSOR_ROLES: readonly SensorRole[] = ['scanner', 'collector']
+
+export function sensorRoleOf(type: SensorType): SensorRole {
+  return type === 'collector' ? 'collector' : 'scanner'
+}
+
 // Admin-controlled status
 export type SensorStatus = 'active' | 'disabled' | 'revoked'
 

@@ -33,5 +33,5 @@ export const SENSOR_TYPE_LABELS: Record<SensorType, string> = {
   runner: 'Runner', // CI/CD pipeline runner
   worker: 'Worker', // Daemon worker
   collector: 'Collector', // Asset collector
-  sensor: 'Sensor', // EASM sensor
+  sensor: 'External (EASM)', // legacy type 'sensor': an EASM vantage point
 }

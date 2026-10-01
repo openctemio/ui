@@ -134,7 +134,7 @@ function TenableModeFields({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="sensor">Runner (sensor) — recommended</SelectItem>
+            <SelectItem value="sensor">Sensor — recommended</SelectItem>
             <SelectItem value="direct">Direct (backend → Tenable)</SelectItem>
           </SelectContent>
         </Select>
@@ -148,8 +148,8 @@ function SensorModeNote() {
     <div className="bg-muted/50 flex gap-2 rounded-lg border p-3">
       <ServerCog className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
       <p className="text-muted-foreground text-xs">
-        A runner in your environment connects to Tenable and pushes results back. Tenable
-        credentials are configured on the runner and are <strong>never stored</strong> in OpenCTEM.
+        A sensor in your environment connects to Tenable and pushes results back. Tenable
+        credentials are configured on the sensor and are <strong>never stored</strong> in OpenCTEM.
         After connecting, use <strong>Runner setup</strong> for deployment steps.
       </p>
     </div>
@@ -162,7 +162,7 @@ function DirectModeWarning() {
       <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
       <p className="text-xs text-amber-700 dark:text-amber-300">
         Direct mode stores Tenable API credentials in OpenCTEM and requires the backend to reach
-        Tenable. Prefer runner mode for segmented networks.
+        Tenable. Prefer sensor mode for segmented networks.
       </p>
     </div>
   )
@@ -434,9 +434,9 @@ function RunnerSetupDialog({
         <DialogHeader>
           <DialogTitle>Set up the Tenable runner</DialogTitle>
           <DialogDescription>
-            In runner (sensor) mode, a runner in your environment talks to Tenable and pushes
-            results to OpenCTEM over an outbound connection. OpenCTEM never reaches your appliance
-            or holds its credentials.
+            In sensor mode, a runner in your environment talks to Tenable and pushes results to
+            OpenCTEM over an outbound connection. OpenCTEM never reaches your appliance or holds its
+            credentials.
           </DialogDescription>
         </DialogHeader>
         <ol className="list-decimal space-y-3 ps-5 text-sm">
@@ -594,7 +594,7 @@ function ScannerCard({
               <h3 className="truncate font-semibold">{integration.name}</h3>
               <StatusBadge status={integration.status} />
               <Badge variant="secondary" className="text-xs">
-                {mode === 'sensor' ? 'Runner (sensor)' : 'Direct'}
+                {mode === 'sensor' ? 'Sensor' : 'Direct'}
               </Badge>
               {engine && (
                 <Badge variant="outline" className="text-xs">
@@ -730,7 +730,7 @@ export default function SecurityScannersPage() {
           description={`of ${scanners.length} configured`}
         />
         <StatsCard
-          title="Runner (sensor) mode"
+          title="Sensor mode"
           value={sensorMode}
           icon={ServerCog}
           description="Credentials stay in your environment"
