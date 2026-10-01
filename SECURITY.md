@@ -377,7 +377,7 @@ Runs on: push/PR to main/develop + weekly (Monday 00:00 UTC)
 | **npm audit**         | SCA        | HIGH+                              | Artifact upload (30-day retention)              |
 | **Trivy**             | Filesystem | CRITICAL, HIGH, MEDIUM             | GitHub Security tab (SARIF)                     |
 | **ESLint**            | SAST       | All rules                          | GitHub Security tab (SARIF)                     |
-| **Gitleaks**          | Secrets    | All                                | Optional (requires `ENABLE_GITLEAKS` + license) |
+| **Betterleaks**       | Secrets    | All                                | Every push and pull request (SARIF; replaced the licence-gated gitleaks job) |
 | **Snyk**              | SCA        | All                                | Optional (requires `ENABLE_SNYK` + token)       |
 | **Docker Image Scan** | Container  | CRITICAL, HIGH                     | Trivy on built image (main branch only)         |
 

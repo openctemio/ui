@@ -2,11 +2,11 @@
  * Scanner Template API Types
  *
  * TypeScript types for Custom Scanner Template Management
- * Supports Nuclei (YAML), Semgrep (YAML), and Gitleaks (TOML) templates
+ * Supports Nuclei (YAML), Semgrep (YAML), and Betterleaks (TOML) templates
  */
 
 // Template types supported by the platform
-export const TEMPLATE_TYPES = ['nuclei', 'semgrep', 'gitleaks'] as const
+export const TEMPLATE_TYPES = ['nuclei', 'semgrep', 'betterleaks'] as const
 
 export type TemplateType = (typeof TEMPLATE_TYPES)[number]
 
@@ -139,42 +139,42 @@ export interface ScannerTemplateListFilters {
 export const TEMPLATE_TYPE_DISPLAY_NAMES: Record<TemplateType, string> = {
   nuclei: 'Nuclei',
   semgrep: 'Semgrep',
-  gitleaks: 'Gitleaks',
+  betterleaks: 'Betterleaks',
 }
 
 // Template type descriptions
 export const TEMPLATE_TYPE_DESCRIPTIONS: Record<TemplateType, string> = {
   nuclei: 'Web vulnerability scanning templates (YAML)',
   semgrep: 'Static analysis security rules (YAML)',
-  gitleaks: 'Secret detection patterns (TOML)',
+  betterleaks: 'Secret detection rules (TOML, gitleaks format)',
 }
 
 // Template type file extensions
 export const TEMPLATE_TYPE_EXTENSIONS: Record<TemplateType, string> = {
   nuclei: '.yaml',
   semgrep: '.yaml',
-  gitleaks: '.toml',
+  betterleaks: '.toml',
 }
 
 // Template type content types
 export const TEMPLATE_TYPE_CONTENT_TYPES: Record<TemplateType, string> = {
   nuclei: 'application/x-yaml',
   semgrep: 'application/x-yaml',
-  gitleaks: 'application/toml',
+  betterleaks: 'application/toml',
 }
 
 // Template type max sizes (in bytes)
 export const TEMPLATE_TYPE_MAX_SIZES: Record<TemplateType, number> = {
   nuclei: 1024 * 1024, // 1MB
   semgrep: 512 * 1024, // 512KB
-  gitleaks: 256 * 1024, // 256KB
+  betterleaks: 256 * 1024, // 256KB
 }
 
 // Template type max rules
 export const TEMPLATE_TYPE_MAX_RULES: Record<TemplateType, number> = {
   nuclei: 100,
   semgrep: 500,
-  gitleaks: 1000,
+  betterleaks: 1000,
 }
 
 // Template status display names
@@ -208,7 +208,7 @@ export interface TemplateUsage {
   total_templates: number
   nuclei_templates: number
   semgrep_templates: number
-  gitleaks_templates: number
+  betterleaks_templates: number
   total_storage_bytes: number
 }
 
@@ -219,7 +219,7 @@ export interface TemplateQuota {
   max_templates: number
   max_templates_nuclei: number
   max_templates_semgrep: number
-  max_templates_gitleaks: number
+  max_templates_betterleaks: number
   max_total_storage_bytes: number
 }
 

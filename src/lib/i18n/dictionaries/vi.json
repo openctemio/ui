@@ -158,7 +158,7 @@
   "settings.item.scan-profiles": "Hồ sơ quét",
   "settings.desc.scan-profiles": "Cấu hình quét dùng lại: công cụ, cường độ và thời lượng.",
   "settings.item.scanner-templates": "Mẫu trình quét",
-  "settings.desc.scanner-templates": "Mẫu Nuclei, Semgrep và Gitleaks tùy chỉnh.",
+  "settings.desc.scanner-templates": "Mẫu Nuclei, Semgrep và Betterleaks tùy chỉnh.",
   "settings.item.template-sources": "Nguồn mẫu",
   "settings.desc.template-sources": "Nguồn Git, S3 và HTTP để đồng bộ mẫu.",
   "settings.item.source-credentials": "Thông tin xác thực nguồn",

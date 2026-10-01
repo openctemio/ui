@@ -117,7 +117,11 @@ export const TOOL_OPTIONS = [
     description: 'Container and dependency vulnerability scanning',
   },
   { value: 'nuclei', label: 'Nuclei', description: 'Web vulnerability scanner' },
-  { value: 'gitleaks', label: 'Gitleaks', description: 'Secret detection in git repositories' },
+  {
+    value: 'betterleaks',
+    label: 'Betterleaks',
+    description: 'Secret detection in code, git history and archives (replaces Gitleaks)',
+  },
   { value: 'checkov', label: 'Checkov', description: 'Infrastructure as code security scanner' },
   { value: 'tfsec', label: 'Tfsec', description: 'Terraform security scanner' },
   { value: 'grype', label: 'Grype', description: 'Software composition analysis (SCA)' },

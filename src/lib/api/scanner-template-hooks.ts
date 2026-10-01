@@ -2,7 +2,7 @@
  * Scanner Template API Hooks
  *
  * SWR hooks for Custom Scanner Template Management
- * Supports Nuclei (YAML), Semgrep (YAML), and Gitleaks (TOML) templates
+ * Supports Nuclei (YAML), Semgrep (YAML), and Betterleaks (TOML) templates
  */
 
 'use client'

@@ -55,7 +55,7 @@ const formSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
   description: z.string().max(500).optional(),
   source_type: z.enum(['git', 's3', 'http']),
-  template_type: z.enum(['nuclei', 'semgrep', 'gitleaks']),
+  template_type: z.enum(['nuclei', 'semgrep', 'betterleaks']),
   auto_sync_on_scan: z.boolean(),
   cache_ttl_minutes: z.number().min(5).max(1440),
   credential_id: z.string().optional(),
@@ -94,7 +94,7 @@ const SOURCE_TYPE_ICONS: Record<SourceType, React.ElementType> = {
 const TEMPLATE_TYPE_OPTIONS = [
   { value: 'nuclei', label: 'Nuclei', description: 'YAML vulnerability templates' },
   { value: 'semgrep', label: 'Semgrep', description: 'YAML SAST rules' },
-  { value: 'gitleaks', label: 'Gitleaks', description: 'TOML secret patterns' },
+  { value: 'betterleaks', label: 'Betterleaks', description: 'TOML secret patterns' },
 ]
 
 export function AddTemplateSourceDialog({
