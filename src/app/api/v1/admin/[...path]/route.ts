@@ -21,6 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { env } from '@/lib/env'
+import { applyClientIpHeaders } from '@/lib/api/client-ip-headers'
 
 /** Backend cookie name the admin API reads the /login refresh token from. */
 const BACKEND_REFRESH_COOKIE = 'refresh_token'
@@ -44,9 +45,11 @@ async function proxy(request: NextRequest, path: string[]): Promise<NextResponse
     const value = request.headers.get(name)
     if (value) headers.set(name, value)
   }
-  // X-Forwarded-For is deliberately NOT passed through: it is client-supplied
-  // here, and forwarding it would let a caller write any IP into the admin
-  // audit log. The generic proxy does not forward it either.
+  // X-Real-IP / X-Forwarded-For are client-supplied unless a reverse proxy in
+  // front of the UI overwrites them; forwarding them blindly would let a caller
+  // write any IP into the admin audit log. They are passed through only when the
+  // operator sets TRUST_PROXY_HEADERS=true (same rule as the generic proxy).
+  applyClientIpHeaders(headers, request.headers)
 
   const cookieParts = ADMIN_COOKIES.flatMap((name) => {
     const value = request.cookies.get(name)?.value
