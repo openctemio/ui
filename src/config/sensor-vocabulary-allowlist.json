@@ -66,6 +66,12 @@
       "files": "^src/features/assets/types/relationship\\.types\\.generated\\.ts$",
       "pattern": "runtime security agents",
       "reason": "Generated from the relationship-type catalogue; describes third-party EDR agents, not our sensors."
+    },
+    {
+      "id": "protocol-v1-refusal",
+      "files": "^src/lib/api/(sensor-protocol-guard\\.ts|__tests__/sensor-protocol-guard\\.test\\.ts)$",
+      "pattern": "'agent'",
+      "reason": "The web UI's /api/v1 proxy refuses the protocol v1 routes (first segment 'agent', a frozen wire name) with 421, so a sensor pointed at the UI is told to use the API address."
     }
   ],
   "excludedPaths": ["^src/lib/api/openapi/", "^src/lib/api/generated/"],
