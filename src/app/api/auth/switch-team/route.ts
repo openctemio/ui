@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { env } from '@/lib/env'
 import { markSwitchTeamCompleted } from '@/lib/api/switch-cooldown'
 import { devLog } from '@/lib/logger'
+import { csrfRejection, ensureCsrfCookie, rotatedRefreshToken } from '@/lib/server-auth-cookies'
 
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
 const REFRESH_TOKEN_COOKIE = env.auth.refreshCookieName
@@ -41,6 +42,9 @@ interface TokenExchangeResponse {
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   devLog.log('[SwitchTeam] Request received')
+  // Cookie-authenticated, state-changing: require the double-submit pair.
+  const csrf = csrfRejection(request)
+  if (csrf) return csrf
 
   try {
     // Parse request body
@@ -118,9 +122,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       path: '/',
     })
 
-    // Update refresh token if rotated
-    if (data.refresh_token) {
-      clientResponse.cookies.set(REFRESH_TOKEN_COOKIE, data.refresh_token, {
+    // Store the rotated refresh token (the API sends it in Set-Cookie only)
+    const rotated = rotatedRefreshToken(response, data)
+    if (rotated) {
+      clientResponse.cookies.set(REFRESH_TOKEN_COOKIE, rotated, {
         httpOnly: true,
         secure: process.env.SECURE_COOKIES !== 'false',
         sameSite: 'lax',
@@ -155,6 +160,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     markSwitchTeamCompleted()
 
     devLog.log('[SwitchTeam] Successfully switched to tenant:', data.tenant_slug)
+    ensureCsrfCookie(request, clientResponse)
     return clientResponse
   } catch (error) {
     devLog.error('[SwitchTeam] Error:', error)

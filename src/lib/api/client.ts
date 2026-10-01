@@ -137,7 +137,7 @@ async function tryRefreshToken(): Promise<boolean> {
   refreshPromise = (async () => {
     try {
       devLog.log('[API Client] Starting token refresh...')
-      const response = await fetch('/api/auth/refresh', {
+      const response = await csrfFetch('/api/auth/refresh', {
         method: 'POST',
         credentials: 'include',
       })
