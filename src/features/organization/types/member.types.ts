@@ -4,6 +4,8 @@
  * Type definitions for team member management
  */
 
+import type { SetupLinkOutcome } from '@/features/shared/components/one-time-setup-link'
+
 // ============================================
 // MEMBER TYPES
 // ============================================
@@ -46,6 +48,8 @@ export interface MemberWithUser extends Member {
   mfa_status?: MemberMfaStatus
   // RBAC roles (included when ?include=roles)
   rbac_roles?: MemberRBACRole[]
+  /** Account created by an admin whose password has not been set yet. */
+  pending_setup?: boolean
 }
 
 export interface MemberStats {
@@ -135,6 +139,34 @@ export const STATUS_DISPLAY: Record<
   active: { label: 'Active', color: 'text-green-400', bgColor: 'bg-green-500/20' },
   pending: { label: 'Pending', color: 'text-yellow-400', bgColor: 'bg-yellow-500/20' },
   suspended: { label: 'Suspended', color: 'text-orange-400', bgColor: 'bg-orange-500/20' },
+}
+
+// ============================================
+// ADMIN-CREATED USERS
+// ============================================
+
+/**
+ * POST /tenants/{tenant}/users — an owner/admin creates the account directly
+ * (no self-registration). Same RBAC role picker as invitations.
+ */
+export interface CreateTenantUserInput {
+  email: string
+  name: string
+  /** 1..10 RBAC role ids */
+  role_ids: string[]
+}
+
+export const MAX_ROLES_PER_USER = 10
+
+/**
+ * Response of POST /tenants/{tenant}/users and
+ * POST /tenants/{tenant}/users/{userId}/setup-link. `setup_token` is present
+ * only when no email was sent; show it once, never store it.
+ */
+export interface CreatedTenantUser extends SetupLinkOutcome {
+  user: { id: string; email: string; name: string }
+  membership_id: string
+  role: string
 }
 
 // Note: Membership level selection removed from UI.

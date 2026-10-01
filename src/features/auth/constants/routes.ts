@@ -27,6 +27,11 @@ export const AUTH_ROUTES = {
   RESET_PASSWORD: '/reset-password',
 
   /**
+   * Set password from an administrator-issued one-time setup link
+   */
+  SET_PASSWORD: '/set-password',
+
+  /**
    * OAuth callback handler
    */
   CALLBACK: '/auth/callback',

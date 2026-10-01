@@ -116,6 +116,11 @@ BACKEND_API_URL=http://localhost:8080
 
 # App identity
 NEXT_PUBLIC_APP_NAME=OpenCTEM
+
+# Forward X-Real-IP / X-Forwarded-For to the API (organization IP allowlists).
+# Only set true when a reverse proxy in front of the UI overwrites these
+# headers; otherwise they are browser-supplied and never forwarded.
+TRUST_PROXY_HEADERS=false
 ```
 
 See [`.env.example`](.env.example) for the full, authoritative list of variables the

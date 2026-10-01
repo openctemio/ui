@@ -24,6 +24,14 @@ export interface AuthProvidersResponse {
   }
   /** Whether the global SSO_ENTRA_* env fallback is enabled */
   sso_env_entra_enabled: boolean
+  /**
+   * Whether people may create their own account at /register. Off by default:
+   * administrators create accounts. An invitation link still allows sign-up for
+   * the invited email. Treat a missing value as false.
+   */
+  registration_enabled?: boolean
+  /** Who may create organizations (server policy). */
+  tenant_creation_mode?: string
 }
 
 // ============================================

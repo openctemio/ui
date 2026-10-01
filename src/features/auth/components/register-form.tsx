@@ -35,6 +35,7 @@ import { registerSchema, type RegisterInput } from '../schemas/auth.schema'
 import { registerAction } from '../actions/local-auth-actions'
 import { initiateSocialLogin, type SocialProvider } from '../actions/social-auth-actions'
 import { useAuthProviders } from '../api/use-auth-providers'
+import { invitationTokenFromReturnTo } from '../lib/self-register'
 
 // ============================================
 // TYPES
@@ -120,15 +121,11 @@ export function RegisterForm({
   // instead of falling back to the platform default. Without this,
   // setting EmailVerificationMode=never on a tenant has no effect for
   // brand-new users who don't yet have a membership in any tenant.
-  const invitationToken = useMemo(() => {
-    const returnTo = searchParams.get('returnTo')
-    if (!returnTo) return undefined
-    // Match /invitations/{token} or /invitations/{token}/anything. The
-    // token is opaque (40-100 chars from the backend) so we just take
-    // the next path segment.
-    const match = returnTo.match(/^\/invitations\/([^/?#]+)/)
-    return match?.[1]
-  }, [searchParams])
+  //
+  // With open registration disabled (the default), this token is also what
+  // lets an invited person create their account at all.
+  const returnTo = searchParams.get('returnTo')
+  const invitationToken = useMemo(() => invitationTokenFromReturnTo(returnTo), [returnTo])
 
   // Form setup with centralized schema
   const form = useForm<RegisterInput>({
@@ -160,7 +157,12 @@ export function RegisterForm({
           result.message ||
             'Registration successful! Please check your email to verify your account.'
         )
-        router.push(redirectTo)
+        // Invited: sign in and land back on the invitation to accept it.
+        router.push(
+          invitationToken && returnTo
+            ? `/login?returnTo=${encodeURIComponent(returnTo)}&email=${encodeURIComponent(data.email)}`
+            : redirectTo
+        )
       } else {
         toast.error(result.error || 'Registration failed')
       }

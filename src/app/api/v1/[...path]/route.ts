@@ -22,6 +22,7 @@ import { env } from '@/lib/env'
 export const maxDuration = 60 // seconds
 export const dynamic = 'force-dynamic'
 import { isInSwitchCooldown } from '@/lib/api/switch-cooldown'
+import { applyClientIpHeaders } from '@/lib/api/client-ip-headers'
 import { devLog } from '@/lib/logger'
 
 const ACCESS_TOKEN_COOKIE = env.auth.cookieName
@@ -262,6 +263,12 @@ async function proxyRequest(
       headers.set(header, value)
     }
   })
+
+  // Client IP (X-Real-IP / X-Forwarded-For) for the API's per-organization IP
+  // allowlist — forwarded ONLY when TRUST_PROXY_HEADERS=true, i.e. a reverse
+  // proxy in front of the UI overwrites them. Otherwise they are browser-supplied
+  // and would let a caller spoof its IP past the allowlist.
+  applyClientIpHeaders(headers, request.headers)
 
   // Get request body for non-GET requests (need to read it once since it can only be read once).
   // For multipart uploads (file attachments), read as raw bytes to preserve binary content.

@@ -122,6 +122,8 @@ services:
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-}
       # Cookie settings
       SECURE_COOKIES: ${SECURE_COOKIES:-true}
+      # true only behind a reverse proxy that OVERWRITES X-Real-IP/X-Forwarded-For
+      TRUST_PROXY_HEADERS: ${TRUST_PROXY_HEADERS:-false}
       COOKIE_MAX_AGE: ${COOKIE_MAX_AGE:-604800}
       # Token refresh
       ENABLE_TOKEN_REFRESH: ${ENABLE_TOKEN_REFRESH:-true}
