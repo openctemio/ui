@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2, Bot, Copy, Check, Eye, EyeOff, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Loader2, Bot, Check, ChevronRight, ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -32,9 +32,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { copyToClipboard } from '@/lib/clipboard'
 import { cn } from '@/lib/utils'
 
+import { OneTimeSecretField } from '@/features/shared'
 import { SensorTypeIcon } from './sensor-type-icon'
 import { ToolSelection, type ToolOption } from './tool-selection'
 import {
@@ -56,8 +56,6 @@ interface AddSensorDialogProps {
 export function AddSensorDialog({ open, onOpenChange, onSuccess }: AddSensorDialogProps) {
   const [step, setStep] = useState<1 | 2>(1)
   const [apiKey, setApiKey] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
-  const [showApiKey, setShowApiKey] = useState(false)
   const [selectedTools, setSelectedTools] = useState<string[]>([])
 
   const {
@@ -98,8 +96,6 @@ export function AddSensorDialog({ open, onOpenChange, onSuccess }: AddSensorDial
     if (open) {
       setStep(1)
       setApiKey(null)
-      setCopied(false)
-      setShowApiKey(false)
       setSelectedTools([])
       form.reset()
     }
@@ -145,21 +141,10 @@ export function AddSensorDialog({ open, onOpenChange, onSuccess }: AddSensorDial
     }
   }
 
-  const handleCopyApiKey = async () => {
-    if (apiKey) {
-      await copyToClipboard(apiKey)
-      setCopied(true)
-      toast.success('API key copied to clipboard')
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
-
   const handleClose = () => {
     form.reset()
     setStep(1)
     setApiKey(null)
-    setCopied(false)
-    setShowApiKey(false)
     setSelectedTools([])
     onOpenChange(false)
     if (apiKey) {
@@ -192,39 +177,7 @@ export function AddSensorDialog({ open, onOpenChange, onSuccess }: AddSensorDial
               </p>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">API Key</label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    readOnly
-                    type={showApiKey ? 'text' : 'password'}
-                    value={apiKey}
-                    className="pe-10 font-mono text-sm"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                  >
-                    {showApiKey ? (
-                      <EyeOff className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </Button>
-                </div>
-                <Button variant="outline" size="icon" onClick={handleCopyApiKey}>
-                  {copied ? (
-                    <Check className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
+            <OneTimeSecretField label="API key" value={apiKey} />
           </div>
 
           <DialogFooter>
