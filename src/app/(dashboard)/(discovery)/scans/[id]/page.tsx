@@ -46,6 +46,11 @@ import {
   type PipelineRun,
 } from '@/lib/api/scan-types'
 import { PIPELINE_TRIGGER_LABELS, type PipelineTriggerType } from '@/lib/api/pipeline-types'
+import {
+  isRunInProgress,
+  runTriggeredByLabel,
+  scanRunCounts,
+} from '@/features/scans/lib/run-display'
 
 // Format date helper
 function formatDate(dateString: string | undefined) {
@@ -99,11 +104,13 @@ export default function ScanDetailPage() {
 
   const recentRuns = useMemo(() => runsResponse?.data || [], [runsResponse])
 
-  // Calculate progress
-  const progress = useMemo(() => {
-    if (!config || config.total_runs === 0) return 0
-    return Math.round((config.successful_runs / config.total_runs) * 100)
-  }, [config])
+  // Run counts. The scan's counters only move when a run finishes, so the
+  // total adds the runs still in progress (see scanRunCounts).
+  const counts = useMemo(
+    () => (config ? scanRunCounts(config, recentRuns) : null),
+    [config, recentRuns]
+  )
+  const progress = counts?.successRate ?? 0
 
   // Action handlers
   const handleTriggerScan = async () => {
@@ -223,8 +230,10 @@ export default function ScanDetailPage() {
             {PIPELINE_TRIGGER_LABELS[row.original.trigger_type as PipelineTriggerType] ??
               row.original.trigger_type}
           </span>
-          {row.original.triggered_by && (
-            <span className="text-xs text-muted-foreground">{row.original.triggered_by}</span>
+          {runTriggeredByLabel(row.original) && (
+            <span className="text-xs text-muted-foreground">
+              {runTriggeredByLabel(row.original)}
+            </span>
           )}
         </div>
       ),
@@ -267,9 +276,7 @@ export default function ScanDetailPage() {
       enableHiding: false,
       cell: ({ row }) => {
         const run = row.original
-        const isActive =
-          run.status === 'pending' || run.status === 'queued' || run.status === 'running'
-        if (!isActive) return null
+        if (!isRunInProgress(run)) return null
         return (
           // PipelinesWrite, not ScansWrite. Cancel posts to
           // POST /pipeline-runs/{id}/cancel, and that route
@@ -459,8 +466,11 @@ export default function ScanDetailPage() {
                 <Target className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{config.total_runs}</p>
-                <p className="text-xs text-muted-foreground">Total Runs</p>
+                <p className="text-2xl font-bold">{counts?.total ?? config.total_runs}</p>
+                <p className="text-xs text-muted-foreground">
+                  Total Runs
+                  {counts && counts.inProgress > 0 && <> · {counts.inProgress} in progress</>}
+                </p>
               </div>
             </div>
           </CardContent>
