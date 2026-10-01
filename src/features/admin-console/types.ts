@@ -3,6 +3,8 @@
  * /api/v1/admin/* through its own proxy; nothing here is tenant-scoped.
  */
 
+import type { SetupLinkOutcome } from '@/features/shared/components/one-time-setup-link'
+
 export type AdminRole = 'super_admin' | 'ops_admin' | 'readonly'
 
 export interface AdminIdentity {
@@ -103,7 +105,51 @@ export interface CreateOrganizationInput {
   name: string
   slug: string
   description?: string
+  /** May be someone without an account yet: the API creates it. */
   owner_email: string
+  /** Name for a newly created owner account. */
+  owner_name?: string
+}
+
+/**
+ * POST /admin/tenants response. `owner_setup` is present when the owner's
+ * account was created by this call; its `setup_token` (no email sent) is shown
+ * once and never stored.
+ */
+export interface CreatedOrganization extends AdminOrganization {
+  owner_setup?: SetupLinkOutcome
+}
+
+/** Membership level an admin can give someone they add to an organization. */
+export type AdminOrgUserRole = 'admin' | 'member' | 'viewer'
+
+export interface AdminOrganizationUser {
+  user_id: string
+  email: string
+  name: string
+  /** owner | admin | member | viewer */
+  role: string
+  status: string
+  pending_setup: boolean
+  joined_at: string
+}
+
+export interface AdminOrganizationUserList {
+  data: AdminOrganizationUser[]
+  total: number
+}
+
+export interface AdminCreateOrganizationUserInput {
+  email: string
+  name: string
+  role: AdminOrgUserRole
+}
+
+/** Same shape as the tenant-side create-user response. */
+export interface AdminCreatedOrganizationUser extends SetupLinkOutcome {
+  user: { id: string; email: string; name: string }
+  membership_id: string
+  role: string
 }
 
 /** super_admin > ops_admin > readonly. */
