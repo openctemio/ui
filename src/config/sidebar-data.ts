@@ -816,7 +816,9 @@ export const sidebarData: SidebarData = {
               title: 'SCIM Provisioning',
               url: '/settings/integrations/scim-tokens',
               icon: Users,
-              subModuleKey: 'scim',
+              // No subModuleKey: the API has no `scim` sub-module (see
+              // integrations sub-modules in api migrations/000004), so the
+              // key that was here hid this entry from every tenant.
             },
             {
               title: 'AI Access (MCP)',
