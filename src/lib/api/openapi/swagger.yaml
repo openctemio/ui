@@ -2372,6 +2372,8 @@ definitions:
         type: object
       first_seen_at:
         type: string
+      has_secret:
+        type: boolean
       id:
         type: string
       identifier:
@@ -2382,7 +2384,9 @@ definitions:
         type: boolean
       last_seen_at:
         type: string
-      secret_value:
+      secret_fingerprint:
+        type: string
+      secret_masked:
         type: string
       severity:
         type: string
@@ -2556,6 +2560,8 @@ definitions:
         type: object
       first_seen_at:
         type: string
+      has_secret:
+        type: boolean
       id:
         type: string
       identifier:
@@ -2566,7 +2572,9 @@ definitions:
         type: boolean
       last_seen_at:
         type: string
-      secret_value:
+      secret_fingerprint:
+        type: string
+      secret_masked:
         type: string
       severity:
         type: string
@@ -2690,6 +2698,94 @@ definitions:
       rate_pct:
         type: number
     type: object
+  github_com_openctemio_api_internal_app_scan.PreviewError:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+    type: object
+  github_com_openctemio_api_internal_app_scan.PreviewTarget:
+    properties:
+      addresses:
+        description: what a hostname resolved to
+        items:
+          type: string
+        type: array
+      reason:
+        type: string
+      sensor_id:
+        description: the sensor its job would be pinned to
+        type: string
+      status:
+        description: zone | unzoned | uncovered
+        type: string
+      target:
+        type: string
+      zone_id:
+        type: string
+      zone_name:
+        type: string
+    type: object
+  github_com_openctemio_api_internal_app_scan.PreviewZone:
+    properties:
+      jobs:
+        type: integer
+      queued_jobs:
+        description: 'jobs with no online sensor yet: they wait in the zone'
+        type: integer
+      sensor_ids:
+        items:
+          type: string
+        type: array
+      targets:
+        type: integer
+      zone_id:
+        type: string
+      zone_name:
+        type: string
+    type: object
+  github_com_openctemio_api_internal_app_scan.ZoneRoutingPreview:
+    properties:
+      error:
+        $ref: '#/definitions/github_com_openctemio_api_internal_app_scan.PreviewError'
+      excluded:
+        items:
+          type: string
+        type: array
+      excluded_targets:
+        type: integer
+      jobs:
+        type: integer
+      not_routed_reason:
+        type: string
+      resolved_targets:
+        type: integer
+      routed:
+        type: boolean
+      selected_zone_id:
+        type: string
+      targets:
+        items:
+          $ref: '#/definitions/github_com_openctemio_api_internal_app_scan.PreviewTarget'
+        type: array
+      targets_per_job:
+        type: integer
+      uncovered_targets:
+        type: integer
+      unzoned_targets:
+        type: integer
+      warnings:
+        items:
+          type: string
+        type: array
+      zones:
+        items:
+          $ref: '#/definitions/github_com_openctemio_api_internal_app_scan.PreviewZone'
+        type: array
+      zones_enabled:
+        type: boolean
+    type: object
   github_com_openctemio_api_internal_app_scancoverage.CoverageStats:
     properties:
       coverage_percent:
@@ -2738,6 +2834,7 @@ definitions:
     - SERVICE_UNAVAILABLE
     - VALIDATION_FAILED
     - RATE_LIMIT_EXCEEDED
+    - UPSTREAM_ERROR
     - MFA_ENROLLMENT_REQUIRED
     type: string
     x-enum-varnames:
@@ -2752,6 +2849,7 @@ definitions:
     - CodeServiceUnavailable
     - CodeValidationFailed
     - CodeRateLimitExceeded
+    - CodeUpstreamError
     - CodeMFAEnrollmentRequired
   github_com_openctemio_api_pkg_apierror.Error:
     properties:
@@ -3353,8 +3451,31 @@ definitions:
     type: object
   github_com_openctemio_api_pkg_sensorproto_legacyv1.Heartbeat:
     properties:
+      actions:
+        description: |-
+          Actions are typed control directives from a closed set: pause,
+          resume, drain, rotate_key, update. Never free-form text.
+        items:
+          type: string
+        type: array
       agent_id:
         type: string
+      config_version:
+        description: |-
+          ConfigVersion is an opaque digest of what the platform governs about
+          the sensor; it changes when that changes. Sent to doorbell-aware
+          sensors only.
+        type: string
+      next_heartbeat_seconds:
+        description: |-
+          NextHeartbeatSeconds is the server-advised interval to the next
+          heartbeat, already bounded by the server.
+        type: integer
+      pending_jobs:
+        description: |-
+          PendingJobs is how many commands this sensor could claim right now
+          (capped at 100): poll GET /api/v1/agent/commands when it is > 0.
+        type: integer
       status:
         type: string
       tenant_id:
@@ -5904,6 +6025,10 @@ definitions:
         - workflow
         - single
         type: string
+      scan_zone_id:
+        description: ScanZoneID pins every target to one scan zone; empty = Automatic
+          routing.
+        type: string
       scanner_config:
         additionalProperties: {}
         type: object
@@ -6004,6 +6129,19 @@ definitions:
     - scan_type
     - schedule_type
     type: object
+  internal_infra_http_handler.CreateScanZoneRequest:
+    properties:
+      description:
+        type: string
+      is_default:
+        type: boolean
+      name:
+        type: string
+      ranges:
+        items:
+          type: string
+        type: array
+    type: object
   internal_infra_http_handler.CreateScannerTemplateRequest:
     properties:
       content:
@@ -6025,7 +6163,7 @@ definitions:
         enum:
         - nuclei
         - semgrep
-        - gitleaks
+        - betterleaks
         type: string
     required:
     - content
@@ -6153,7 +6291,7 @@ definitions:
         enum:
         - nuclei
         - semgrep
-        - gitleaks
+        - betterleaks
         type: string
     required:
     - name
@@ -6251,52 +6389,6 @@ definitions:
     required:
     - install_method
     - name
-    type: object
-  internal_infra_http_handler.CreateVulnerabilityRequest:
-    properties:
-      cve_id:
-        type: string
-      cvss_score:
-        maximum: 10
-        minimum: 0
-        type: number
-      cvss_vector:
-        maxLength: 100
-        type: string
-      description:
-        maxLength: 10000
-        type: string
-      epss_percentile:
-        description: 0-100 percentile; a 0-1 fraction is rescaled
-        maximum: 100
-        minimum: 0
-        type: number
-      epss_score:
-        maximum: 1
-        minimum: 0
-        type: number
-      exploit_available:
-        type: boolean
-      exploit_maturity:
-        type: string
-      fixed_versions:
-        items:
-          type: string
-        maxItems: 50
-        type: array
-      remediation:
-        maxLength: 5000
-        type: string
-      severity:
-        type: string
-      title:
-        maxLength: 500
-        minLength: 1
-        type: string
-    required:
-    - cve_id
-    - severity
-    - title
     type: object
   internal_infra_http_handler.CredentialContextReq:
     properties:
@@ -7615,6 +7707,28 @@ definitions:
       timestamp:
         type: string
     type: object
+  internal_infra_http_handler.HeartbeatOutbox:
+    properties:
+      dead_letter_count:
+        description: DeadLetterCount is the number of items the platform refused for
+          good.
+        type: integer
+      evicted_count:
+        description: |-
+          EvictedCount is the number of items dropped by the size/age cap since
+          the sensor process started.
+        type: integer
+      oldest_age_seconds:
+        description: OldestAgeSeconds is the age of the oldest pending item (0 when
+          empty).
+        type: integer
+      pending_bytes:
+        description: PendingBytes is the size on disk of those items.
+        type: integer
+      pending_count:
+        description: PendingCount is the number of items waiting to be delivered.
+        type: integer
+    type: object
   internal_infra_http_handler.HeartbeatRequest:
     properties:
       active_jobs:
@@ -7647,6 +7761,14 @@ definitions:
         type: number
       network_tx_mbps:
         type: number
+      outbox:
+        allOf:
+        - $ref: '#/definitions/internal_infra_http_handler.HeartbeatOutbox'
+        description: |-
+          Outbox is the state of the sensor's durable outbox (results queued on
+          disk, waiting to be delivered). Optional: SDKs without an outbox omit
+          it, and a heartbeat without it leaves the stored snapshot untouched.
+          Display data only; values are clamped before they are stored.
       region:
         type: string
       scanners:
@@ -7904,6 +8026,36 @@ definitions:
         example: "2024-01-15T10:30:00Z"
         type: string
     type: object
+  internal_infra_http_handler.InvitationListItem:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      invited_by:
+        type: string
+      pending:
+        type: boolean
+      role:
+        type: string
+      role_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  internal_infra_http_handler.InvitationListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/internal_infra_http_handler.InvitationListItem'
+        type: array
+      total:
+        type: integer
+    type: object
   internal_infra_http_handler.LicensingModuleResponse:
     properties:
       category:
@@ -7938,6 +8090,23 @@ definitions:
       page_size:
         type: integer
       total_count:
+        type: integer
+    type: object
+  internal_infra_http_handler.ListResponse-github_com_openctemio_api_pkg_domain_component_VulnerableComponent:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_openctemio_api_pkg_domain_component.VulnerableComponent'
+        type: array
+      links:
+        $ref: '#/definitions/internal_infra_http_handler.PaginationLinks'
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
         type: integer
     type: object
   internal_infra_http_handler.ListResponse-internal_infra_http_handler_AssetGroupResponse:
@@ -8589,6 +8758,16 @@ definitions:
       type:
         type: string
     type: object
+  internal_infra_http_handler.PaginatedResponse:
+    properties:
+      items: {}
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total_count:
+        type: integer
+    type: object
   internal_infra_http_handler.PaginationLinks:
     properties:
       first:
@@ -9145,6 +9324,35 @@ definitions:
     - new_password
     - token
     type: object
+  internal_infra_http_handler.RevealCredentialResponse:
+    properties:
+      id:
+        type: string
+      secret_value:
+        type: string
+    type: object
+  internal_infra_http_handler.RunDispatchResponse:
+    properties:
+      excluded_targets:
+        type: integer
+      resolved_targets:
+        type: integer
+      sensor_routing:
+        description: |-
+          SensorRouting is where the run's commands were queued: "tenant" or
+          "platform" (shared platform sensors), decided at trigger time.
+        type: string
+      uncovered_targets:
+        items:
+          $ref: '#/definitions/internal_infra_http_handler.RunUncoveredTarget'
+        type: array
+      warnings:
+        items:
+          type: string
+        type: array
+      zone_routing:
+        $ref: '#/definitions/internal_infra_http_handler.RunZoneRouting'
+    type: object
   internal_infra_http_handler.RunResponse:
     properties:
       asset_id:
@@ -9155,6 +9363,8 @@ definitions:
         type: integer
       created_at:
         type: string
+      dispatch:
+        $ref: '#/definitions/internal_infra_http_handler.RunDispatchResponse'
       error_message:
         type: string
       failed_steps:
@@ -9191,6 +9401,53 @@ definitions:
         type: string
       triggered_by:
         type: string
+      triggered_by_name:
+        description: display name, when triggered_by is a user id
+        type: string
+    type: object
+  internal_infra_http_handler.RunUncoveredTarget:
+    properties:
+      reason:
+        type: string
+      target:
+        type: string
+    type: object
+  internal_infra_http_handler.RunZoneRoute:
+    properties:
+      jobs:
+        type: integer
+      queued_jobs:
+        description: waiting for a healthy sensor of the zone
+        type: integer
+      sensor_ids:
+        description: sensors the jobs were pinned to
+        items:
+          type: string
+        type: array
+      targets:
+        type: integer
+      zone_id:
+        type: string
+      zone_name:
+        type: string
+    type: object
+  internal_infra_http_handler.RunZoneRouting:
+    properties:
+      jobs:
+        type: integer
+      targets_per_job:
+        type: integer
+      uncovered_targets:
+        type: integer
+      unzoned_targets:
+        type: integer
+      zone_id:
+        description: 'workflow runs: the one zone the run is bound to'
+        type: string
+      zones:
+        items:
+          $ref: '#/definitions/internal_infra_http_handler.RunZoneRoute'
+        type: array
     type: object
   internal_infra_http_handler.SCMExtensionResponse:
     properties:
@@ -9366,6 +9623,9 @@ definitions:
         type: boolean
       scan_type:
         type: string
+      scan_zone_id:
+        description: null = Automatic routing
+        type: string
       scanner_config:
         additionalProperties: {}
         type: object
@@ -9502,6 +9762,10 @@ definitions:
           type: string
         type: array
       target_scope:
+        enum:
+        - all
+        - selected
+        - tag
         type: string
       target_tags:
         items:
@@ -9581,6 +9845,113 @@ definitions:
         type: integer
       total:
         type: integer
+    type: object
+  internal_infra_http_handler.ScanZoneCoverageResponse:
+    properties:
+      has_default_zone:
+        type: boolean
+      in_zones:
+        type: integer
+      inventory_addresses:
+        type: integer
+      outside_private:
+        type: integer
+      outside_public:
+        type: integer
+      warnings:
+        items:
+          $ref: '#/definitions/internal_infra_http_handler.ScanZoneCoverageWarning'
+        type: array
+      zones:
+        items:
+          $ref: '#/definitions/internal_infra_http_handler.ScanZoneCoverageZone'
+        type: array
+    type: object
+  internal_infra_http_handler.ScanZoneCoverageWarning:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+      zone_id:
+        type: string
+    type: object
+  internal_infra_http_handler.ScanZoneCoverageZone:
+    properties:
+      addresses:
+        type: integer
+      assigned_sensors:
+        type: integer
+      has_private_range:
+        type: boolean
+      healthy_sensors:
+        type: integer
+      is_default:
+        type: boolean
+      name:
+        type: string
+      zone_id:
+        type: string
+    type: object
+  internal_infra_http_handler.ScanZoneListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/internal_infra_http_handler.ScanZoneResponse'
+        type: array
+      total:
+        type: integer
+    type: object
+  internal_infra_http_handler.ScanZonePreviewRequest:
+    properties:
+      asset_group_ids:
+        items:
+          type: string
+        type: array
+      pipeline_id:
+        description: |-
+          PipelineID is accepted so a client can send its whole draft; a workflow
+          is routed the same whatever its steps, so it does not change the result.
+        type: string
+      scan_type:
+        type: string
+      scan_zone_id:
+        type: string
+      scanner_name:
+        type: string
+      targets:
+        items:
+          type: string
+        type: array
+      targets_per_job:
+        type: integer
+    type: object
+  internal_infra_http_handler.ScanZoneResponse:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_default:
+        type: boolean
+      name:
+        type: string
+      ranges:
+        items:
+          type: string
+        type: array
+      sensor_ids:
+        items:
+          type: string
+        type: array
+      tenant_id:
+        type: string
+      updated_at:
+        type: string
     type: object
   internal_infra_http_handler.ScannerTemplateResponse:
     properties:
@@ -9736,6 +10107,21 @@ definitions:
         maxLength: 500
         type: string
     type: object
+  internal_infra_http_handler.SensorOutboxResponse:
+    properties:
+      dead_letter_count:
+        type: integer
+      evicted_count:
+        type: integer
+      oldest_age_seconds:
+        type: integer
+      pending_bytes:
+        type: integer
+      pending_count:
+        type: integer
+      reported_at:
+        type: string
+    type: object
   internal_infra_http_handler.SensorRegenerateAPIKeyResponse:
     properties:
       api_key:
@@ -9789,6 +10175,18 @@ definitions:
         type: number
       name:
         type: string
+      outbox:
+        allOf:
+        - $ref: '#/definitions/internal_infra_http_handler.SensorOutboxResponse'
+        description: |-
+          Outbox is the last outbox state the sensor reported on its heartbeat;
+          null when it never reported one (an SDK without a durable outbox).
+      outbox_warning:
+        description: |-
+          OutboxWarning is true when the last snapshot shows lost or stuck
+          results: dead_letter_count > 0, evicted_count > 0, or
+          oldest_age_seconds > 3600. False when there is no snapshot.
+        type: boolean
       region:
         type: string
       status:
@@ -9844,12 +10242,39 @@ definitions:
       total:
         type: integer
     type: object
+  internal_infra_http_handler.SensorSuppressionRule:
+    properties:
+      asset_id:
+        type: string
+      expires_at:
+        type: string
+      path_pattern:
+        type: string
+      rule_id:
+        type: string
+      tool_name:
+        type: string
+    type: object
+  internal_infra_http_handler.SensorSuppressionsResponse:
+    properties:
+      count:
+        type: integer
+      rules:
+        items:
+          $ref: '#/definitions/internal_infra_http_handler.SensorSuppressionRule'
+        type: array
+    type: object
   internal_infra_http_handler.SessionsResponse:
     properties:
       sessions:
         items:
           $ref: '#/definitions/github_com_openctemio_api_internal_app.SessionInfo'
         type: array
+    type: object
+  internal_infra_http_handler.SetSyncEnabledRequest:
+    properties:
+      enabled:
+        type: boolean
     type: object
   internal_infra_http_handler.SetTagsRequest:
     properties:
@@ -9982,11 +10407,42 @@ definitions:
           type: string
         type: array
     type: object
+  internal_infra_http_handler.SyncStatusResponse:
+    properties:
+      enabled:
+        type: boolean
+      last_error:
+        type: string
+      last_sync_at:
+        type: string
+      last_sync_status:
+        type: string
+      next_sync_at:
+        type: string
+      records_synced:
+        type: integer
+      source:
+        type: string
+    type: object
+  internal_infra_http_handler.TargetMappingTypesResponse:
+    properties:
+      asset_types:
+        description: AssetTypes are the asset types a target type can map to.
+        items:
+          type: string
+        type: array
+      target_types:
+        description: TargetTypes are the scanner target types (tool supported_targets
+          values).
+        items:
+          type: string
+        type: array
+    type: object
   internal_infra_http_handler.TemplateQuotaData:
     properties:
       max_templates:
         type: integer
-      max_templates_gitleaks:
+      max_templates_betterleaks:
         type: integer
       max_templates_nuclei:
         type: integer
@@ -10044,7 +10500,7 @@ definitions:
     type: object
   internal_infra_http_handler.TemplateUsageData:
     properties:
-      gitleaks_templates:
+      betterleaks_templates:
         type: integer
       nuclei_templates:
         type: integer
@@ -10424,6 +10880,12 @@ definitions:
       context:
         additionalProperties: {}
         type: object
+    type: object
+  internal_infra_http_handler.TriggerSyncRequest:
+    properties:
+      source:
+        description: empty or "all" for all sources
+        type: string
     type: object
   internal_infra_http_handler.UnreadCountResponse:
     properties:
@@ -10958,6 +11420,10 @@ definitions:
         type: integer
       run_on_tenant_runner:
         type: boolean
+      scan_zone_id:
+        description: 'ScanZoneID: omitted = unchanged, "" = Automatic routing, id
+          = pin to that zone.'
+        type: string
       scanner_config:
         additionalProperties: {}
         type: object
@@ -11036,6 +11502,10 @@ definitions:
         maxItems: 100
         type: array
       target_scope:
+        enum:
+        - all
+        - selected
+        - tag
         type: string
       target_tags:
         items:
@@ -11065,6 +11535,19 @@ definitions:
         type: string
     required:
     - status
+    type: object
+  internal_infra_http_handler.UpdateScanZoneRequest:
+    properties:
+      description:
+        type: string
+      is_default:
+        type: boolean
+      name:
+        type: string
+      ranges:
+        items:
+          type: string
+        type: array
     type: object
   internal_infra_http_handler.UpdateScannerTemplateRequest:
     properties:
@@ -11230,48 +11713,6 @@ definitions:
         maxLength: 200
         type: string
     type: object
-  internal_infra_http_handler.UpdateVulnerabilityRequest:
-    properties:
-      cvss_score:
-        maximum: 10
-        minimum: 0
-        type: number
-      cvss_vector:
-        maxLength: 100
-        type: string
-      description:
-        maxLength: 10000
-        type: string
-      epss_percentile:
-        description: 0-100 percentile; a 0-1 fraction is rescaled
-        maximum: 100
-        minimum: 0
-        type: number
-      epss_score:
-        maximum: 1
-        minimum: 0
-        type: number
-      exploit_available:
-        type: boolean
-      exploit_maturity:
-        type: string
-      fixed_versions:
-        items:
-          type: string
-        maxItems: 50
-        type: array
-      remediation:
-        maxLength: 5000
-        type: string
-      severity:
-        type: string
-      status:
-        type: string
-      title:
-        maxLength: 500
-        minLength: 1
-        type: string
-    type: object
   internal_infra_http_handler.UserInfo:
     properties:
       email:
@@ -11349,7 +11790,7 @@ definitions:
         enum:
         - nuclei
         - semgrep
-        - gitleaks
+        - betterleaks
         type: string
     required:
     - content
@@ -11876,6 +12317,22 @@ paths:
       summary: Configure the administrators' identity provider
       tags:
       - Admin Platform IdP
+  /admin/target-mappings/types:
+    get:
+      description: The target types and asset types that POST /admin/target-mappings
+        accepts. Any admin role.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.TargetMappingTypesResponse'
+      security:
+      - BearerAuth: []
+      summary: List accepted target-mapping types (platform admin)
+      tags:
+      - Admin Target Mappings
   /admin/tenants:
     get:
       description: Cross-tenant list of organizations with size and SSO posture. Newest
@@ -12311,6 +12768,84 @@ paths:
       summary: Create a user in an organization (platform admin)
       tags:
       - Admin Organizations
+  /admin/threat-intel/sync:
+    get:
+      description: Status of the platform-wide EPSS and CISA KEV feed syncs.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Threat-intelligence feed sync status (platform admin)
+      tags:
+      - Admin Threat Intelligence
+    post:
+      consumes:
+      - application/json
+      description: Syncs the platform-wide EPSS and/or CISA KEV feed now. ops_admin
+        or super_admin; audited.
+      parameters:
+      - description: Feed (epss, kev, all); empty = all
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/internal_infra_http_handler.TriggerSyncRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Run a threat-intelligence feed sync (platform admin)
+      tags:
+      - Admin Threat Intelligence
+  /admin/threat-intel/sync/{source}:
+    patch:
+      consumes:
+      - application/json
+      description: Turns the platform-wide sync of one feed on or off for every organization.
+        ops_admin or super_admin; audited.
+      parameters:
+      - description: Feed (epss, kev)
+        in: path
+        name: source
+        required: true
+        type: string
+      - description: Enabled
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infra_http_handler.SetSyncEnabledRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.SyncStatusResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Enable or disable a threat-intelligence feed sync (platform admin)
+      tags:
+      - Admin Threat Intelligence
   /admin/users/{id}/break-glass-test:
     post:
       description: 'Super admin only, and not the break-glass account itself: records
@@ -12581,8 +13116,17 @@ paths:
     post:
       consumes:
       - application/json
-      description: Send a heartbeat to indicate sensor is alive
+      description: 'Send a heartbeat to indicate sensor is alive. The response is
+        also a doorbell (RFC-023 §9.2a): pending_jobs > 0 means poll GET /agent/commands
+        now; next_heartbeat_seconds is the advised interval; actions are typed directives
+        (pause, resume, drain, rotate_key, update). A sensor that sends X-OpenCTEM-Sensor-Features:
+        doorbell also gets config_version and, while disabled, a 200 with the pause
+        action instead of a 401.'
       parameters:
+      - description: Optional protocol features, comma-separated (doorbell)
+        in: header
+        name: X-OpenCTEM-Sensor-Features
+        type: string
       - description: Heartbeat data
         in: body
         name: request
@@ -12787,6 +13331,20 @@ paths:
         required: true
         schema:
           type: object
+      - description: Repository the log was produced from, when the log has no runs[].versionControlProvenance.
+          Required in that case unless the artifact URIs name a github.com/gitlab.com/bitbucket.org
+          repository.
+        in: query
+        name: repository_url
+        type: string
+      - description: Branch that was scanned
+        in: query
+        name: branch
+        type: string
+      - description: Commit that was scanned
+        in: query
+        name: commit_sha
+        type: string
       produces:
       - application/json
       responses:
@@ -12957,6 +13515,31 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Update scan session
+      tags:
+      - Sensor
+  /agent/suppressions:
+    get:
+      description: Approved, unexpired suppression rules of the authenticated sensor's
+        tenant, for the sensor-side security gate. Empty when the suppressions module
+        is disabled. Platform sensors (no tenant) get 403.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.SensorSuppressionsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - ApiKeyAuth: []
+      summary: Active suppression rules for the sensor's tenant
       tags:
       - Sensor
   /agents:
@@ -16297,10 +16880,15 @@ paths:
     get:
       description: Retrieves components with vulnerability details for the tenant
       parameters:
-      - default: 10
-        description: Limit results
+      - default: 1
+        description: Page number
         in: query
-        name: limit
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: per_page
         type: integer
       produces:
       - application/json
@@ -16308,9 +16896,7 @@ paths:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/github_com_openctemio_api_pkg_domain_component.VulnerableComponent'
-            type: array
+            $ref: '#/definitions/internal_infra_http_handler.ListResponse-github_com_openctemio_api_pkg_domain_component_VulnerableComponent'
         "400":
           description: Bad Request
           schema:
@@ -16559,6 +17145,47 @@ paths:
           schema:
             $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
       summary: Mark credential as resolved
+      tags:
+      - Credentials
+  /credentials/{id}/reveal:
+    post:
+      description: Returns the plaintext secret of one leaked credential. Requires
+        findings:credentials:reveal; every call is written to the audit log before
+        the secret is returned, and the call fails if it cannot be audited.
+      parameters:
+      - description: Credential ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.RevealCredentialResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      summary: Reveal a leaked credential's secret
       tags:
       - Credentials
   /credentials/enums:
@@ -18700,15 +19327,30 @@ paths:
         name: groupId
         required: true
         type: string
+      - default: 20
+        description: Page size
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/internal_infra_http_handler.GroupOwnershipResponse'
-            type: array
+            allOf:
+            - $ref: '#/definitions/internal_infra_http_handler.PaginatedResponse'
+            - properties:
+                items:
+                  items:
+                    $ref: '#/definitions/internal_infra_http_handler.GroupOwnershipResponse'
+                  type: array
+              type: object
         "404":
           description: Not Found
           schema:
@@ -18818,15 +19460,30 @@ paths:
         name: groupId
         required: true
         type: string
+      - default: 20
+        description: Page size
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/internal_infra_http_handler.GroupMemberWithUserResponse'
-            type: array
+            allOf:
+            - $ref: '#/definitions/internal_infra_http_handler.PaginatedResponse'
+            - properties:
+                items:
+                  items:
+                    $ref: '#/definitions/internal_infra_http_handler.GroupMemberWithUserResponse'
+                  type: array
+              type: object
         "404":
           description: Not Found
           schema:
@@ -21579,13 +22236,338 @@ paths:
       summary: Get scan session statistics
       tags:
       - Scan Sessions
+  /scan-zones:
+    get:
+      description: Every scan zone of the tenant with its ranges and assigned sensors
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.ScanZoneListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List scan zones
+      tags:
+      - Scan Zones
+    post:
+      consumes:
+      - application/json
+      description: 'Ranges are validated and normalized: no overlap with the built-in
+        deny list (loopback, link-local/metadata, multicast, unspecified), IPv4 no
+        wider than /8, IPv6 no wider than /32, at most 256 ranges. Only the default
+        zone may have no ranges.'
+      parameters:
+      - description: Scan zone
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infra_http_handler.CreateScanZoneRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.ScanZoneResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "409":
+          description: name taken, or a default zone already exists
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Create scan zone
+      tags:
+      - Scan Zones
+  /scan-zones/{id}:
+    delete:
+      description: Refused with 409 while jobs routed to the zone are queued or running.
+      parameters:
+      - description: Scan zone ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Delete scan zone
+      tags:
+      - Scan Zones
+    get:
+      parameters:
+      - description: Scan zone ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.ScanZoneResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get scan zone
+      tags:
+      - Scan Zones
+    patch:
+      consumes:
+      - application/json
+      description: Omitted fields are unchanged. New ranges apply to the next scan
+        trigger; jobs already routed keep their zone.
+      parameters:
+      - description: Scan zone ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Changes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infra_http_handler.UpdateScanZoneRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.ScanZoneResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update scan zone
+      tags:
+      - Scan Zones
+  /scan-zones/{id}/sensors/{sensorId}:
+    delete:
+      description: Jobs of the zone still queued for that sensor go back to the zone's
+        pool.
+      parameters:
+      - description: Scan zone ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Sensor ID
+        in: path
+        name: sensorId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Remove a sensor from a scan zone
+      tags:
+      - Scan Zones
+    put:
+      description: Idempotent. The sensor must belong to the same tenant; platform
+        sensors cannot be assigned.
+      parameters:
+      - description: Scan zone ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Sensor ID
+        in: path
+        name: sensorId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.ScanZoneResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Assign a sensor to a scan zone
+      tags:
+      - Scan Zones
+  /scan-zones/coverage:
+    get:
+      description: How inventory IP addresses fall into zones (outside_private are
+        skipped by scans), per-zone sensor health, and warnings such as private ranges
+        without a healthy sensor.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.ScanZoneCoverageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Scan zone coverage
+      tags:
+      - Scan Zones
+  /scan-zones/preview:
+    post:
+      consumes:
+      - application/json
+      description: 'For a scan about to be created: which targets go to which zone
+        and sensor, which scope excludes, and which are not scanned and why. Computed
+        with the trigger''s routing code; creates nothing. Hostnames are resolved
+        now, as at trigger time. What a trigger would refuse is reported in `error`
+        (NO_TARGETS, ALL_TARGETS_EXCLUDED, NO_ZONE_COVERAGE, ZONE_SPLIT_REQUIRED,
+        TOO_MANY_JOBS, INVALID_TARGET).'
+      parameters:
+      - description: Scan targets and settings
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infra_http_handler.ScanZonePreviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_internal_app_scan.ZoneRoutingPreview'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "404":
+          description: scan zone or asset group not in this tenant
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Preview scan zone routing
+      tags:
+      - Scan Zones
   /scanner-templates:
     get:
       consumes:
       - application/json
       description: Get a paginated list of scanner templates for the current tenant
       parameters:
-      - description: Filter by template type (nuclei, semgrep, gitleaks)
+      - description: Filter by template type (nuclei, semgrep, betterleaks)
         in: query
         name: template_type
         type: string
@@ -21634,7 +22616,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Create a new custom scanner template (Nuclei, Semgrep, or Gitleaks)
+      description: Create a new custom scanner template (Nuclei, Semgrep, or Betterleaks)
       parameters:
       - description: Template data
         in: body
@@ -25441,7 +26423,7 @@ paths:
         in: query
         name: source_type
         type: string
-      - description: Filter by template type (nuclei, semgrep, gitleaks)
+      - description: Filter by template type (nuclei, semgrep, betterleaks)
         in: query
         name: template_type
         type: string
@@ -26105,6 +27087,32 @@ paths:
       summary: Get tool stats
       tags:
       - Tool Stats
+  /tenants/{tenant}/invitations:
+    get:
+      description: 'Pending invitations of the organization. No token: tokens are
+        stored hashed and the raw token is returned only once, by the create call.'
+      parameters:
+      - description: Tenant ID or slug
+        in: path
+        name: tenant
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.InvitationListResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List pending invitations
+      tags:
+      - Tenants
   /tenants/{tenant}/users:
     post:
       consumes:
@@ -26186,6 +27194,42 @@ paths:
       summary: Issue a new set-password link for a pending account
       tags:
       - Tenants
+  /threat-intel/sync:
+    post:
+      description: Always 403. The EPSS and CISA KEV feed syncs are shared by every
+        organization; a platform administrator runs or toggles them from the admin
+        console.
+      produces:
+      - application/json
+      responses:
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      summary: Run the threat-intelligence feed sync (not allowed)
+      tags:
+      - Threat Intelligence
+  /threat-intel/sync/{source}:
+    patch:
+      description: Always 403. The EPSS and CISA KEV feed syncs are shared by every
+        organization; a platform administrator runs or toggles them from the admin
+        console.
+      parameters:
+      - description: Feed (epss, kev)
+        in: path
+        name: source
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      summary: Change the threat-intelligence feed sync (not allowed)
+      tags:
+      - Threat Intelligence
   /tools:
     get:
       consumes:
@@ -27037,63 +28081,38 @@ paths:
       tags:
       - Vulnerabilities
     post:
-      consumes:
-      - application/json
-      description: Creates a new CVE vulnerability record
-      parameters:
-      - description: Vulnerability data
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/internal_infra_http_handler.CreateVulnerabilityRequest'
+      description: Always 403. The CVE catalog is shared by every organization and
+        is maintained from sensor reports and the threat-intelligence feeds; an organization
+        cannot create, edit or delete its entries.
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
+        "403":
+          description: Forbidden
           schema:
-            $ref: '#/definitions/internal_infra_http_handler.VulnerabilityResponse'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Conflict
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Create vulnerability
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      summary: Write the shared CVE catalog (not allowed)
       tags:
       - Vulnerabilities
   /vulnerabilities/{id}:
     delete:
-      description: Deletes a vulnerability
+      description: Always 403. The CVE catalog is shared by every organization and
+        is maintained from sensor reports and the threat-intelligence feeds; an organization
+        cannot create, edit or delete its entries.
       parameters:
       - description: Vulnerability ID
         in: path
         name: id
         required: true
         type: string
+      produces:
+      - application/json
       responses:
-        "204":
-          description: No Content
-        "400":
-          description: Bad Request
+        "403":
+          description: Forbidden
           schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Delete vulnerability
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      summary: Edit or delete a shared CVE catalog entry (not allowed)
       tags:
       - Vulnerabilities
     get:
@@ -27127,41 +28146,23 @@ paths:
       tags:
       - Vulnerabilities
     put:
-      consumes:
-      - application/json
-      description: Updates a vulnerability
+      description: Always 403. The CVE catalog is shared by every organization and
+        is maintained from sensor reports and the threat-intelligence feeds; an organization
+        cannot create, edit or delete its entries.
       parameters:
       - description: Vulnerability ID
         in: path
         name: id
         required: true
         type: string
-      - description: Vulnerability data
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/internal_infra_http_handler.UpdateVulnerabilityRequest'
       produces:
       - application/json
       responses:
-        "200":
-          description: OK
+        "403":
+          description: Forbidden
           schema:
-            $ref: '#/definitions/internal_infra_http_handler.VulnerabilityResponse'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Update vulnerability
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      summary: Edit or delete a shared CVE catalog entry (not allowed)
       tags:
       - Vulnerabilities
   /vulnerabilities/{id}/affected-assets:
