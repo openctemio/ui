@@ -6,7 +6,34 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { slugify, generateStepKey, generateTempStepId, getPageNumbers } from './utils'
+import {
+  slugify,
+  generateStepKey,
+  generateTempStepId,
+  getPageNumbers,
+  sanitizeExternalUrl,
+} from './utils'
+
+// ============================================
+// sanitizeExternalUrl TESTS (XSS guard for window.open / href)
+// ============================================
+
+describe('sanitizeExternalUrl', () => {
+  it('passes through http/https URLs', () => {
+    expect(sanitizeExternalUrl('https://github.com/x/y')).toBe('https://github.com/x/y')
+    expect(sanitizeExternalUrl('http://example.com/')).toBe('http://example.com/')
+  })
+
+  it('prefixes a bare host with https', () => {
+    expect(sanitizeExternalUrl('github.com/x')).toBe('https://github.com/x')
+  })
+
+  it('neutralises dangerous schemes to "#"', () => {
+    expect(sanitizeExternalUrl('javascript:alert(document.domain)')).toBe('#')
+    expect(sanitizeExternalUrl('data:text/html,<script>alert(1)</script>')).toBe('#')
+    expect(sanitizeExternalUrl('vbscript:msgbox(1)')).toBe('#')
+  })
+})
 
 // ============================================
 // SLUGIFY TESTS
