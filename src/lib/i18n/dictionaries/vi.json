@@ -14,7 +14,7 @@
   "common.noData": "Không có dữ liệu",
   "common.rowsExported": "Đã xuất {count} dòng",
   "common.language": "Ngôn ngữ",
-  "nav.item.agents": "Agent",
+  "nav.item.sensors": "Sensor",
   "nav.item.all-components": "Tất cả thành phần",
   "nav.item.apis": "API",
   "nav.item.asset-groups": "Nhóm tài sản",

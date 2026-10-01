@@ -29,8 +29,8 @@ import { useHasModule } from '@/features/integrations/api/use-tenant-modules'
 import type { AuditLog, AuditAction, AuditResult } from '@/lib/api/audit-types'
 import { getActionLabel, getSeverityColor, getResultColor } from '@/lib/api/audit-types'
 
-interface AgentAuditLogProps {
-  agentId: string
+interface SensorAuditLogProps {
+  sensorId: string
 }
 
 /**
@@ -38,15 +38,15 @@ interface AgentAuditLogProps {
  */
 function getActionIcon(action: AuditAction) {
   const iconMap: Partial<Record<AuditAction, React.ReactNode>> = {
-    'agent.created': <Plus className="h-4 w-4" />,
-    'agent.updated': <Pencil className="h-4 w-4" />,
-    'agent.deleted': <Trash className="h-4 w-4" />,
-    'agent.activated': <Power className="h-4 w-4" />,
-    'agent.deactivated': <PowerOff className="h-4 w-4" />,
-    'agent.revoked': <Ban className="h-4 w-4" />,
-    'agent.key_regenerated': <KeyRound className="h-4 w-4" />,
-    'agent.connected': <Wifi className="h-4 w-4" />,
-    'agent.disconnected': <WifiOff className="h-4 w-4" />,
+    'sensor.created': <Plus className="h-4 w-4" />,
+    'sensor.updated': <Pencil className="h-4 w-4" />,
+    'sensor.deleted': <Trash className="h-4 w-4" />,
+    'sensor.activated': <Power className="h-4 w-4" />,
+    'sensor.deactivated': <PowerOff className="h-4 w-4" />,
+    'sensor.revoked': <Ban className="h-4 w-4" />,
+    'sensor.key_regenerated': <KeyRound className="h-4 w-4" />,
+    'sensor.connected': <Wifi className="h-4 w-4" />,
+    'sensor.disconnected': <WifiOff className="h-4 w-4" />,
   }
   return iconMap[action] || <FileText className="h-4 w-4" />
 }
@@ -189,12 +189,12 @@ function AuditLogSkeleton() {
 }
 
 /**
- * Agent Audit Log component
- * Displays audit history for a specific agent
+ * Sensor Audit Log component
+ * Displays audit history for a specific sensor
  */
-export function AgentAuditLog({ agentId }: AgentAuditLogProps) {
+export function SensorAuditLog({ sensorId }: SensorAuditLogProps) {
   const { hasModule: hasAuditModule, isLoading: moduleLoading } = useHasModule('audit')
-  const { data, isLoading, error } = useResourceAuditHistory('agent', agentId, {
+  const { data, isLoading, error } = useResourceAuditHistory('sensor', sensorId, {
     refreshInterval: 30000, // Refresh every 30 seconds
   })
 

@@ -87,9 +87,9 @@ export interface CapabilityCategoriesResponse {
  */
 export interface CapabilityUsageStats {
   tool_count: number
-  agent_count: number
+  sensor_count: number
   tool_names?: string[]
-  agent_names?: string[]
+  sensor_names?: string[]
 }
 
 /**

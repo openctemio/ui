@@ -1,15 +1,15 @@
 'use client'
 
 import { Main } from '@/components/layout'
-import { AgentsSection } from '@/features/agents'
+import { SensorsSection } from '@/features/sensors'
 
 export default function RunnersPage() {
   return (
     <Main>
-      <AgentsSection
+      <SensorsSection
         typeFilter="runner"
         title="CI/CD runners"
-        description="Agents that run scans inside your CI/CD pipelines."
+        description="Sensors that run scans inside your CI/CD pipelines."
       />
     </Main>
   )

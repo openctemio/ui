@@ -167,7 +167,7 @@ export function CapabilitiesSection() {
     // Check if capability is in use and force delete is not enabled
     const hasUsage =
       selectedUsageStats &&
-      (selectedUsageStats.tool_count > 0 || selectedUsageStats.agent_count > 0)
+      (selectedUsageStats.tool_count > 0 || selectedUsageStats.sensor_count > 0)
 
     if (hasUsage && !forceDelete) {
       toast.error('Please confirm force delete to remove capability in use')
@@ -205,7 +205,7 @@ export function CapabilitiesSection() {
 
   // Check if selected capability has usage
   const selectedHasUsage =
-    selectedUsageStats && (selectedUsageStats.tool_count > 0 || selectedUsageStats.agent_count > 0)
+    selectedUsageStats && (selectedUsageStats.tool_count > 0 || selectedUsageStats.sensor_count > 0)
 
   const toolbarStart = (
     <>
@@ -456,19 +456,19 @@ export function CapabilitiesSection() {
                           </span>
                         </div>
                       )}
-                      {selectedUsageStats.agent_count > 0 && (
+                      {selectedUsageStats.sensor_count > 0 && (
                         <div className="flex items-center gap-1.5">
                           <Bot className="h-4 w-4" />
                           <span>
-                            {selectedUsageStats.agent_count} agent
-                            {selectedUsageStats.agent_count > 1 ? 's' : ''}
+                            {selectedUsageStats.sensor_count} sensor
+                            {selectedUsageStats.sensor_count > 1 ? 's' : ''}
                           </span>
                         </div>
                       )}
                     </div>
                     {/* Show affected items */}
                     {(selectedUsageStats.tool_names?.length ||
-                      selectedUsageStats.agent_names?.length) && (
+                      selectedUsageStats.sensor_names?.length) && (
                       <div className="text-xs text-muted-foreground space-y-1 pt-1 border-t border-amber-500/20">
                         {selectedUsageStats.tool_names &&
                           selectedUsageStats.tool_names.length > 0 && (
@@ -479,13 +479,13 @@ export function CapabilitiesSection() {
                                 ` (+${selectedUsageStats.tool_names.length - 3} more)`}
                             </p>
                           )}
-                        {selectedUsageStats.agent_names &&
-                          selectedUsageStats.agent_names.length > 0 && (
+                        {selectedUsageStats.sensor_names &&
+                          selectedUsageStats.sensor_names.length > 0 && (
                             <p>
-                              <strong>Agents:</strong>{' '}
-                              {selectedUsageStats.agent_names.slice(0, 3).join(', ')}
-                              {selectedUsageStats.agent_names.length > 3 &&
-                                ` (+${selectedUsageStats.agent_names.length - 3} more)`}
+                              <strong>Sensors:</strong>{' '}
+                              {selectedUsageStats.sensor_names.slice(0, 3).join(', ')}
+                              {selectedUsageStats.sensor_names.length > 3 &&
+                                ` (+${selectedUsageStats.sensor_names.length - 3} more)`}
                             </p>
                           )}
                       </div>
@@ -507,7 +507,7 @@ export function CapabilitiesSection() {
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    This capability is not currently used by any tools or agents.
+                    This capability is not currently used by any tools or sensors.
                   </p>
                 )}
               </div>

@@ -316,8 +316,8 @@ export interface RequestValidationResult {
 
 /**
  * Request a CTEM Stage-4 validation run for a finding (RFC-011).
- * POST /api/v1/findings/{id}/validate — dispatches a safe-check job to an agent;
- * the outcome is applied to the finding asynchronously when the agent reports back.
+ * POST /api/v1/findings/{id}/validate — dispatches a safe-check job to a sensor;
+ * the outcome is applied to the finding asynchronously when the sensor reports back.
  */
 export function useRequestValidationApi(findingId: string) {
   const { currentTenant } = useTenant()
@@ -332,14 +332,14 @@ export function useRequestValidationApi(findingId: string) {
 
 /**
  * True when an error returned by {@link useRequestValidationApi} indicates that
- * no validation-capable agent is currently online for the tenant. The API
- * signals this as a 400 wrapping `ErrNoValidationAgent` whose message contains
- * "no validation-capable agent is online". Callers surface a deploy-an-agent
+ * no validation-capable sensor is currently online for the tenant. The API
+ * signals this as a 400 wrapping `ErrNoValidationSensor` whose message contains
+ * "no validation-capable sensor is online". Callers surface a deploy-a-sensor
  * hint instead of a generic failure toast.
  */
-export function isNoValidationAgentError(error: unknown): boolean {
+export function isNoValidationSensorError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : typeof error === 'string' ? error : ''
-  return /no validation-capable agent/i.test(message)
+  return /no validation-capable sensor/i.test(message)
 }
 
 /** A single validation-evidence record recorded against a finding. */

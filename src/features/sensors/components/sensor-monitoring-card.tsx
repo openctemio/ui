@@ -26,19 +26,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import type { Agent } from '@/lib/api/agent-types'
-import { AgentTypeIcon, AGENT_TYPE_COLORS } from './agent-type-icon'
+import type { Sensor } from '@/lib/api/sensor-types'
+import { SensorTypeIcon, SENSOR_TYPE_COLORS } from './sensor-type-icon'
 
-interface AgentMonitoringCardProps {
-  agent: Agent
-  onEdit: (agent: Agent) => void
-  onViewConfig: (agent: Agent) => void
-  onActivate: (agent: Agent) => void
-  onDeactivate: (agent: Agent) => void
-  onViewDetails: (agent: Agent) => void
+interface SensorMonitoringCardProps {
+  sensor: Sensor
+  onEdit: (sensor: Sensor) => void
+  onViewConfig: (sensor: Sensor) => void
+  onActivate: (sensor: Sensor) => void
+  onDeactivate: (sensor: Sensor) => void
+  onViewDetails: (sensor: Sensor) => void
 }
 
-// Note: Online status now comes from the health field in Agent type
+// Note: Online status now comes from the health field in Sensor type
 // The backend tracks heartbeat and sets health = 'online' | 'offline' | 'error' | 'unknown'
 
 // Format uptime from last_seen_at
@@ -54,27 +54,27 @@ function formatUptime(lastSeenAt?: string): string {
   return `${Math.floor(diffMs / 86400000)}d ago`
 }
 
-export function AgentMonitoringCard({
-  agent,
+export function SensorMonitoringCard({
+  sensor,
   onEdit,
   onViewConfig,
   onActivate,
   onDeactivate,
   onViewDetails,
-}: AgentMonitoringCardProps) {
+}: SensorMonitoringCardProps) {
   // Use health field from backend (heartbeat-based)
-  const isOnline = agent.status === 'active' && agent.health === 'online'
-  const isActive = agent.status === 'active'
-  const hasError = agent.health === 'error'
+  const isOnline = sensor.status === 'active' && sensor.health === 'online'
+  const isActive = sensor.status === 'active'
+  const hasError = sensor.health === 'error'
 
   // Mock metrics - will be replaced when backend supports
-  // These could come from agent.metadata or a separate metrics endpoint
-  // Using deterministic hash based on agent ID for consistent display
-  const hash = agent.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)
+  // These could come from sensor.metadata or a separate metrics endpoint
+  // Using deterministic hash based on sensor ID for consistent display
+  const hash = sensor.id.split('').reduce((a, b) => a + b.charCodeAt(0), 0)
   const metrics = {
     cpu: (hash % 60) + 20,
     memory: (hash % 50) + 30,
-    activeJobs: agent.status === 'active' ? (hash % 5) + 1 : 0,
+    activeJobs: sensor.status === 'active' ? (hash % 5) + 1 : 0,
   }
 
   return (
@@ -82,11 +82,11 @@ export function AgentMonitoringCard({
       className={cn(
         'transition-all hover:border-primary/50 cursor-pointer',
         isOnline && 'border-green-500/30',
-        !isOnline && agent.status === 'active' && !hasError && 'border-yellow-500/30',
-        agent.status === 'disabled' && 'border-gray-500/30 opacity-75',
+        !isOnline && sensor.status === 'active' && !hasError && 'border-yellow-500/30',
+        sensor.status === 'disabled' && 'border-gray-500/30 opacity-75',
         hasError && 'border-red-500/30'
       )}
-      onClick={() => onViewDetails(agent)}
+      onClick={() => onViewDetails(sensor)}
     >
       <CardContent className="p-4">
         {/* Header */}
@@ -96,10 +96,10 @@ export function AgentMonitoringCard({
               <div
                 className={cn(
                   'flex h-10 w-10 items-center justify-center rounded-lg',
-                  AGENT_TYPE_COLORS[agent.type]
+                  SENSOR_TYPE_COLORS[sensor.type]
                 )}
               >
-                <AgentTypeIcon type={agent.type} className="h-5 w-5" />
+                <SensorTypeIcon type={sensor.type} className="h-5 w-5" />
               </div>
               {/* Online indicator */}
               <div
@@ -110,9 +110,9 @@ export function AgentMonitoringCard({
               />
             </div>
             <div>
-              <h3 className="font-medium text-sm">{agent.name}</h3>
+              <h3 className="font-medium text-sm">{sensor.name}</h3>
               <p className="text-xs text-muted-foreground">
-                {agent.hostname || agent.ip_address || 'No host info'}
+                {sensor.hostname || sensor.ip_address || 'No host info'}
               </p>
             </div>
           </div>
@@ -124,26 +124,26 @@ export function AgentMonitoringCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={() => onViewDetails(agent)}>
+              <DropdownMenuItem onClick={() => onViewDetails(sensor)}>
                 <Activity className="me-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit(agent)}>
+              <DropdownMenuItem onClick={() => onEdit(sensor)}>
                 <Settings className="me-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onViewConfig(agent)}>
+              <DropdownMenuItem onClick={() => onViewConfig(sensor)}>
                 <Settings className="me-2 h-4 w-4" />
                 View Config
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              {agent.status === 'disabled' || agent.status === 'revoked' ? (
-                <DropdownMenuItem onClick={() => onActivate(agent)} className="text-green-500">
+              {sensor.status === 'disabled' || sensor.status === 'revoked' ? (
+                <DropdownMenuItem onClick={() => onActivate(sensor)} className="text-green-500">
                   <Power className="me-2 h-4 w-4" />
                   Activate
                 </DropdownMenuItem>
-              ) : agent.status === 'active' ? (
-                <DropdownMenuItem onClick={() => onDeactivate(agent)} className="text-amber-500">
+              ) : sensor.status === 'active' ? (
+                <DropdownMenuItem onClick={() => onDeactivate(sensor)} className="text-amber-500">
                   <PowerOff className="me-2 h-4 w-4" />
                   Deactivate
                 </DropdownMenuItem>
@@ -176,10 +176,10 @@ export function AgentMonitoringCard({
             </Badge>
           )}
 
-          {agent.error_count > 0 && (
+          {sensor.error_count > 0 && (
             <Badge variant="secondary" className="bg-red-500/10 text-red-500 text-xs">
               <AlertTriangle className="me-1 h-3 w-3" />
-              {agent.error_count}
+              {sensor.error_count}
             </Badge>
           )}
         </div>
@@ -225,7 +225,7 @@ export function AgentMonitoringCard({
               <TooltipTrigger asChild>
                 <span className="flex items-center gap-1">
                   <Activity className="h-3 w-3" />
-                  {agent.total_scans.toLocaleString()} scans
+                  {sensor.total_scans.toLocaleString()} scans
                 </span>
               </TooltipTrigger>
               <TooltipContent>Total scans completed</TooltipContent>
@@ -237,12 +237,12 @@ export function AgentMonitoringCard({
               <TooltipTrigger asChild>
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {formatUptime(agent.last_seen_at)}
+                  {formatUptime(sensor.last_seen_at)}
                 </span>
               </TooltipTrigger>
               <TooltipContent>
                 Last seen:{' '}
-                {agent.last_seen_at ? new Date(agent.last_seen_at).toLocaleString() : 'Never'}
+                {sensor.last_seen_at ? new Date(sensor.last_seen_at).toLocaleString() : 'Never'}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

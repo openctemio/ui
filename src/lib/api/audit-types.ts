@@ -82,16 +82,16 @@ export type AuditAction =
   // Data actions
   | 'data.exported'
   | 'data.imported'
-  // Agent actions
-  | 'agent.created'
-  | 'agent.updated'
-  | 'agent.deleted'
-  | 'agent.activated'
-  | 'agent.deactivated'
-  | 'agent.revoked'
-  | 'agent.key_regenerated'
-  | 'agent.connected'
-  | 'agent.disconnected'
+  // Sensor actions
+  | 'sensor.created'
+  | 'sensor.updated'
+  | 'sensor.deleted'
+  | 'sensor.activated'
+  | 'sensor.deactivated'
+  | 'sensor.revoked'
+  | 'sensor.key_regenerated'
+  | 'sensor.connected'
+  | 'sensor.disconnected'
 
 /**
  * Resource types - maps to backend audit.ResourceType
@@ -112,7 +112,7 @@ export type AuditResourceType =
   | 'asset'
   | 'settings'
   | 'token'
-  | 'agent'
+  | 'sensor'
 
 /**
  * Audit result - maps to backend audit.Result
@@ -285,16 +285,16 @@ export function getActionLabel(action: AuditAction): string {
     // Data actions
     'data.exported': 'Data Exported',
     'data.imported': 'Data Imported',
-    // Agent actions
-    'agent.created': 'Agent Created',
-    'agent.updated': 'Agent Updated',
-    'agent.deleted': 'Agent Deleted',
-    'agent.activated': 'Agent Activated',
-    'agent.deactivated': 'Agent Deactivated',
-    'agent.revoked': 'Agent Revoked',
-    'agent.key_regenerated': 'API Key Regenerated',
-    'agent.connected': 'Agent Connected',
-    'agent.disconnected': 'Agent Disconnected',
+    // Sensor actions
+    'sensor.created': 'Sensor Created',
+    'sensor.updated': 'Sensor Updated',
+    'sensor.deleted': 'Sensor Deleted',
+    'sensor.activated': 'Sensor Activated',
+    'sensor.deactivated': 'Sensor Deactivated',
+    'sensor.revoked': 'Sensor Revoked',
+    'sensor.key_regenerated': 'API Key Regenerated',
+    'sensor.connected': 'Sensor Connected',
+    'sensor.disconnected': 'Sensor Disconnected',
   }
   return labels[action] || action
 }

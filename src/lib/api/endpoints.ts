@@ -24,7 +24,7 @@ export const API_BASE = {
   VULNERABILITIES: '/api/v1/vulnerabilities',
   DASHBOARD: '/api/v1/dashboard',
   AUDIT_LOGS: '/api/v1/audit-logs',
-  AGENTS: '/api/v1/agents',
+  SENSORS: '/api/v1/sensors',
   SCAN_PROFILES: '/api/v1/scan-profiles',
   SCANNER_TEMPLATES: '/api/v1/scanner-templates',
   TEMPLATE_SOURCES: '/api/v1/template-sources',
@@ -39,7 +39,7 @@ export const API_BASE = {
   CUSTOM_CAPABILITIES: '/api/v1/custom-capabilities',
   SCANS: '/api/v1/scans',
   EXPOSURES: '/api/v1/exposures',
-  AGENT_INGEST: '/api/v1/agent/ingest',
+  SENSOR_INGEST: '/api/v1/sensor/ingest',
   THREAT_INTEL: '/api/v1/threat-intel',
   PLATFORM: '/api/v1/platform',
 } as const
@@ -981,125 +981,125 @@ export const auditLogEndpoints = {
 } as const
 
 // ============================================
-// AGENT ENDPOINTS
+// SENSOR ENDPOINTS
 // ============================================
 
 import type {
-  AgentListFilters,
-  AgentSessionListFilters,
-  AgentDailyStatsListFilters,
-} from './agent-types'
+  SensorListFilters,
+  SensorSessionListFilters,
+  SensorDailyStatsListFilters,
+} from './sensor-types'
 
 /**
- * Agent endpoints for managing agents (runners, workers, collectors, sensors)
+ * Sensor endpoints for managing sensors (runners, workers, collectors, sensors)
  */
-export const agentEndpoints = {
+export const sensorEndpoints = {
   /**
-   * List agents with optional filters
+   * List sensors with optional filters
    */
-  list: (filters?: AgentListFilters) => {
+  list: (filters?: SensorListFilters) => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.AGENTS}${queryString}`
+    return `${API_BASE.SENSORS}${queryString}`
   },
 
   /**
-   * Get agent by ID
+   * Get sensor by ID
    */
-  get: (agentId: string) => `${API_BASE.AGENTS}/${agentId}`,
+  get: (sensorId: string) => `${API_BASE.SENSORS}/${sensorId}`,
 
   /**
-   * Create a new agent
+   * Create a new sensor
    */
-  create: () => API_BASE.AGENTS,
+  create: () => API_BASE.SENSORS,
 
   /**
-   * Update agent
+   * Update sensor
    */
-  update: (agentId: string) => `${API_BASE.AGENTS}/${agentId}`,
+  update: (sensorId: string) => `${API_BASE.SENSORS}/${sensorId}`,
 
   /**
-   * Delete agent
+   * Delete sensor
    */
-  delete: (agentId: string) => `${API_BASE.AGENTS}/${agentId}`,
+  delete: (sensorId: string) => `${API_BASE.SENSORS}/${sensorId}`,
 
   /**
-   * Regenerate agent API key
+   * Regenerate sensor API key
    */
-  regenerateKey: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/regenerate-key`,
+  regenerateKey: (sensorId: string) => `${API_BASE.SENSORS}/${sensorId}/regenerate-key`,
 
   /**
-   * Get agent statistics
+   * Get sensor statistics
    */
-  stats: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/stats`,
+  stats: (sensorId: string) => `${API_BASE.SENSORS}/${sensorId}/stats`,
 
   /**
-   * Tenant-wide agent stats (status/health/type/mode breakdowns).
+   * Tenant-wide sensor stats (status/health/type/mode breakdowns).
    * SQL-aggregated server-side; replaces client-side .filter().length.
    */
-  tenantStats: () => `${API_BASE.AGENTS}/stats`,
+  tenantStats: () => `${API_BASE.SENSORS}/stats`,
 
   /**
-   * Activate agent (set status to active)
+   * Activate sensor (set status to active)
    */
-  activate: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/activate`,
+  activate: (sensorId: string) => `${API_BASE.SENSORS}/${sensorId}/activate`,
 
   /**
-   * Deactivate agent (set status to disabled)
+   * Deactivate sensor (set status to disabled)
    */
-  deactivate: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/deactivate`,
+  deactivate: (sensorId: string) => `${API_BASE.SENSORS}/${sensorId}/deactivate`,
 
   /**
-   * Revoke agent (permanently revoke access)
+   * Revoke sensor (permanently revoke access)
    */
-  revoke: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/revoke`,
+  revoke: (sensorId: string) => `${API_BASE.SENSORS}/${sensorId}/revoke`,
 
   /**
    * Get available capabilities for tenant
-   * Returns unique capability names from all agents (tenant + platform) accessible to the tenant
-   * @param includePlatform - Whether to include platform agents (default: true)
+   * Returns unique capability names from all sensors (tenant + platform) accessible to the tenant
+   * @param includePlatform - Whether to include platform sensors (default: true)
    */
   availableCapabilities: (includePlatform: boolean = true) =>
-    `${API_BASE.AGENTS}/available-capabilities?include_platform=${includePlatform}`,
+    `${API_BASE.SENSORS}/available-capabilities?include_platform=${includePlatform}`,
 
   // ============================================
-  // AGENT ANALYTICS (Sessions & Daily Stats)
+  // SENSOR ANALYTICS (Sessions & Daily Stats)
   // ============================================
 
   /**
-   * List agent sessions
+   * List sensor sessions
    */
-  listSessions: (agentId: string, filters?: AgentSessionListFilters) => {
+  listSessions: (sensorId: string, filters?: SensorSessionListFilters) => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.AGENTS}/${agentId}/sessions${queryString}`
+    return `${API_BASE.SENSORS}/${sensorId}/sessions${queryString}`
   },
 
   /**
-   * Get active session for an agent
+   * Get active session for a sensor
    */
-  getActiveSession: (agentId: string) => `${API_BASE.AGENTS}/${agentId}/sessions/active`,
+  getActiveSession: (sensorId: string) => `${API_BASE.SENSORS}/${sensorId}/sessions/active`,
 
   /**
-   * Get session stats for an agent
+   * Get session stats for a sensor
    */
-  getSessionStats: (agentId: string, filters?: { started_at?: string; ended_at?: string }) => {
+  getSessionStats: (sensorId: string, filters?: { started_at?: string; ended_at?: string }) => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.AGENTS}/${agentId}/sessions/stats${queryString}`
+    return `${API_BASE.SENSORS}/${sensorId}/sessions/stats${queryString}`
   },
 
   /**
-   * List daily stats for an agent
+   * List daily stats for a sensor
    */
-  listDailyStats: (agentId: string, filters?: AgentDailyStatsListFilters) => {
+  listDailyStats: (sensorId: string, filters?: SensorDailyStatsListFilters) => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.AGENTS}/${agentId}/stats/daily${queryString}`
+    return `${API_BASE.SENSORS}/${sensorId}/stats/daily${queryString}`
   },
 
   /**
-   * Get time series data for an agent
+   * Get time series data for a sensor
    */
-  getTimeSeries: (agentId: string, filters?: { from?: string; to?: string }) => {
+  getTimeSeries: (sensorId: string, filters?: { from?: string; to?: string }) => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.AGENTS}/${agentId}/stats/timeseries${queryString}`
+    return `${API_BASE.SENSORS}/${sensorId}/stats/timeseries${queryString}`
   },
 } as const
 
@@ -2084,22 +2084,22 @@ export const ingestEndpoints = {
   /**
    * Ingest SARIF format data (Static Analysis Results Interchange Format)
    */
-  sarif: () => `${API_BASE.AGENT_INGEST}/sarif`,
+  sarif: () => `${API_BASE.SENSOR_INGEST}/sarif`,
 
   /**
    * Ingest CTIS format data (CTEM Ingest Schema)
    */
-  ctis: () => `${API_BASE.AGENT_INGEST}/ctis`,
+  ctis: () => `${API_BASE.SENSOR_INGEST}/ctis`,
 } as const
 
 // ============================================
-// PLATFORM AGENT ENDPOINTS
+// PLATFORM SENSOR ENDPOINTS
 // ============================================
 
-import type { PlatformAgentListFilters } from './platform-types'
+import type { PlatformSensorListFilters } from './platform-types'
 
 /**
- * Platform agent endpoints for tiered platform agents
+ * Platform sensor endpoints for tiered platform sensors
  * Supports three tiers: shared, dedicated, premium
  */
 export const platformEndpoints = {
@@ -2109,11 +2109,11 @@ export const platformEndpoints = {
   stats: () => `${API_BASE.PLATFORM}/stats`,
 
   /**
-   * List platform agents with optional filters
+   * List platform sensors with optional filters
    */
-  agents: (filters?: PlatformAgentListFilters) => {
+  sensors: (filters?: PlatformSensorListFilters) => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.PLATFORM}/agents${queryString}`
+    return `${API_BASE.PLATFORM}/sensors${queryString}`
   },
 } as const
 
@@ -2170,7 +2170,7 @@ export const endpoints = {
   findings: findingEndpoints,
   dashboard: dashboardEndpoints,
   auditLogs: auditLogEndpoints,
-  agents: agentEndpoints,
+  sensors: sensorEndpoints,
   scanProfiles: scanProfileEndpoints,
   scannerTemplates: scannerTemplateEndpoints,
   tools: toolEndpoints,
@@ -2207,7 +2207,7 @@ export {
   findingEndpoints as findings,
   dashboardEndpoints as dashboard,
   auditLogEndpoints as auditLogs,
-  agentEndpoints as agents,
+  sensorEndpoints as sensors,
   scanProfileEndpoints as scanProfiles,
   scannerTemplateEndpoints as scannerTemplates,
   toolEndpoints as tools,
