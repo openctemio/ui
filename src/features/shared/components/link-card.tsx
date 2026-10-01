@@ -27,7 +27,7 @@ export function LinkCard({ href, icon: Icon, title, description, badge, aside }:
       href={href}
       className="group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <Card className="h-full transition-colors group-hover:border-primary/50">
+      <Card className="h-full gap-0 py-0 transition-colors group-hover:border-primary/50">
         <CardContent className="flex items-start gap-3 p-4">
           <Icon className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
           <div className="min-w-0 flex-1">
