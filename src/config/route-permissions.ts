@@ -9,7 +9,7 @@
  * 2. Permission (RBAC) - Does user have the required permission?
  *
  * Pattern matching:
- * - Exact match: '/settings/audit' matches only that path
+ * - Exact match: '/settings/audit-log' matches only that path
  * - Wildcard: '/assets/*' matches '/assets/domains', '/assets/cloud', etc.
  * - Double wildcard: '/settings/**' matches all nested paths
  *
@@ -542,12 +542,16 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   // Settings - Organization (Core feature, no module required)
   // Team management is always available, controlled by RBAC only
   // ========================================
-  '/settings/tenant': {
-    permission: Permission.TeamUpdate,
-    message: 'You need admin privileges to access tenant settings.',
-  },
+  // Organization › General and Access › Authentication (both were tabs of
+  // /settings/tenant). Viewing needs team:update; saving the security
+  // settings is owner-only in the API and the page.
   '/settings/general': {
     permission: Permission.TeamUpdate,
+    message: 'You need admin privileges to access organization settings.',
+  },
+  '/settings/authentication': {
+    permission: Permission.TeamUpdate,
+    message: 'You need admin privileges to access authentication settings.',
   },
   '/settings/modules': {
     permission: Permission.TeamUpdate,
@@ -599,11 +603,11 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   // Settings - Audit Log (Admin/Owner only, no module required)
   // Audit is a core feature, controlled by RBAC only
   // ========================================
-  '/settings/audit': {
+  '/settings/audit-log': {
     permission: Permission.AuditRead,
     message: 'Audit logs require admin or owner privileges.',
   },
-  '/settings/audit/**': {
+  '/settings/audit-log/**': {
     permission: Permission.AuditRead,
     message: 'Audit logs require admin or owner privileges.',
   },
@@ -695,7 +699,7 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
 /**
  * Match a pathname against route permission patterns
  *
- * @param pathname - The current pathname (e.g., '/settings/audit')
+ * @param pathname - The current pathname (e.g., '/settings/audit-log')
  * @returns The matching route config or undefined if no match
  */
 export function matchRoutePermission(pathname: string): RoutePermissionConfig | undefined {

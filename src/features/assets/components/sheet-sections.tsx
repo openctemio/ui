@@ -5,14 +5,20 @@
  */
 
 import * as React from 'react'
-import { Clock, Info, Tag as TagIcon, Trash2, AlertTriangle, Pencil, Save, X } from 'lucide-react'
+import { Clock, Info, Tag as TagIcon, Trash2, Pencil, Save, X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { TagInput } from '@/components/ui/tag-input'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { DetailSection, DetailField, DetailFieldGrid } from '@/features/shared'
+import {
+  DetailSection,
+  DetailField,
+  DetailFieldGrid,
+  DangerZone,
+  DangerZoneItem,
+} from '@/features/shared'
 import type { AssetType } from '../types/asset.types'
 import { ASSET_TYPE_LABELS } from '../types/asset.types'
 
@@ -205,24 +211,22 @@ interface DangerZoneSectionProps {
   assetTypeName: string
 }
 
-/** Kept distinct from the other sections through the destructive token only. */
+/** The shared DangerZone, for asset detail sheets. */
 export function DangerZoneSection({ onDelete, assetTypeName }: DangerZoneSectionProps) {
+  const noun = assetTypeName.toLowerCase()
   return (
-    <section className="space-y-3">
-      <h3 className="flex items-center gap-2 text-sm font-semibold text-destructive">
-        <AlertTriangle className="h-4 w-4" />
-        Danger zone
-      </h3>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          Permanently delete this {assetTypeName.toLowerCase()} from your inventory.
-        </p>
-        <Button variant="destructive" size="sm" className="shrink-0" onClick={onDelete}>
-          <Trash2 className="me-2 h-4 w-4" />
-          Delete {assetTypeName.toLowerCase()}
-        </Button>
-      </div>
-    </section>
+    <DangerZone as="h3">
+      <DangerZoneItem
+        title={`Delete ${noun}`}
+        description={`Permanently delete this ${noun} from your inventory.`}
+        action={
+          <Button variant="destructive" size="sm" onClick={onDelete}>
+            <Trash2 className="me-2 h-4 w-4" />
+            Delete {noun}
+          </Button>
+        }
+      />
+    </DangerZone>
   )
 }
 

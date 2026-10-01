@@ -18,6 +18,8 @@ import {
   DataTableRowActions,
   SectionTabs,
   type RowAction,
+  DangerZone,
+  DangerZoneItem,
 } from '@/features/shared'
 
 const REMEDIATION_TABS = [
@@ -1868,24 +1870,19 @@ function TaskDetailSheet({
               </InfoCard>
             </div>
 
-            {/* Danger Zone */}
             <Can permission={Permission.RemediationWrite}>
-              <Separator />
-              <div className="flex items-center justify-between rounded-lg border border-destructive/20 bg-destructive/5 p-3">
-                <div>
-                  <p className="text-sm font-medium text-destructive">Delete task</p>
-                  <p className="text-xs text-muted-foreground">Permanently remove this task</p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 border-destructive/30 text-destructive hover:bg-destructive/10"
-                  onClick={() => onDelete(task)}
-                >
-                  <Trash2 className="me-1.5 h-3.5 w-3.5" />
-                  Delete
-                </Button>
-              </div>
+              <DangerZone as="h3">
+                <DangerZoneItem
+                  title="Delete task"
+                  description="Permanently remove this task."
+                  action={
+                    <Button variant="destructive" size="sm" onClick={() => onDelete(task)}>
+                      <Trash2 className="me-1.5 h-3.5 w-3.5" />
+                      Delete
+                    </Button>
+                  }
+                />
+              </DangerZone>
             </Can>
           </div>
         </div>

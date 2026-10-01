@@ -1,4 +1,9 @@
+'use client'
+
+import { useId, useState } from 'react'
 import { cn } from '@/lib/utils'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -23,6 +28,11 @@ type ConfirmDialogProps = {
   isLoading?: boolean
   className?: string
   children?: React.ReactNode
+  /**
+   * For actions that cannot be undone: the confirm button stays disabled until
+   * the user types this exact text (e.g. the organization's name).
+   */
+  typeToConfirm?: string
 }
 
 export function ConfirmDialog(props: ConfirmDialogProps) {
@@ -37,10 +47,20 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
     isLoading,
     disabled = false,
     handleConfirm,
+    typeToConfirm,
     ...actions
   } = props
+  const inputId = useId()
+  const [typed, setTyped] = useState('')
+  const typedOk = !typeToConfirm || typed === typeToConfirm
   return (
-    <AlertDialog {...actions}>
+    <AlertDialog
+      {...actions}
+      onOpenChange={(open) => {
+        if (!open) setTyped('')
+        actions.onOpenChange(open)
+      }}
+    >
       <AlertDialogContent className={cn(className && className)}>
         <AlertDialogHeader className="text-start">
           <AlertDialogTitle>{title}</AlertDialogTitle>
@@ -49,12 +69,26 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
           </AlertDialogDescription>
         </AlertDialogHeader>
         {children}
+        {typeToConfirm && (
+          <div className="space-y-2">
+            <Label htmlFor={inputId} className="font-normal">
+              Type <span className="font-semibold">{typeToConfirm}</span> to confirm
+            </Label>
+            <Input
+              id={inputId}
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </div>
+        )}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isLoading}>{cancelBtnText ?? 'Cancel'}</AlertDialogCancel>
           <Button
             variant={destructive ? 'destructive' : 'default'}
             onClick={handleConfirm}
-            disabled={disabled || isLoading}
+            disabled={disabled || isLoading || !typedOk}
           >
             {confirmText ?? 'Continue'}
           </Button>
