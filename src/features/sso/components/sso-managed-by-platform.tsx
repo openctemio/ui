@@ -38,7 +38,7 @@ export function SsoManagedByPlatform({ title, what }: SsoManagedByPlatformProps)
           description={ssoManagedText(what)}
           action={
             <Button asChild variant="outline" size="sm">
-              <Link href="/settings/integrations">Back to integrations</Link>
+              <Link href="/settings/authentication">Authentication settings</Link>
             </Button>
           }
         />
