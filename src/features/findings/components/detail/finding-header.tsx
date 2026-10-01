@@ -50,6 +50,7 @@ import { AssigneeSelect } from '../assignee-select'
 import { StatusSelect } from '../status-select'
 import { SeveritySelect } from '../severity-select'
 import { ApprovalDialog } from '../approval-dialog'
+import { findingAssetTypeLabel } from '@/features/findings/lib/finding-asset-type'
 
 // Human-readable source labels
 const SOURCE_LABELS: Record<FindingSource, string> = {
@@ -524,10 +525,12 @@ export function FindingHeader({
               </div>
             </div>
 
-            {/* Repository */}
+            {/* Primary asset or target */}
             {finding.assets.length > 0 && (
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">Repo:</span>
+                <span className="text-muted-foreground">
+                  {findingAssetTypeLabel(finding.assets[0].type)}:
+                </span>
                 {finding.assets[0].url ? (
                   <a
                     href={sanitizeExternalUrl(finding.assets[0].url)}
@@ -785,7 +788,7 @@ export function FindingHeader({
             {finding.assets.length > 0 && (
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-muted-foreground">
-                  {finding.assets[0].type === 'target' ? 'Target:' : 'Repository:'}
+                  {findingAssetTypeLabel(finding.assets[0].type)}:
                 </span>
                 {finding.assets[0].url ? (
                   <a

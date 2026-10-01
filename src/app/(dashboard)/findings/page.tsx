@@ -984,7 +984,10 @@ function FindingsContent() {
               className="cursor-pointer max-w-[200px] sm:max-w-md"
               role="button"
               tabIndex={0}
-              aria-label="View finding details"
+              // The title leads the name, so a screen reader announces which
+              // finding the button opens (it used to read "View finding
+              // details" on every row).
+              aria-label={`${row.getValue('title')}, view details`}
               onClick={() => handleRowClick(row.original)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
