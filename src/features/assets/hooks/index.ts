@@ -51,3 +51,7 @@ export {
   updateAssetRelationship,
   removeAssetRelationship,
 } from './use-asset-relationships'
+
+// Asset identity hooks (identifiers + renames)
+export { useAssetIdentifiers, useAssetRenames } from './use-asset-identity'
+export type { AssetRename } from './use-asset-identity'

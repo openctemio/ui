@@ -15,6 +15,14 @@ export interface DedupReview {
   merge_asset_names: string[]
   merge_finding_count: number
   status: string
+  /**
+   * Why the assets were flagged: shared_ip | identifier_conflict |
+   * shared_identifier | renamed_host. null on reviews created before the
+   * identity model.
+   */
+  reason?: string | null
+  /** What the flag rests on, e.g. {kind, value} or {ip, tool}. May be {}. */
+  evidence?: Record<string, unknown> | null
   created_at: string
 }
 
