@@ -14,6 +14,7 @@ import { validateRedirectUrl } from '@/lib/redirect'
 // Use refactored LoginForm from features directory
 import { LoginForm } from '@/features/auth/components/login-form'
 import { SignUpPrompt } from '@/features/auth/components/sign-up-prompt'
+import { LegalNotice } from '@/features/auth/components/legal-notice'
 
 interface LoginPageProps {
   searchParams: Promise<{
@@ -90,18 +91,8 @@ export default async function SignIn({ searchParams }: LoginPageProps) {
       <CardContent>
         <LoginForm redirectTo={redirectTo} orgSlug={params.org} />
       </CardContent>
-      <CardFooter>
-        <p className="text-muted-foreground px-8 text-center text-sm">
-          By clicking sign in, you agree to our{' '}
-          <a href="/terms" className="hover:text-primary underline underline-offset-4">
-            Terms of Service
-          </a>{' '}
-          and{' '}
-          <a href="/privacy" className="hover:text-primary underline underline-offset-4">
-            Privacy Policy
-          </a>
-          .
-        </p>
+      <CardFooter className="justify-center empty:hidden">
+        <LegalNotice action="clicking sign in" />
       </CardFooter>
     </Card>
   )
