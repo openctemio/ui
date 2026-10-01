@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   ScrollText,
   UserCog,
+  Waypoints,
   type LucideIcon,
 } from 'lucide-react'
 import type { AdminRole } from '../types'
@@ -24,7 +25,7 @@ export interface AdminNavSection {
 
 /**
  * Console navigation, modeled on Tenable Security Center's administrator menu
- * (Organizations, Users, System). Only pages that exist are listed. Add an
+ * (Organizations, Users, Scanning, System). Only pages that exist are listed. Add an
  * item together with its page, never ahead of it.
  */
 export const adminNav: AdminNavSection[] = [
@@ -42,6 +43,10 @@ export const adminNav: AdminNavSection[] = [
         minRole: 'super_admin',
       },
     ],
+  },
+  {
+    title: 'Scanning',
+    items: [{ title: 'Target mappings', url: '/admin/scanning/target-mappings', icon: Waypoints }],
   },
   {
     title: 'System',
