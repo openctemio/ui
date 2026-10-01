@@ -14,19 +14,7 @@ import {
 import { Fragment } from 'react'
 import { cn } from '@/lib/utils'
 import { breadcrumbLabel } from './breadcrumb-labels'
-
-// UUID regex pattern to detect dynamic route segments
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-// Check if a segment looks like an ID (UUID or other ID formats)
-function isIdSegment(segment: string): boolean {
-  // Check for UUID format
-  if (UUID_PATTERN.test(segment)) return true
-  // Check for other common ID patterns (hex strings, numeric IDs)
-  if (/^[0-9a-f]{24}$/i.test(segment)) return true // MongoDB ObjectId
-  if (/^[0-9]+$/.test(segment) && segment.length > 5) return true // Long numeric IDs
-  return false
-}
+import { breadcrumbHasPage, isIdSegment } from './breadcrumb-routes'
 
 interface BreadcrumbNavProps {
   /** Override the auto-generated page title */
@@ -125,6 +113,9 @@ export function BreadcrumbNav({ pageTitle, className, hideIdSegment = true }: Br
                   <BreadcrumbPage className="truncate" aria-current="page">
                     {item.label}
                   </BreadcrumbPage>
+                ) : !breadcrumbHasPage(item.path) ? (
+                  // A section folder with no page: a link would lead to the 404.
+                  <span className="truncate">{item.label}</span>
                 ) : (
                   <BreadcrumbLink asChild>
                     <Link href={item.path} className="truncate">
