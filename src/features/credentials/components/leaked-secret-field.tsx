@@ -96,14 +96,14 @@ export function LeakedSecretField({
   return (
     <div className={cn('rounded-xl border p-4 bg-card', className)}>
       <div className="flex items-center gap-2 mb-3">
-        <Key className="h-4 w-4 text-amber-500" />
+        <Key className="h-4 w-4 text-warning" />
         <h4 className="text-sm font-medium">{label}</h4>
       </div>
 
       {showWarning && (
-        <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-          <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-          <p className="text-xs text-amber-700 dark:text-amber-400">
+        <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-warning/10 border border-warning/30">
+          <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+          <p className="text-xs text-warning">
             This is sensitive data. Handle with care and rotate if compromised.
           </p>
         </div>
@@ -129,7 +129,7 @@ export function LeakedSecretField({
                 aria-label={isCopied ? 'Copied to clipboard' : 'Copy secret'}
               >
                 {isCopied ? (
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Check className="h-4 w-4 text-success" />
                 ) : (
                   <Copy className="h-4 w-4" />
                 )}
