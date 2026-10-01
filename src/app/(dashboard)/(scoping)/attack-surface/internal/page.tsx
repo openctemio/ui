@@ -33,7 +33,6 @@ import {
   HardDrive,
   RefreshCw,
   Download,
-  Filter,
   X,
   Search as SearchIcon,
   Wifi,
@@ -613,12 +612,11 @@ export default function InternalSurfacePage() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
                 <Select
                   value={filterType}
                   onValueChange={(v) => setFilterType(v as AssetType | 'all')}
                 >
-                  <SelectTrigger className="w-36">
+                  <SelectTrigger className="w-36" aria-label="Filter by type">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -634,7 +632,7 @@ export default function InternalSurfacePage() {
                   value={filterZone}
                   onValueChange={(v) => setFilterZone(v as NetworkZone | 'all')}
                 >
-                  <SelectTrigger className="w-32">
+                  <SelectTrigger className="w-32" aria-label="Filter by zone">
                     <SelectValue placeholder="Zone" />
                   </SelectTrigger>
                   <SelectContent>

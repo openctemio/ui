@@ -10,7 +10,6 @@ import {
   CheckCheck,
   ChevronLeft,
   ChevronRight,
-  Filter,
   Inbox,
   Info,
   Loader2,
@@ -274,12 +273,8 @@ export default function NotificationsPage() {
 
       {/* Filters */}
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Filter className="h-4 w-4" />
-          Filters:
-        </div>
         <Select value={severityFilter} onValueChange={handleSeverityChange}>
-          <SelectTrigger className="w-[130px] h-8 text-xs">
+          <SelectTrigger className="w-[130px] h-8 text-xs" aria-label="Filter by severity">
             <SelectValue placeholder="Severity" />
           </SelectTrigger>
           <SelectContent>
@@ -292,7 +287,7 @@ export default function NotificationsPage() {
           </SelectContent>
         </Select>
         <Select value={readFilter} onValueChange={handleReadFilterChange}>
-          <SelectTrigger className="w-[120px] h-8 text-xs">
+          <SelectTrigger className="w-[120px] h-8 text-xs" aria-label="Filter by read status">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>

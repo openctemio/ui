@@ -22,6 +22,8 @@ import {
   SheetStatCard,
   DangerZone,
   DangerZoneItem,
+  FilterPanelToggle,
+  FilterSheet,
 } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,8 +56,6 @@ import { toast } from 'sonner'
 import {
   Plus,
   Search,
-  ListFilter,
-  PanelLeftClose,
   MoreHorizontal,
   Eye,
   Pause,
@@ -926,37 +926,15 @@ function ConfigurationsTab() {
     </FacetPanel>
   )
 
-  const filterBadge =
-    activeFiltersCount > 0 ? (
-      <span className="ms-1.5 rounded-full bg-primary px-1.5 text-[11px] font-medium tabular-nums text-primary-foreground">
-        {activeFiltersCount}
-      </span>
-    ) : null
-
   const toolbarStart = (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        className="hidden h-9 lg:inline-flex"
-        onClick={() => setFiltersOpen(!filtersOpen)}
-        aria-pressed={filtersOpen}
-        aria-controls="scan-config-filters"
-      >
-        {filtersOpen ? <PanelLeftClose className="h-4 w-4" /> : <ListFilter className="h-4 w-4" />}
-        <span className="ms-2">Filters</span>
-        {filterBadge}
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-9 lg:hidden"
-        onClick={() => setFilterSheetOpen(true)}
-      >
-        <ListFilter className="h-4 w-4" />
-        <span className="ms-2">Filters</span>
-        {filterBadge}
-      </Button>
+      <FilterPanelToggle
+        open={filtersOpen}
+        onToggle={() => setFiltersOpen(!filtersOpen)}
+        onOpenSheet={() => setFilterSheetOpen(true)}
+        activeCount={activeFiltersCount}
+        controlsId="scan-config-filters"
+      />
       <SearchBox
         value={searchQuery}
         onChange={setSearchQuery}
@@ -1056,14 +1034,13 @@ function ConfigurationsTab() {
         </Can>
       </BulkActionBar>
 
-      <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-        <SheetContent side="left" className="w-80 overflow-y-auto p-4">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Scan configuration filters</SheetTitle>
-          </SheetHeader>
-          {facetPanel}
-        </SheetContent>
-      </Sheet>
+      <FilterSheet
+        open={filterSheetOpen}
+        onOpenChange={setFilterSheetOpen}
+        title="Scan configuration filters"
+      >
+        {facetPanel}
+      </FilterSheet>
 
       {/* Config Details Sheet */}
       <Sheet open={!!selectedConfig} onOpenChange={() => setSelectedConfig(null)}>
@@ -1889,8 +1866,7 @@ function RunsTab() {
   const toolbarStart = (
     <>
       <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as RunStatusFilter)}>
-        <SelectTrigger className="h-9 w-auto min-w-36 gap-2" aria-label="Filter runs by status">
-          <ListFilter className="h-4 w-4 text-muted-foreground" />
+        <SelectTrigger className="h-9 w-auto min-w-36" aria-label="Filter runs by status">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

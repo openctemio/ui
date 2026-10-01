@@ -43,6 +43,24 @@ Every page, top to bottom:
   - ≥ 3 filter dimensions → `<FacetFilterPanel>` in a floating sticky card
     (see Findings), toggled from the toolbar, closed by default.
   - 1–2 dimensions → dropdown buttons in the toolbar.
+- **The Filters button is icon-only**, and there is exactly one:
+  `FilterButton` from `@/features/shared` (`filter-button.tsx`). It is a
+  square `size-9` outline button with the `ListFilter` icon, `aria-label` and
+  tooltip "Filters", a count badge on its corner and a primary tint when
+  filters are applied. Never a "[≡ Filters]" text button.
+  - Facet panel (Findings layout): pass `filterToggle` (`open`, `onToggle`,
+    `onOpenSheet`, `activeCount`, `controlsId`) to `<DataTable>`, or render
+    `<FilterPanelToggle>` yourself when the toolbar is not a DataTable's. It
+    toggles the side panel from `lg` up and opens the same panel below `lg`
+    in `<FilterSheet>` (full width, close button on its own row, a "Show N
+    results" footer). No other left-side sheet.
+  - Popover / sheet / dialog of filters: put `<FilterButton activeCount={n} />`
+    inside `<PopoverTrigger asChild>` (it forwards its ref and props).
+  - The filter icons (`ListFilter`, `Filter`, `Funnel`, …) are imported only by
+    `filter-button.tsx`. Dropdown filters and their select triggers carry no
+    filter icon; label them with `aria-label="Filter by …"`.
+  - Enforced by `src/features/shared/components/__tests__/filter-trigger-governance.test.ts`;
+    a non-trigger use of a filter icon needs an allowlist entry with a reason.
 - Filters, search, sort, page and page size live in the URL
   (`useUrlFilter` / `useUrlFilterList`).
 - Server-paginated tables pass `sorting`/`onSortingChange`; columns the API
