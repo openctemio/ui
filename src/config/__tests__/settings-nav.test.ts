@@ -188,13 +188,14 @@ describe('settings shell', () => {
   })
 
   it('leaves the app sidebar on app pages, Priority rules and org creation', () => {
+    // Priority rules now live at /priority-rules (the old /settings path 308s).
     for (const p of [
       '/',
       '/scans',
       '/sensors',
       '/scan-profilesx',
-      '/settings/priority-rules',
-      '/settings/priority-rules/abc',
+      '/priority-rules',
+      '/priority-rules/abc',
       '/settings/tenant/create',
     ]) {
       expect(isSettingsShellPath(p), p).toBe(false)

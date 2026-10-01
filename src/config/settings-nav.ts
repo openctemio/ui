@@ -248,7 +248,7 @@ export const settingsNav: SettingsNavGroup[] = [
         id: 'risk-scoring',
         title: 'Risk scoring',
         description: 'How asset risk scores are weighted.',
-        url: '/settings/scoring',
+        url: '/settings/risk-scoring',
         icon: Scale,
         permission: Permission.TeamUpdate,
         module: 'risk_scoring',
@@ -440,11 +440,10 @@ export const settingsNav: SettingsNavGroup[] = [
 export const settingsNavItems: SettingsNavItem[] = settingsNav.flatMap((g) => g.items)
 
 /**
- * Routes under /settings that keep the app sidebar: Priority rules is a CTEM
- * working object in Prioritization (its URL moves out of /settings later), and
- * creating a new organization is onboarding, not configuration.
+ * Routes under /settings that keep the app sidebar: creating a new
+ * organization is onboarding, not configuration.
  */
-const APP_SHELL_UNDER_SETTINGS = ['/settings/priority-rules', '/settings/tenant/create']
+const APP_SHELL_UNDER_SETTINGS = ['/settings/tenant/create']
 
 function underPath(pathname: string, base: string): boolean {
   return pathname === base || pathname.startsWith(`${base}/`)

@@ -52,6 +52,18 @@ export const LEGACY_SETTINGS_ROUTE_REDIRECTS: LegacyRouteRedirect[] = [
   },
   { source: '/settings/tenant', destination: '/settings/general', permanent: true },
   { source: '/settings/audit/:path*', destination: '/settings/audit-log/:path*', permanent: true },
+  // Policies: Risk scoring says what it is; Priority rules are a CTEM working
+  // object, so they leave /settings and stay in Prioritization.
+  {
+    source: '/settings/scoring/:path*',
+    destination: '/settings/risk-scoring/:path*',
+    permanent: true,
+  },
+  {
+    source: '/settings/priority-rules/:path*',
+    destination: '/priority-rules/:path*',
+    permanent: true,
+  },
 ]
 
 /**
