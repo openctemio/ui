@@ -28,6 +28,9 @@ if (process.env.NODE_ENV !== 'test') {
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // The dev-only "N" badge sat over the sidebar's last rows on phones. The
+  // local stack runs `next dev`, so it showed there too.
+  devIndicators: false,
   // Note: reactCompiler requires babel-plugin-react-compiler package
   // Disabled until package is added to dependencies
 
