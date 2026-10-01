@@ -23,13 +23,13 @@ test('every settings rail entry opens', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible({
     timeout: 30_000,
   })
-  // Entries of the labelled groups (the "Back to app" link sits in an unlabelled one).
+  // Every rail link except "Back to app" (its target is an app page).
   const hrefs = await page
-    .locator(`${rail} [data-sidebar="group"]`)
-    .evaluateAll((groups) =>
-      groups
-        .filter((g) => g.querySelector('[data-sidebar="group-label"]'))
-        .flatMap((g) => [...g.querySelectorAll('a')].map((a) => a.getAttribute('href') ?? ''))
+    .locator(`${rail} a`)
+    .evaluateAll((as) =>
+      as
+        .filter((a) => !(a.textContent ?? '').includes('Back to app'))
+        .map((a) => a.getAttribute('href') ?? '')
     )
   expect(hrefs.length).toBeGreaterThan(20)
 
