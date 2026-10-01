@@ -137,6 +137,9 @@ export const Permission = {
   // Credentials (findings:credentials:*)
   CredentialsRead: 'findings:credentials:read',
   CredentialsWrite: 'findings:credentials:write',
+  // Reveal a leaked credential's plaintext secret (audited). Reads return only
+  // a mask and a fingerprint; owners and admins hold this by default.
+  CredentialsReveal: 'findings:credentials:reveal',
 
   // Remediation (findings:remediation:*)
   RemediationRead: 'findings:remediation:read',
