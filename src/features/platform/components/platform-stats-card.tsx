@@ -1,12 +1,12 @@
 /**
  * Platform Stats Card Component
  *
- * Displays platform agent usage statistics and tier information.
+ * Displays platform sensor usage statistics and tier information.
  * Shows:
  * - Current usage vs max concurrent slots
  * - Queued jobs
- * - Tier-specific stats (online agents per tier)
- * - Upgrade prompt when platform agents are disabled
+ * - Tier-specific stats (online sensors per tier)
+ * - Upgrade prompt when platform sensors are disabled
  */
 
 'use client'
@@ -18,8 +18,8 @@ import { cn } from '@/lib/utils'
 import { Server, Cloud, Crown, Zap, CheckCircle, Clock } from 'lucide-react'
 import { usePlatformUsage } from '@/lib/api/platform-hooks'
 import { TierBadge, MaxTierBadge } from './tier-badge'
-import type { PlatformAgentTier, TierStats } from '@/lib/api/platform-types'
-import { PLATFORM_AGENT_TIERS, PLATFORM_TIER_LABELS } from '@/lib/api/platform-types'
+import type { PlatformSensorTier, TierStats } from '@/lib/api/platform-types'
+import { PLATFORM_SENSOR_TIERS, PLATFORM_TIER_LABELS } from '@/lib/api/platform-types'
 
 // Tier icons
 const TIER_ICONS = {
@@ -58,11 +58,11 @@ export function PlatformStatsCard({ className }: PlatformStatsCardProps) {
   }
 
   if (isComingSoon) {
-    return <PlatformAgentsComingSoonCard className={className} />
+    return <PlatformSensorsComingSoonCard className={className} />
   }
 
   if (!isEnabled) {
-    return <PlatformAgentsDisabledCard className={className} />
+    return <PlatformSensorsDisabledCard className={className} />
   }
 
   return (
@@ -71,7 +71,7 @@ export function PlatformStatsCard({ className }: PlatformStatsCardProps) {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-sm font-medium">
             <Zap className="h-4 w-4 text-primary" />
-            Platform Agents
+            Platform Sensors
           </CardTitle>
           {maxTier && <MaxTierBadge maxTier={maxTier} />}
         </div>
@@ -120,9 +120,9 @@ export function PlatformStatsCard({ className }: PlatformStatsCardProps) {
         {/* Tier Stats Grid */}
         {tierStats && (
           <div className="border-t pt-4">
-            <p className="mb-2 text-xs font-medium text-muted-foreground">Agents by Tier</p>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Sensors by Tier</p>
             <div className="grid grid-cols-3 gap-2">
-              {PLATFORM_AGENT_TIERS.map((tier) => (
+              {PLATFORM_SENSOR_TIERS.map((tier) => (
                 <TierStatItem key={tier} tier={tier} stats={tierStats[tier]} />
               ))}
             </div>
@@ -134,12 +134,12 @@ export function PlatformStatsCard({ className }: PlatformStatsCardProps) {
 }
 
 /**
- * Tier stat item showing online/total agents for a tier
+ * Tier stat item showing online/total sensors for a tier
  */
-function TierStatItem({ tier, stats }: { tier: PlatformAgentTier; stats?: TierStats }) {
+function TierStatItem({ tier, stats }: { tier: PlatformSensorTier; stats?: TierStats }) {
   const Icon = TIER_ICONS[tier]
-  const online = stats?.online_agents ?? 0
-  const total = stats?.total_agents ?? 0
+  const online = stats?.online_sensors ?? 0
+  const total = stats?.total_sensors ?? 0
 
   return (
     <div className="flex flex-col items-center rounded-md border bg-muted/30 p-2">
@@ -156,11 +156,11 @@ function TierStatItem({ tier, stats }: { tier: PlatformAgentTier; stats?: TierSt
  * Card shown when platform stats feature is coming soon (API not yet implemented)
  * Matches StatsCard layout for consistent grid height
  */
-function PlatformAgentsComingSoonCard({ className }: { className?: string }) {
+function PlatformSensorsComingSoonCard({ className }: { className?: string }) {
   return (
     <Card className={cn('border-dashed', className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Platform Agents</CardTitle>
+        <CardTitle className="text-sm font-medium">Platform Sensors</CardTitle>
         <Zap className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
@@ -175,14 +175,14 @@ function PlatformAgentsComingSoonCard({ className }: { className?: string }) {
 }
 
 /**
- * Card shown when platform agents are disabled for the tenant
+ * Card shown when platform sensors are disabled for the tenant
  * Matches StatsCard layout for consistent grid height
  */
-function PlatformAgentsDisabledCard({ className }: { className?: string }) {
+function PlatformSensorsDisabledCard({ className }: { className?: string }) {
   return (
     <Card className={cn('border-dashed', className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Platform Agents</CardTitle>
+        <CardTitle className="text-sm font-medium">Platform Sensors</CardTitle>
         <Zap className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>

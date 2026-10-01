@@ -1,7 +1,7 @@
-export { useAgentFormOptions } from './use-agent-form-options'
+export { useSensorFormOptions } from './use-sensor-form-options'
 export type {
   FormOption,
   ToolOption as ApiToolOption, // Renamed to avoid conflict with tool-selection.tsx
   CapabilityOption,
-  UseAgentFormOptionsReturn,
-} from './use-agent-form-options'
+  UseSensorFormOptionsReturn,
+} from './use-sensor-form-options'

@@ -339,7 +339,7 @@ export function NodePalette({ onDragStart, position = 'right' }: NodePaletteProp
                           title={
                             isAvailable
                               ? tool.description
-                              : `${tool.display_name || tool.name} - No agent available`
+                              : `${tool.display_name || tool.name} - No sensor available`
                           }
                         >
                           {tool.logo_url ? (
@@ -392,7 +392,7 @@ export function NodePalette({ onDragStart, position = 'right' }: NodePaletteProp
                               {/* Show badge for unavailable tools */}
                               {!isAvailable && (
                                 <span className="text-[9px] px-1 py-0.5 rounded bg-red-500/15 text-red-600 font-medium shrink-0">
-                                  No Agent
+                                  No Sensor
                                 </span>
                               )}
                             </div>

@@ -112,22 +112,22 @@ export interface PipelineTrigger {
 }
 
 // ============================================
-// AGENT PREFERENCE
+// SENSOR PREFERENCE
 // ============================================
 
-export const PIPELINE_AGENT_PREFERENCES = ['auto', 'tenant', 'platform'] as const
-export type PipelineAgentPreference = (typeof PIPELINE_AGENT_PREFERENCES)[number]
+export const PIPELINE_SENSOR_PREFERENCES = ['auto', 'tenant', 'platform'] as const
+export type PipelineSensorPreference = (typeof PIPELINE_SENSOR_PREFERENCES)[number]
 
-export const PIPELINE_AGENT_PREFERENCE_LABELS: Record<PipelineAgentPreference, string> = {
+export const PIPELINE_SENSOR_PREFERENCE_LABELS: Record<PipelineSensorPreference, string> = {
   auto: 'Auto (Tenant first, Platform fallback)',
-  tenant: 'Tenant Agents Only',
-  platform: 'Platform Agents Only',
+  tenant: 'Tenant Sensors Only',
+  platform: 'Platform Sensors Only',
 }
 
-export const PIPELINE_AGENT_PREFERENCE_DESCRIPTIONS: Record<PipelineAgentPreference, string> = {
-  auto: 'Uses tenant agents when available, falls back to platform agents',
-  tenant: 'Only uses agents deployed in your infrastructure',
-  platform: "Only uses OpenCTEM's managed platform agents",
+export const PIPELINE_SENSOR_PREFERENCE_DESCRIPTIONS: Record<PipelineSensorPreference, string> = {
+  auto: 'Uses tenant sensors when available, falls back to platform sensors',
+  tenant: 'Only uses sensors deployed in your infrastructure',
+  platform: "Only uses OpenCTEM's managed platform sensors",
 }
 
 // ============================================
@@ -142,7 +142,7 @@ export interface PipelineSettings {
   notify_on_complete: boolean
   notify_on_failure: boolean
   notification_channels?: string[]
-  agent_preference?: PipelineAgentPreference
+  sensor_preference?: PipelineSensorPreference
 }
 
 export const DEFAULT_PIPELINE_SETTINGS: PipelineSettings = {
@@ -153,7 +153,7 @@ export const DEFAULT_PIPELINE_SETTINGS: PipelineSettings = {
   notify_on_complete: false,
   notify_on_failure: true,
   notification_channels: [],
-  agent_preference: 'auto',
+  sensor_preference: 'auto',
 }
 
 // ============================================

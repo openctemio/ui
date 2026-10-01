@@ -25,19 +25,19 @@ import {
   type RowAction,
 } from '@/features/shared'
 
-import type { Agent } from '@/lib/api/agent-types'
-import { AgentTypeIcon, AGENT_TYPE_LABELS } from './agent-type-icon'
+import type { Sensor } from '@/lib/api/sensor-types'
+import { SensorTypeIcon, SENSOR_TYPE_LABELS } from './sensor-type-icon'
 
-interface AgentTableProps {
-  agents: Agent[]
-  onViewAgent: (agent: Agent) => void
-  onEditAgent: (agent: Agent) => void
-  onActivateAgent: (agent: Agent) => void
-  onDeactivateAgent: (agent: Agent) => void
-  onDeleteAgent: (agent: Agent) => void
-  onRegenerateKey: (agent: Agent) => void
+interface SensorTableProps {
+  sensors: Sensor[]
+  onViewSensor: (sensor: Sensor) => void
+  onEditSensor: (sensor: Sensor) => void
+  onActivateSensor: (sensor: Sensor) => void
+  onDeactivateSensor: (sensor: Sensor) => void
+  onDeleteSensor: (sensor: Sensor) => void
+  onRegenerateKey: (sensor: Sensor) => void
   /** Selected rows, for the page's bulk-action bar. */
-  onSelectionChange?: (agents: Agent[]) => void
+  onSelectionChange?: (sensors: Sensor[]) => void
   /** Bump to clear the selection (e.g. after a bulk delete). */
   resetSelectionKey?: number
   toolbarStart?: React.ReactNode
@@ -49,16 +49,16 @@ interface AgentTableProps {
  * Admin status first (disabled / revoked), then heartbeat health. Only an
  * error is coloured; online carries a check icon, everything else is muted.
  */
-function AgentStatusBadge({ agent }: { agent: Agent }) {
-  if (agent.status === 'disabled' || agent.status === 'revoked') {
+function SensorStatusBadge({ sensor }: { sensor: Sensor }) {
+  if (sensor.status === 'disabled' || sensor.status === 'revoked') {
     return (
       <Badge variant="secondary" className="gap-1">
         <XCircle className="h-3.5 w-3.5" />
-        {agent.status === 'disabled' ? 'Disabled' : 'Revoked'}
+        {sensor.status === 'disabled' ? 'Disabled' : 'Revoked'}
       </Badge>
     )
   }
-  if (agent.health === 'error') {
+  if (sensor.health === 'error') {
     return (
       <Badge variant="destructive" className="gap-1">
         <AlertCircle className="h-3.5 w-3.5" />
@@ -66,7 +66,7 @@ function AgentStatusBadge({ agent }: { agent: Agent }) {
       </Badge>
     )
   }
-  if (agent.health === 'online') {
+  if (sensor.health === 'online') {
     return (
       <Badge variant="outline" className="gap-1">
         <CheckCircle className="h-3.5 w-3.5" />
@@ -91,21 +91,21 @@ function UsageCell({ percent }: { percent: number }) {
   )
 }
 
-export function AgentTable({
-  agents,
-  onViewAgent,
-  onEditAgent,
-  onActivateAgent,
-  onDeactivateAgent,
-  onDeleteAgent,
+export function SensorTable({
+  sensors,
+  onViewSensor,
+  onEditSensor,
+  onActivateSensor,
+  onDeactivateSensor,
+  onDeleteSensor,
   onRegenerateKey,
   onSelectionChange,
   resetSelectionKey,
   toolbarStart,
   toolbarEnd,
-  emptyMessage = 'No agents match these filters',
-}: AgentTableProps) {
-  const columns = useMemo<ColumnDef<Agent>[]>(
+  emptyMessage = 'No sensors match these filters',
+}: SensorTableProps) {
+  const columns = useMemo<ColumnDef<Sensor>[]>(
     () => [
       {
         id: 'select',
@@ -135,15 +135,15 @@ export function AgentTable({
         accessorFn: (a) =>
           `${a.name} ${a.description ?? ''} ${a.hostname ?? ''} ${a.ip_address ?? ''}`,
         sortingFn: (a, b) => a.original.name.localeCompare(b.original.name),
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Agent" />,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Sensor" />,
         cell: ({ row }) => {
-          const agent = row.original
-          const host = agent.ip_address || agent.hostname
+          const sensor = row.original
+          const host = sensor.ip_address || sensor.hostname
           return (
             <div className="flex min-w-0 items-center gap-3">
-              <AgentTypeIcon type={agent.type} className="h-5 w-5 shrink-0" />
+              <SensorTypeIcon type={sensor.type} className="h-5 w-5 shrink-0" />
               <div className="min-w-0">
-                <p className="truncate font-medium">{agent.name}</p>
+                <p className="truncate font-medium">{sensor.name}</p>
                 {host ? (
                   <p className="truncate font-mono text-xs text-muted-foreground">{host}</p>
                 ) : (
@@ -156,8 +156,8 @@ export function AgentTable({
       },
       {
         id: 'type',
-        // Older agents can carry a type the UI has no label for; show it raw.
-        accessorFn: (a) => AGENT_TYPE_LABELS[a.type] ?? a.type ?? '—',
+        // Older sensors can carry a type the UI has no label for; show it raw.
+        accessorFn: (a) => SENSOR_TYPE_LABELS[a.type] ?? a.type ?? '—',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Type" />,
         cell: ({ getValue }) => <Badge variant="outline">{getValue<string>()}</Badge>,
       },
@@ -165,7 +165,7 @@ export function AgentTable({
         id: 'status',
         accessorFn: (a) => (a.status === 'active' ? a.health : a.status),
         header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-        cell: ({ row }) => <AgentStatusBadge agent={row.original} />,
+        cell: ({ row }) => <SensorStatusBadge sensor={row.original} />,
       },
       {
         id: 'activeJobs',
@@ -207,61 +207,68 @@ export function AgentTable({
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => {
-          const agent = row.original
+          const sensor = row.original
           const actions: RowAction[] = [
-            { label: 'View details', icon: Eye, onClick: () => onViewAgent(agent) },
+            { label: 'View details', icon: Eye, onClick: () => onViewSensor(sensor) },
             {
               label: 'Edit',
               icon: Settings,
-              onClick: () => onEditAgent(agent),
-              permission: Permission.AgentsWrite,
+              onClick: () => onEditSensor(sensor),
+              permission: Permission.SensorsWrite,
             },
             {
               label: 'Regenerate API key',
               icon: KeyRound,
-              onClick: () => onRegenerateKey(agent),
-              permission: Permission.AgentsWrite,
+              onClick: () => onRegenerateKey(sensor),
+              permission: Permission.SensorsWrite,
             },
           ]
-          if (agent.status === 'disabled' || agent.status === 'revoked') {
+          if (sensor.status === 'disabled' || sensor.status === 'revoked') {
             actions.push({
               label: 'Activate',
               icon: Power,
-              onClick: () => onActivateAgent(agent),
+              onClick: () => onActivateSensor(sensor),
               separatorBefore: true,
-              permission: Permission.AgentsWrite,
+              permission: Permission.SensorsWrite,
             })
-          } else if (agent.status === 'active') {
+          } else if (sensor.status === 'active') {
             actions.push({
               label: 'Deactivate',
               icon: PowerOff,
-              onClick: () => onDeactivateAgent(agent),
+              onClick: () => onDeactivateSensor(sensor),
               separatorBefore: true,
-              permission: Permission.AgentsWrite,
+              permission: Permission.SensorsWrite,
             })
           }
           actions.push({
             label: 'Delete',
             icon: Trash2,
-            onClick: () => onDeleteAgent(agent),
+            onClick: () => onDeleteSensor(sensor),
             destructive: true,
             separatorBefore: true,
-            permission: Permission.AgentsDelete,
+            permission: Permission.SensorsDelete,
           })
           return <DataTableRowActions actions={actions} />
         },
       },
     ],
-    [onViewAgent, onEditAgent, onActivateAgent, onDeactivateAgent, onDeleteAgent, onRegenerateKey]
+    [
+      onViewSensor,
+      onEditSensor,
+      onActivateSensor,
+      onDeactivateSensor,
+      onDeleteSensor,
+      onRegenerateKey,
+    ]
   )
 
   return (
     <DataTable
       columns={columns}
-      data={agents}
+      data={sensors}
       getRowId={(a) => a.id}
       showSearch={false}
-      onRowClick={onViewAgent}
+      onRowClick={onViewSensor}
       onSelectionChange={onSelectionChange}
       resetSelectionKey={resetSelectionKey}
       showSelectionCount={false}

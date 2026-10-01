@@ -25,7 +25,7 @@ Grouped by CTEM stage in `src/config/sidebar-data.ts`:
 - **Scoping** — Attack Surface (+ external/internal/cloud), Asset Groups, Scope
   Config, Business Services, Business Units, Crown Jewels, CTEM Cycles, Attacker
   Profiles, Relationships, Compliance, Threat Model, Scan Profiles, Scanner
-  Templates, Template Sources, Secret Store, Tools, Capabilities, Agents.
+  Templates, Template Sources, Secret Store, Tools, Capabilities, Sensors.
 - **Discovery** — Scans, Asset Inventory, Exposures (+ vulnerabilities, secrets,
   code, misconfigurations), Credentials, Components.
 - **Prioritization** — Exposure Chains, Attack Paths, Threat Intel, Business Impact.

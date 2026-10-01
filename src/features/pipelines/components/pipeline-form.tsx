@@ -53,11 +53,11 @@ import {
   type PipelineTrigger,
   PIPELINE_TRIGGERS,
   PIPELINE_TRIGGER_LABELS,
-  PIPELINE_AGENT_PREFERENCES,
-  PIPELINE_AGENT_PREFERENCE_LABELS,
-  PIPELINE_AGENT_PREFERENCE_DESCRIPTIONS,
+  PIPELINE_SENSOR_PREFERENCES,
+  PIPELINE_SENSOR_PREFERENCE_LABELS,
+  PIPELINE_SENSOR_PREFERENCE_DESCRIPTIONS,
   type PipelineTriggerType,
-  type PipelineAgentPreference,
+  type PipelineSensorPreference,
   type UIPosition,
   DEFAULT_PIPELINE_SETTINGS,
 } from '@/lib/api'
@@ -320,8 +320,8 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
   const [maxParallelSteps, setMaxParallelSteps] = useState(
     pipeline?.settings?.max_parallel_steps || 3
   )
-  const [agentPreference, setAgentPreference] = useState<PipelineAgentPreference>(
-    pipeline?.settings?.agent_preference || 'auto'
+  const [sensorPreference, setSensorPreference] = useState<PipelineSensorPreference>(
+    pipeline?.settings?.sensor_preference || 'auto'
   )
   const [notifyOnFailure, setNotifyOnFailure] = useState(
     pipeline?.settings?.notify_on_failure ?? true
@@ -365,7 +365,7 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
       setSteps(newSteps)
       setTimeoutSeconds(pipeline.settings?.timeout_seconds || 3600)
       setMaxParallelSteps(pipeline.settings?.max_parallel_steps || 3)
-      setAgentPreference(pipeline.settings?.agent_preference || 'auto')
+      setSensorPreference(pipeline.settings?.sensor_preference || 'auto')
       setNotifyOnFailure(pipeline.settings?.notify_on_failure ?? true)
     }
   }, [pipeline])
@@ -457,7 +457,7 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
         ...(pipeline?.settings ?? DEFAULT_PIPELINE_SETTINGS),
         timeout_seconds: timeoutSeconds,
         max_parallel_steps: maxParallelSteps,
-        agent_preference: agentPreference,
+        sensor_preference: sensorPreference,
         notify_on_failure: notifyOnFailure,
       },
     }
@@ -746,24 +746,24 @@ export function PipelineForm({ pipeline, onSubmit, onCancel, isSubmitting }: Pip
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm">Agent Selection</Label>
+            <Label className="text-sm">Sensor Selection</Label>
             <Select
-              value={agentPreference}
-              onValueChange={(v) => setAgentPreference(v as PipelineAgentPreference)}
+              value={sensorPreference}
+              onValueChange={(v) => setSensorPreference(v as PipelineSensorPreference)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select preference" />
               </SelectTrigger>
               <SelectContent>
-                {PIPELINE_AGENT_PREFERENCES.map((pref) => (
+                {PIPELINE_SENSOR_PREFERENCES.map((pref) => (
                   <SelectItem key={pref} value={pref}>
-                    {PIPELINE_AGENT_PREFERENCE_LABELS[pref]}
+                    {PIPELINE_SENSOR_PREFERENCE_LABELS[pref]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {PIPELINE_AGENT_PREFERENCE_DESCRIPTIONS[agentPreference]}
+              {PIPELINE_SENSOR_PREFERENCE_DESCRIPTIONS[sensorPreference]}
             </p>
           </div>
 

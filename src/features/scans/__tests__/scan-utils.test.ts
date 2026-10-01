@@ -233,7 +233,7 @@ describe('scanConfigToFormData', () => {
     asset_group_id?: string
     targets?: string[]
     pipeline_id?: string
-    agent_preference?: string
+    sensor_preference?: string
     targets_per_job?: number
     schedule_day?: number
     schedule_time?: string
@@ -250,7 +250,7 @@ describe('scanConfigToFormData', () => {
       mode: config.scan_type === 'workflow' ? 'workflow' : 'single',
       type: 'full' as const,
       workflowId: config.pipeline_id,
-      agentPreference: config.agent_preference || 'auto',
+      sensorPreference: config.sensor_preference || 'auto',
       targets: {
         type: 'asset_groups' as const,
         assetGroupIds:
@@ -410,28 +410,28 @@ describe('scanConfigToFormData', () => {
     expect(result.targets.customTargets).toEqual(['example.com', '192.168.1.1'])
   })
 
-  it('defaults agent preference to auto', () => {
+  it('defaults sensor preference to auto', () => {
     const config: ScanConfig = {
-      name: 'No Agent Pref',
+      name: 'No Sensor Pref',
       scan_type: 'single',
       schedule_type: 'manual',
     }
 
     const result = scanConfigToFormData(config)
 
-    expect(result.agentPreference).toBe('auto')
+    expect(result.sensorPreference).toBe('auto')
   })
 
-  it('preserves agent preference', () => {
+  it('preserves sensor preference', () => {
     const config: ScanConfig = {
-      name: 'Platform Agent',
+      name: 'Platform Sensor',
       scan_type: 'single',
       schedule_type: 'manual',
-      agent_preference: 'platform',
+      sensor_preference: 'platform',
     }
 
     const result = scanConfigToFormData(config)
 
-    expect(result.agentPreference).toBe('platform')
+    expect(result.sensorPreference).toBe('platform')
   })
 })

@@ -46,7 +46,7 @@ export function ValidationCoverageCard({ className }: { className?: string }) {
           Validation Coverage
         </CardTitle>
         <CardDescription>
-          Share of findings re-checked by an agent (has validation evidence).
+          Share of findings re-checked by a sensor (has validation evidence).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

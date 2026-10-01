@@ -69,7 +69,7 @@ export function useSuppression(id: string | undefined) {
 }
 
 /**
- * Active (approved, unexpired) rules — the agent-facing view.
+ * Active (approved, unexpired) rules — the sensor-facing view.
  * `GET /api/v1/suppressions/active` → `{ rules, count }`.
  */
 export interface ActiveSuppressionRule {

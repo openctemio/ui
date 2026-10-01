@@ -30,11 +30,11 @@ import {
   Cloud,
 } from 'lucide-react'
 import { useState } from 'react'
-import type { ScanType, ScanMode, AgentPreference, NewScanFormData } from '../../types'
+import type { ScanType, ScanMode, SensorPreference, NewScanFormData } from '../../types'
 import {
   SCAN_TYPE_CONFIG,
   SCAN_MODE_CONFIG,
-  AGENT_PREFERENCE_CONFIG,
+  SENSOR_PREFERENCE_CONFIG,
   mockWorkflows,
 } from '../../types'
 
@@ -225,38 +225,38 @@ export function BasicInfoStep({ data, onChange }: BasicInfoStepProps) {
             </RadioGroup>
           </div>
 
-          {/* Agent Preference - Compact */}
+          {/* Sensor Preference - Compact */}
           <div className="space-y-2">
-            <Label className="text-sm">Agent Preference</Label>
+            <Label className="text-sm">Sensor Preference</Label>
             <RadioGroup
-              value={data.agentPreference}
-              onValueChange={(value: AgentPreference) => onChange({ agentPreference: value })}
+              value={data.sensorPreference}
+              onValueChange={(value: SensorPreference) => onChange({ sensorPreference: value })}
               className="flex flex-wrap gap-3"
             >
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="auto" id="agent-auto" />
-                <Label htmlFor="agent-auto" className="cursor-pointer text-sm font-normal">
+                <RadioGroupItem value="auto" id="sensor-auto" />
+                <Label htmlFor="sensor-auto" className="cursor-pointer text-sm font-normal">
                   <span className="flex items-center gap-1.5">
                     <Sparkles className="h-3.5 w-3.5" />
-                    {AGENT_PREFERENCE_CONFIG.auto.label}
+                    {SENSOR_PREFERENCE_CONFIG.auto.label}
                   </span>
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="tenant" id="agent-tenant" />
-                <Label htmlFor="agent-tenant" className="cursor-pointer text-sm font-normal">
+                <RadioGroupItem value="tenant" id="sensor-tenant" />
+                <Label htmlFor="sensor-tenant" className="cursor-pointer text-sm font-normal">
                   <span className="flex items-center gap-1.5">
                     <Server className="h-3.5 w-3.5" />
-                    {AGENT_PREFERENCE_CONFIG.tenant.label}
+                    {SENSOR_PREFERENCE_CONFIG.tenant.label}
                   </span>
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="platform" id="agent-platform" />
-                <Label htmlFor="agent-platform" className="cursor-pointer text-sm font-normal">
+                <RadioGroupItem value="platform" id="sensor-platform" />
+                <Label htmlFor="sensor-platform" className="cursor-pointer text-sm font-normal">
                   <span className="flex items-center gap-1.5">
                     <Cloud className="h-3.5 w-3.5" />
-                    {AGENT_PREFERENCE_CONFIG.platform.label}
+                    {SENSOR_PREFERENCE_CONFIG.platform.label}
                   </span>
                 </Label>
               </div>

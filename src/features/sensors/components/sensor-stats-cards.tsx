@@ -2,54 +2,54 @@
 
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Bot, CheckCircle, AlertCircle, Play, Server, Database } from 'lucide-react'
-import type { Agent, AgentType, ExecutionMode } from '@/lib/api/agent-types'
+import type { Sensor, SensorType, ExecutionMode } from '@/lib/api/sensor-types'
 
-interface AgentStats {
+interface SensorStats {
   total: number
   active: number // status === 'active'
   disabled: number // status === 'disabled' || status === 'revoked'
-  online: number // health === 'online' (for active agents)
+  online: number // health === 'online' (for active sensors)
   offline: number // health === 'offline' || health === 'unknown'
   error: number // health === 'error'
-  byType: Record<AgentType, number>
+  byType: Record<SensorType, number>
   byMode: Record<ExecutionMode, number>
 }
 
-interface AgentStatsCardsProps {
-  agents: Agent[]
+interface SensorStatsCardsProps {
+  sensors: Sensor[]
   activeFilter: string | null
   onFilterChange: (filter: string | null) => void
 }
 
-function calculateAgentStats(agents: Agent[]): AgentStats {
-  const activeAgents = agents.filter((a) => a.status === 'active')
+function calculateSensorStats(sensors: Sensor[]): SensorStats {
+  const activeSensors = sensors.filter((a) => a.status === 'active')
 
   return {
-    total: agents.length,
-    active: activeAgents.length,
-    disabled: agents.filter((a) => a.status === 'disabled' || a.status === 'revoked').length,
-    online: activeAgents.filter((a) => a.health === 'online').length,
-    offline: activeAgents.filter((a) => a.health === 'offline' || a.health === 'unknown').length,
-    error: agents.filter((a) => a.health === 'error').length,
+    total: sensors.length,
+    active: activeSensors.length,
+    disabled: sensors.filter((a) => a.status === 'disabled' || a.status === 'revoked').length,
+    online: activeSensors.filter((a) => a.health === 'online').length,
+    offline: activeSensors.filter((a) => a.health === 'offline' || a.health === 'unknown').length,
+    error: sensors.filter((a) => a.health === 'error').length,
     byType: {
-      runner: agents.filter((a) => a.type === 'runner').length,
-      worker: agents.filter((a) => a.type === 'worker').length,
-      collector: agents.filter((a) => a.type === 'collector').length,
-      sensor: agents.filter((a) => a.type === 'sensor').length,
+      runner: sensors.filter((a) => a.type === 'runner').length,
+      worker: sensors.filter((a) => a.type === 'worker').length,
+      collector: sensors.filter((a) => a.type === 'collector').length,
+      sensor: sensors.filter((a) => a.type === 'sensor').length,
     },
     byMode: {
-      standalone: agents.filter((a) => a.execution_mode === 'standalone').length,
-      daemon: agents.filter((a) => a.execution_mode === 'daemon').length,
+      standalone: sensors.filter((a) => a.execution_mode === 'standalone').length,
+      daemon: sensors.filter((a) => a.execution_mode === 'daemon').length,
     },
   }
 }
 
-export function AgentStatsCards({ agents, activeFilter, onFilterChange }: AgentStatsCardsProps) {
-  const stats = calculateAgentStats(agents)
+export function SensorStatsCards({ sensors, activeFilter, onFilterChange }: SensorStatsCardsProps) {
+  const stats = calculateSensorStats(sensors)
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-      {/* Total Agents */}
+      {/* Total Sensors */}
       <Card
         className={`cursor-pointer transition-colors hover:border-primary ${
           activeFilter === null ? 'border-primary' : ''
@@ -97,7 +97,7 @@ export function AgentStatsCards({ agents, activeFilter, onFilterChange }: AgentS
         </CardHeader>
       </Card>
 
-      {/* Daemon Agents */}
+      {/* Daemon Sensors */}
       <Card
         className={`cursor-pointer transition-colors hover:border-blue-500 ${
           activeFilter === 'mode:daemon' ? 'border-blue-500' : ''
@@ -153,12 +153,12 @@ export function AgentStatsCards({ agents, activeFilter, onFilterChange }: AgentS
 /**
  * Compact stats for inline display
  */
-export function AgentStatsInline({ agents }: { agents: Agent[] }) {
-  const stats = calculateAgentStats(agents)
+export function SensorStatsInline({ sensors }: { sensors: Sensor[] }) {
+  const stats = calculateSensorStats(sensors)
 
   return (
     <div className="flex items-center gap-3 text-sm">
-      <span className="text-muted-foreground">{stats.total} agents</span>
+      <span className="text-muted-foreground">{stats.total} sensors</span>
       <span className="text-green-500">{stats.online} online</span>
       {stats.error > 0 && <span className="text-red-500">{stats.error} error</span>}
     </div>

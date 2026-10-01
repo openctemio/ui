@@ -100,7 +100,7 @@ import {
   type CreatePipelineRequest,
   type UpdatePipelineRequest,
   PIPELINE_TRIGGER_LABELS,
-  PIPELINE_AGENT_PREFERENCE_LABELS,
+  PIPELINE_SENSOR_PREFERENCE_LABELS,
 } from '@/lib/api'
 
 export default function PipelinesPage() {
@@ -873,18 +873,18 @@ export default function PipelinesPage() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Agent</span>
+                    <span className="text-muted-foreground">Sensor</span>
                     <Badge variant="secondary" className="text-xs">
-                      {selectedPipeline.settings?.agent_preference === 'platform' ? (
+                      {selectedPipeline.settings?.sensor_preference === 'platform' ? (
                         <Cloud className="me-1 h-3 w-3" />
-                      ) : selectedPipeline.settings?.agent_preference === 'tenant' ? (
+                      ) : selectedPipeline.settings?.sensor_preference === 'tenant' ? (
                         <Server className="me-1 h-3 w-3" />
                       ) : (
                         <Settings className="me-1 h-3 w-3" />
                       )}
                       {
-                        PIPELINE_AGENT_PREFERENCE_LABELS[
-                          selectedPipeline.settings?.agent_preference || 'auto'
+                        PIPELINE_SENSOR_PREFERENCE_LABELS[
+                          selectedPipeline.settings?.sensor_preference || 'auto'
                         ]
                       }
                     </Badge>

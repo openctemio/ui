@@ -17,9 +17,9 @@ export type ScheduleType = (typeof SCHEDULE_TYPES)[number]
 export const SCAN_CONFIG_STATUSES = ['active', 'paused', 'disabled'] as const
 export type ScanConfigStatus = (typeof SCAN_CONFIG_STATUSES)[number]
 
-// Agent preference types
-export const AGENT_PREFERENCES = ['auto', 'tenant', 'platform'] as const
-export type AgentPreference = (typeof AGENT_PREFERENCES)[number]
+// Sensor preference types
+export const SENSOR_PREFERENCES = ['auto', 'tenant', 'platform'] as const
+export type SensorPreference = (typeof SENSOR_PREFERENCES)[number]
 
 // Labels for display
 export const SCAN_TYPE_LABELS: Record<ScanType, string> = {
@@ -41,16 +41,16 @@ export const SCAN_CONFIG_STATUS_LABELS: Record<ScanConfigStatus, string> = {
   disabled: 'Disabled',
 }
 
-export const AGENT_PREFERENCE_LABELS: Record<AgentPreference, string> = {
+export const SENSOR_PREFERENCE_LABELS: Record<SensorPreference, string> = {
   auto: 'Auto (Tenant first, Platform fallback)',
-  tenant: 'Tenant Agents Only',
-  platform: 'Platform Agents Only',
+  tenant: 'Tenant Sensors Only',
+  platform: 'Platform Sensors Only',
 }
 
-export const AGENT_PREFERENCE_DESCRIPTIONS: Record<AgentPreference, string> = {
-  auto: 'Uses tenant agents when available, falls back to platform agents',
-  tenant: 'Only uses agents deployed in your infrastructure',
-  platform: "Only uses OpenCTEM's managed platform agents",
+export const SENSOR_PREFERENCE_DESCRIPTIONS: Record<SensorPreference, string> = {
+  auto: 'Uses tenant sensors when available, falls back to platform sensors',
+  tenant: 'Only uses sensors deployed in your infrastructure',
+  platform: "Only uses OpenCTEM's managed platform sensors",
 }
 
 /**
@@ -77,7 +77,7 @@ export interface ScanConfig {
   next_run_at?: string
   tags?: string[]
   run_on_tenant_runner: boolean
-  agent_preference: AgentPreference
+  sensor_preference: SensorPreference
   profile_id?: string
   timeout_seconds: number
   /** Maximum automatic retry attempts (0 = no retry, max 10) */
@@ -133,7 +133,7 @@ export interface CreateScanConfigRequest {
   timezone?: string
   tags?: string[]
   run_on_tenant_runner?: boolean
-  agent_preference?: AgentPreference
+  sensor_preference?: SensorPreference
   profile_id?: string
   /** Max execution time in seconds (min 30, max 86400, default 3600) */
   timeout_seconds?: number
@@ -160,7 +160,7 @@ export interface UpdateScanConfigRequest {
   timezone?: string
   tags?: string[]
   run_on_tenant_runner?: boolean
-  agent_preference?: AgentPreference
+  sensor_preference?: SensorPreference
   /** Pass empty string to unlink the profile, omit to leave unchanged */
   profile_id?: string
   /** Max execution time in seconds (min 30, max 86400) */
@@ -369,7 +369,7 @@ export interface QualityGateResult {
 export interface ScanSession {
   id: string
   tenant_id?: string
-  agent_id?: string
+  sensor_id?: string
   scanner_name: string
   scanner_version?: string
   scanner_type?: string

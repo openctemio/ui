@@ -21,9 +21,9 @@
  *
  * Rule 1 deliberately keys on the `useDashboardStats` import rather than on
  * "has a domain-scoped hook". The looser form is unreliable here: most real pages
- * delegate to a feature section (`<AgentsSection/>`) or call `useSWR<T>(` with a
+ * delegate to a feature section (`<SensorsSection/>`) or call `useSWR<T>(` with a
  * generic, and a first draft of this test flagged fifteen working pages including
- * /agents, /reports and /secret-store. Keying on the import is exact — measured
+ * /sensors, /reports and /secret-store. Keying on the import is exact — measured
  * 2026-08-01: 46 pages import it, 37 have nothing else, and no working sidebar
  * page imports it at all.
  */

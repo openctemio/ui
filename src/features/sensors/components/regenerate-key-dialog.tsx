@@ -17,21 +17,21 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 
-import { useRegenerateAgentKey, invalidateAgentsCache } from '@/lib/api/agent-hooks'
-import { AgentConfigDialog } from './agent-config-dialog'
-import type { Agent } from '@/lib/api/agent-types'
+import { useRegenerateSensorKey, invalidateSensorsCache } from '@/lib/api/sensor-hooks'
+import { SensorConfigDialog } from './sensor-config-dialog'
+import type { Sensor } from '@/lib/api/sensor-types'
 
 interface RegenerateKeyDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  agent: Agent
+  sensor: Sensor
   onSuccess?: () => void
 }
 
 export function RegenerateKeyDialog({
   open,
   onOpenChange,
-  agent,
+  sensor,
   onSuccess,
 }: RegenerateKeyDialogProps) {
   const [apiKey, setApiKey] = useState<string | null>(null)
@@ -39,7 +39,7 @@ export function RegenerateKeyDialog({
   const [showApiKey, setShowApiKey] = useState(false)
   const [configDialogOpen, setConfigDialogOpen] = useState(false)
 
-  const { trigger: regenerateKey, isMutating } = useRegenerateAgentKey(agent.id)
+  const { trigger: regenerateKey, isMutating } = useRegenerateSensorKey(sensor.id)
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -103,7 +103,7 @@ export function RegenerateKeyDialog({
 
     // Invalidate cache after dialog closes if we regenerated a key
     if (hadNewKey) {
-      await invalidateAgentsCache()
+      await invalidateSensorsCache()
       onSuccess?.()
     }
   }
@@ -130,7 +130,7 @@ export function RegenerateKeyDialog({
                   Important: Save your new API key
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  The old API key has been invalidated. Any agents using the old key will no longer
+                  The old API key has been invalidated. Any sensors using the old key will no longer
                   be able to authenticate.
                 </p>
               </div>
@@ -187,10 +187,10 @@ export function RegenerateKeyDialog({
         </Dialog>
 
         {/* Config dialog with actual API key */}
-        <AgentConfigDialog
+        <SensorConfigDialog
           open={configDialogOpen}
           onOpenChange={setConfigDialogOpen}
-          agent={agent}
+          sensor={sensor}
           apiKey={apiKey}
         />
       </>
@@ -207,7 +207,7 @@ export function RegenerateKeyDialog({
             Regenerate API Key
           </DialogTitle>
           <DialogDescription>
-            Generate a new API key for <strong>{agent.name}</strong>
+            Generate a new API key for <strong>{sensor.name}</strong>
           </DialogDescription>
         </DialogHeader>
 
@@ -219,8 +219,8 @@ export function RegenerateKeyDialog({
                 Warning: This will invalidate the current API key
               </p>
               <p className="text-xs text-muted-foreground">
-                Any agents currently using this API key will no longer be able to authenticate. Make
-                sure to update your agent configuration with the new key.
+                Any sensors currently using this API key will no longer be able to authenticate.
+                Make sure to update your sensor configuration with the new key.
               </p>
             </div>
           </div>
@@ -229,7 +229,7 @@ export function RegenerateKeyDialog({
         <div className="text-sm text-muted-foreground">
           <p>
             Current API key prefix:{' '}
-            <code className="bg-muted px-1 rounded">{agent.api_key_prefix}...</code>
+            <code className="bg-muted px-1 rounded">{sensor.api_key_prefix}...</code>
           </p>
         </div>
 

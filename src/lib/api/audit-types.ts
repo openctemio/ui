@@ -9,6 +9,64 @@
 // VALUE OBJECTS
 // ============================================
 
+// ----------------------------------------------------------------------------
+// Sensor events before and after the sensor rename
+//
+// RFC-023 §9.5 (openctemio/api, docs/rfcs/RFC-023-sensor-rename-contract.md §5).
+// New events are sensor.* on resource type "sensor" with sensor_* metadata.
+// Rows written before the upgrade keep the old action prefix, resource type and
+// metadata keys (the HISTORICAL_SENSOR_* constants below) for good:
+// the audit log is hash-chained, so history is never rewritten. The API returns
+// each row as written (a sensor filter also matches the old spelling), so the
+// UI maps the old spelling onto the new one before labelling anything.
+// ----------------------------------------------------------------------------
+
+export const SENSOR_AUDIT_VERBS = [
+  'created',
+  'updated',
+  'deleted',
+  'activated',
+  'deactivated',
+  'revoked',
+  'key_regenerated',
+  'key_renewed',
+  'connected',
+  'disconnected',
+] as const
+export type SensorAuditVerb = (typeof SENSOR_AUDIT_VERBS)[number]
+
+/** Action prefix of sensor events written before the rename. */
+export const HISTORICAL_SENSOR_ACTION_PREFIX = 'agent.'
+/** Resource type of sensor events written before the rename. */
+export const HISTORICAL_SENSOR_RESOURCE_TYPE = 'agent'
+/** Metadata key prefix (type, id, name) of events written before the rename. */
+export const HISTORICAL_SENSOR_METADATA_PREFIX = 'agent_'
+
+const SENSOR_ACTION_PREFIX = 'sensor.'
+const SENSOR_METADATA_PREFIX = 'sensor_'
+const HISTORICAL_SENSOR_METADATA_KEYS = new Set(['type', 'id', 'name'])
+
+/** Current name of an audit action: a pre-rename sensor action maps onto sensor.*. */
+export function canonicalAuditAction<T extends string>(action: T): T {
+  return (
+    action.startsWith(HISTORICAL_SENSOR_ACTION_PREFIX)
+      ? SENSOR_ACTION_PREFIX + action.slice(HISTORICAL_SENSOR_ACTION_PREFIX.length)
+      : action
+  ) as T
+}
+
+/** Current name of an audit resource type (the historical one -> "sensor"). */
+export function canonicalAuditResourceType<T extends string>(resourceType: T): T {
+  return (resourceType === HISTORICAL_SENSOR_RESOURCE_TYPE ? 'sensor' : resourceType) as T
+}
+
+/** Current name of an audit metadata key (historical type/id/name keys -> sensor_*). */
+export function canonicalAuditMetadataKey(key: string): string {
+  if (!key.startsWith(HISTORICAL_SENSOR_METADATA_PREFIX)) return key
+  const rest = key.slice(HISTORICAL_SENSOR_METADATA_PREFIX.length)
+  return HISTORICAL_SENSOR_METADATA_KEYS.has(rest) ? SENSOR_METADATA_PREFIX + rest : key
+}
+
 /**
  * Audit action types - maps to backend audit.Action
  */
@@ -82,16 +140,9 @@ export type AuditAction =
   // Data actions
   | 'data.exported'
   | 'data.imported'
-  // Agent actions
-  | 'agent.created'
-  | 'agent.updated'
-  | 'agent.deleted'
-  | 'agent.activated'
-  | 'agent.deactivated'
-  | 'agent.revoked'
-  | 'agent.key_regenerated'
-  | 'agent.connected'
-  | 'agent.disconnected'
+  // Sensor actions, and the spelling rows written before the rename carry
+  | `sensor.${SensorAuditVerb}`
+  | `${typeof HISTORICAL_SENSOR_ACTION_PREFIX}${SensorAuditVerb}`
 
 /**
  * Resource types - maps to backend audit.ResourceType
@@ -112,7 +163,8 @@ export type AuditResourceType =
   | 'asset'
   | 'settings'
   | 'token'
-  | 'agent'
+  | 'sensor'
+  | typeof HISTORICAL_SENSOR_RESOURCE_TYPE
 
 /**
  * Audit result - maps to backend audit.Result
@@ -215,7 +267,7 @@ export interface AuditLogStats {
  * Get display label for action
  */
 export function getActionLabel(action: AuditAction): string {
-  const labels: Record<AuditAction, string> = {
+  const labels: Partial<Record<AuditAction, string>> = {
     // User actions
     'user.created': 'User Created',
     'user.updated': 'User Updated',
@@ -285,18 +337,20 @@ export function getActionLabel(action: AuditAction): string {
     // Data actions
     'data.exported': 'Data Exported',
     'data.imported': 'Data Imported',
-    // Agent actions
-    'agent.created': 'Agent Created',
-    'agent.updated': 'Agent Updated',
-    'agent.deleted': 'Agent Deleted',
-    'agent.activated': 'Agent Activated',
-    'agent.deactivated': 'Agent Deactivated',
-    'agent.revoked': 'Agent Revoked',
-    'agent.key_regenerated': 'API Key Regenerated',
-    'agent.connected': 'Agent Connected',
-    'agent.disconnected': 'Agent Disconnected',
+    // Sensor actions (pre-rename rows are mapped onto these first)
+    'sensor.created': 'Sensor Created',
+    'sensor.updated': 'Sensor Updated',
+    'sensor.deleted': 'Sensor Deleted',
+    'sensor.activated': 'Sensor Activated',
+    'sensor.deactivated': 'Sensor Deactivated',
+    'sensor.revoked': 'Sensor Revoked',
+    'sensor.key_regenerated': 'Sensor API Key Regenerated',
+    'sensor.key_renewed': 'Sensor API Key Renewed',
+    'sensor.connected': 'Sensor Connected',
+    'sensor.disconnected': 'Sensor Disconnected',
   }
-  return labels[action] || action
+  const canonical = canonicalAuditAction(action)
+  return labels[canonical] || action
 }
 
 /**

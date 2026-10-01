@@ -48,6 +48,7 @@ import {
   formatAction,
 } from '@/features/organization'
 import { copyToClipboard } from '@/lib/clipboard'
+import { canonicalAuditMetadataKey, canonicalAuditResourceType } from '@/lib/api/audit-types'
 import { Permission, useHasPermission } from '@/lib/permissions'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useUrlFilter } from '@/hooks/use-url-param'
@@ -225,7 +226,9 @@ export default function AuditLogPage() {
             <span className="text-sm">
               {row.original.resource_name || row.original.resource_id}
             </span>
-            <span className="text-xs text-muted-foreground">{row.original.resource_type}</span>
+            <span className="text-xs text-muted-foreground">
+              {canonicalAuditResourceType(row.original.resource_type)}
+            </span>
           </div>
         ),
       },
@@ -517,7 +520,9 @@ export default function AuditLogPage() {
                   <div className="rounded-lg border divide-y">
                     <div className="flex items-center justify-between p-3 text-sm">
                       <span className="text-muted-foreground">Type</span>
-                      <span className="font-medium">{selectedLog.resource_type}</span>
+                      <span className="font-medium">
+                        {canonicalAuditResourceType(selectedLog.resource_type)}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between p-3 text-sm">
                       <span className="text-muted-foreground">Name</span>
@@ -575,7 +580,7 @@ export default function AuditLogPage() {
                         {Object.entries(selectedLog.metadata).map(([key, value]) => (
                           <div key={key}>
                             <dt className="text-xs font-medium text-muted-foreground mb-1">
-                              {key}
+                              {canonicalAuditMetadataKey(key)}
                             </dt>
                             <dd className="text-sm font-mono break-all">
                               {typeof value === 'object' ? JSON.stringify(value) : String(value)}

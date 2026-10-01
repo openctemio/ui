@@ -62,7 +62,7 @@ export const CapabilityDetailPanel = memo(function CapabilityDetailPanel({
 
   // Use fetched data, fall back to initial stats for instant counts display
   const stats = usageStats || initialStats
-  const hasNames = usageStats?.tool_names || usageStats?.agent_names
+  const hasNames = usageStats?.tool_names || usageStats?.sensor_names
   const isLoadingNames = isLoading && !hasNames
 
   if (!capability) return null
@@ -129,9 +129,9 @@ export const CapabilityDetailPanel = memo(function CapabilityDetailPanel({
                 <div className="rounded-lg border bg-muted/30 p-3">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Bot className="h-4 w-4" />
-                    <span className="text-xs font-medium">Agents</span>
+                    <span className="text-xs font-medium">Sensors</span>
                   </div>
-                  <p className="mt-1 text-2xl font-bold">{stats?.agent_count ?? 0}</p>
+                  <p className="mt-1 text-2xl font-bold">{stats?.sensor_count ?? 0}</p>
                 </div>
               </div>
             </section>
@@ -189,21 +189,21 @@ export const CapabilityDetailPanel = memo(function CapabilityDetailPanel({
             {/* Divider */}
             <div className="border-t" />
 
-            {/* Agents List */}
+            {/* Sensors List */}
             <section>
               <div className="mb-3 flex items-center justify-between">
                 <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <Bot className="h-4 w-4" />
-                  Agents
-                  {stats && stats.agent_count > 0 && (
+                  Sensors
+                  {stats && stats.sensor_count > 0 && (
                     <Badge variant="secondary" className="ms-1 text-xs">
-                      {stats.agent_count}
+                      {stats.sensor_count}
                     </Badge>
                   )}
                 </h4>
-                {stats && stats.agent_count > 0 && (
+                {stats && stats.sensor_count > 0 && (
                   <Link
-                    href="/agents"
+                    href="/sensors"
                     className="text-xs text-primary hover:underline flex items-center gap-1"
                   >
                     View All
@@ -217,9 +217,9 @@ export const CapabilityDetailPanel = memo(function CapabilityDetailPanel({
                     <Skeleton key={i} className="h-10 w-full" />
                   ))}
                 </div>
-              ) : usageStats?.agent_names && usageStats.agent_names.length > 0 ? (
+              ) : usageStats?.sensor_names && usageStats.sensor_names.length > 0 ? (
                 <div className="space-y-1.5">
-                  {usageStats.agent_names.map((name) => (
+                  {usageStats.sensor_names.map((name) => (
                     <div
                       key={name}
                       className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm"
@@ -229,9 +229,9 @@ export const CapabilityDetailPanel = memo(function CapabilityDetailPanel({
                     </div>
                   ))}
                 </div>
-              ) : stats?.agent_count === 0 ? (
+              ) : stats?.sensor_count === 0 ? (
                 <p className="text-sm text-muted-foreground py-2">
-                  No agents have this capability assigned.
+                  No sensors have this capability assigned.
                 </p>
               ) : null}
             </section>

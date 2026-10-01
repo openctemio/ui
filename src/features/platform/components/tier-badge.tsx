@@ -1,7 +1,7 @@
 /**
  * Tier Badge Component
  *
- * Displays a badge showing the platform agent tier with icon and color
+ * Displays a badge showing the platform sensor tier with icon and color
  * Tiers: shared (gray), dedicated (blue), premium (purple)
  */
 
@@ -11,7 +11,7 @@ import { memo } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { Server, Cloud, Crown, type LucideIcon } from 'lucide-react'
-import type { PlatformAgentTier } from '@/lib/api/platform-types'
+import type { PlatformSensorTier } from '@/lib/api/platform-types'
 import {
   PLATFORM_TIER_LABELS,
   PLATFORM_TIER_COLORS,
@@ -29,7 +29,7 @@ const TIER_ICON_MAP: Record<string, LucideIcon> = {
 
 interface TierBadgeProps {
   /** The tier level */
-  tier: PlatformAgentTier
+  tier: PlatformSensorTier
   /** Whether to show the tier icon */
   showIcon?: boolean
   /** Size variant */
@@ -84,7 +84,7 @@ export function MaxTierBadge({
   maxTier,
   className,
 }: {
-  maxTier: PlatformAgentTier
+  maxTier: PlatformSensorTier
   className?: string
 }) {
   return (
@@ -102,7 +102,7 @@ export function AccessibleTiersList({
   tiers,
   className,
 }: {
-  tiers: PlatformAgentTier[]
+  tiers: PlatformSensorTier[]
   className?: string
 }) {
   if (!tiers || tiers.length === 0) return null

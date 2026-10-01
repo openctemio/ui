@@ -48,6 +48,7 @@ import {
   Clock,
   Timer,
   Bot,
+  RadioTower,
   FileSliders,
   Wrench,
   // New icons for CTEM architecture
@@ -603,22 +604,22 @@ export const sidebarData: SidebarData = {
       title: 'Settings',
       icon: Settings,
       items: [
-        // Agents — the execution/data-collection runtime (Fleet-style). Agents
+        // Sensors — the execution/data-collection runtime (Fleet-style). Sensors
         // span recon/scan/validate/collect, so they are their own plane, not a
         // sub-item of Scanning. Mirrors the Elastic Agent+Fleet / Datadog Agent
         // model; "Scanning" below is narrowed to scan-job configuration.
         {
-          title: 'Agents',
-          icon: Bot,
-          permission: Permission.AgentsRead,
-          module: 'scans',
+          title: 'Sensors',
+          icon: RadioTower,
+          permission: Permission.SensorsRead,
+          module: 'sensors',
           items: [
             {
-              title: 'All Agents',
-              url: '/agents',
-              icon: Bot,
-              permission: Permission.AgentsRead,
-              module: 'scans',
+              title: 'All Sensors',
+              url: '/sensors',
+              icon: RadioTower,
+              permission: Permission.SensorsRead,
+              module: 'sensors',
             },
             {
               title: 'Capabilities',

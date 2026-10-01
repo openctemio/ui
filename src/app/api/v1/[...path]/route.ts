@@ -255,7 +255,7 @@ async function proxyRequest(
     // NOTE: never forward a client-supplied 'x-tenant-id' — the Go API
     // derives tenant solely from the JWT. Forwarding it is a footgun.
     'x-csrf-token',
-    'x-agent-api-key', // For GET /agents/{id}/config-templates — keeps key out of query string
+    'x-sensor-api-key', // For GET /sensors/{id}/config-templates — keeps key out of query string
   ]
   forwardHeaders.forEach((header) => {
     const value = request.headers.get(header)

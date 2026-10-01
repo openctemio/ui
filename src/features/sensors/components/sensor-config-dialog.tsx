@@ -15,7 +15,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import { copyToClipboard } from '@/lib/clipboard'
-import type { Agent } from '@/lib/api/agent-types'
+import type { Sensor } from '@/lib/api/sensor-types'
 
 interface RenderedTemplates {
   yaml: string
@@ -24,28 +24,33 @@ interface RenderedTemplates {
   cli: string
 }
 
-interface AgentConfigDialogProps {
+interface SensorConfigDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  agent: Agent
+  sensor: Sensor
   apiKey?: string // Optional - only available right after creation/regeneration
 }
 
-export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentConfigDialogProps) {
+export function SensorConfigDialog({
+  open,
+  onOpenChange,
+  sensor,
+  apiKey,
+}: SensorConfigDialogProps) {
   const [copied, setCopied] = useState<string | null>(null)
   const [templates, setTemplates] = useState<RenderedTemplates | null>(null)
   const [loading, setLoading] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
 
   // Fetch rendered templates from the backend.
-  // Templates live in api/configs/agent-templates/*.tmpl on the API host —
+  // Templates live in api/configs/sensor-templates/*.tmpl on the API host —
   // operators can edit them without rebuilding the frontend.
   //
-  // SECURITY: API key (when provided) is sent via X-Agent-API-Key header,
+  // SECURITY: API key (when provided) is sent via X-Sensor-API-Key header,
   // never as a query parameter — query strings get logged by proxies,
   // load balancers, browser history, and referer headers.
   useEffect(() => {
-    if (!open || !agent.id) return
+    if (!open || !sensor.id) return
 
     const controller = new AbortController()
     setLoading(true)
@@ -53,10 +58,10 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
 
     const headers: Record<string, string> = { Accept: 'application/json' }
     if (apiKey) {
-      headers['X-Agent-API-Key'] = apiKey
+      headers['X-Sensor-API-Key'] = apiKey
     }
 
-    fetch(`/api/v1/agents/${agent.id}/config-templates`, {
+    fetch(`/api/v1/sensors/${sensor.id}/config-templates`, {
       credentials: 'include',
       headers,
       signal: controller.signal,
@@ -72,12 +77,12 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
       .catch((err: Error) => {
         if (err.name === 'AbortError') return
         setFetchError(err.message)
-        toast.error(`Failed to load agent config templates: ${err.message}`)
+        toast.error(`Failed to load sensor config templates: ${err.message}`)
       })
       .finally(() => setLoading(false))
 
     return () => controller.abort()
-  }, [open, agent.id, apiKey])
+  }, [open, sensor.id, apiKey])
 
   const yamlConfig = templates?.yaml ?? ''
   const envConfig = templates?.env ?? ''
@@ -110,17 +115,17 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileCode className="h-5 w-5" />
-            Agent Configuration
+            Sensor Configuration
           </DialogTitle>
           <DialogDescription>
-            Configuration templates for <strong>{agent.name}</strong>
+            Configuration templates for <strong>{sensor.name}</strong>
             {!apiKey && (
               <span className="text-yellow-600 dark:text-yellow-400 block mt-1">
                 Note: Replace {'<YOUR_API_KEY>'} with your actual API key
               </span>
             )}
             <span className="text-muted-foreground block mt-1 text-xs">
-              Templates are loaded from <code>configs/agent-templates/*.tmpl</code> on the API host
+              Templates are loaded from <code>configs/sensor-templates/*.tmpl</code> on the API host
               — edit them there to customize without rebuilding the UI.
             </span>
           </DialogDescription>
@@ -154,11 +159,11 @@ export function AgentConfigDialog({ open, onOpenChange, agent, apiKey }: AgentCo
                   variant="outline"
                   size="sm"
                   disabled={!yamlConfig}
-                  aria-label="Download agent YAML configuration"
+                  aria-label="Download sensor YAML configuration"
                   onClick={() =>
                     handleDownload(
                       yamlConfig,
-                      `${agent.name.toLowerCase().replace(/\s+/g, '-')}-agent.yaml`
+                      `${sensor.name.toLowerCase().replace(/\s+/g, '-')}-sensor.yaml`
                     )
                   }
                 >

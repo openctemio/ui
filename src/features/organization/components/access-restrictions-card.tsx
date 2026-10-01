@@ -65,8 +65,8 @@ export function AccessRestrictionsCard({
       <CardHeader>
         <CardTitle>Access restrictions</CardTitle>
         <CardDescription>
-          Enforced for user accounts in this organization. Sensors (agents), API keys and the
-          platform admin console are not affected.
+          Enforced for user accounts in this organization. Sensors, API keys and the platform admin
+          console are not affected.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

@@ -32,7 +32,7 @@ const liveGitleaksPayload = {
   finding_count: 22,
   finding_severity_counts: { critical: 0, high: 16, medium: 6, low: 0, info: 0 },
   properties: { source: 'parse_options' },
-  discovery_source: 'agent',
+  discovery_source: 'sensor',
   discovery_tool: 'gitleaks',
   discovered_at: '2026-07-14T04:54:45.713383Z',
   pii_data_exposed: false,
@@ -55,7 +55,7 @@ describe('getAsset mapping', () => {
     expect(a.riskScore).toBe(73)
     expect(a.findingCount).toBe(22)
     expect(a.findingSeverityCounts).toEqual({ critical: 0, high: 16, medium: 6, low: 0, info: 0 })
-    expect(a.discoverySource).toBe('agent')
+    expect(a.discoverySource).toBe('sensor')
     expect(a.discoveryTool).toBe('gitleaks')
     expect(a.discoveredAt).toBe('2026-07-14T04:54:45.713383Z')
     expect(a.piiDataExposed).toBe(false)
