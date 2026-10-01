@@ -3,14 +3,12 @@
 import type { ElementType, ReactNode } from 'react'
 import Link from 'next/link'
 import {
-  SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebarActions,
 } from '@/components/ui/sidebar'
-import { Badge } from '@/components/ui/badge'
+import { NAV_BUTTON_CLASS, NavBadge, NavClusterLabel } from './nav-group'
 
 export interface GroupedNavLink {
   key: string
@@ -38,8 +36,16 @@ interface GroupedNavProps {
  * most. Used by the shells whose nav is a list of destinations rather than the
  * CTEM tree: the settings rail and the platform admin console.
  *
- * Collapsed to the icon rail, headings hide and each link keeps its icon with a
- * tooltip. On phones (sheet), following a link closes the sheet.
+ * Built from the main sidebar's own pieces so the two look and behave alike in
+ * both states: rows are `SidebarMenuButton` with the main nav's
+ * NAV_BUTTON_CLASS (20px icons, same stroke, colours, active and hover
+ * states), and sections are separated by NavClusterLabel, which shows the
+ * label when expanded and a hairline on the icon rail. Collapsed, every row
+ * keeps its tooltip. On phones (sheet), following a link closes the sheet.
+ *
+ * Not SidebarGroupLabel: collapsed, it slides up by its own height while
+ * fading out, and the invisible label then sat on top of the row above it
+ * (the settings rail's "Back to app" could not be clicked).
  */
 export function GroupedNav({ sections, activeUrl }: GroupedNavProps) {
   const { setOpenMobile } = useSidebarActions()
@@ -48,8 +54,8 @@ export function GroupedNav({ sections, activeUrl }: GroupedNavProps) {
     <>
       {sections.map((section) =>
         section.items.length === 0 ? null : (
-          <SidebarGroup key={section.key} className="py-1">
-            {section.label && <SidebarGroupLabel>{section.label}</SidebarGroupLabel>}
+          <div key={section.key} className="flex flex-col gap-1">
+            {section.label && <NavClusterLabel label={section.label} />}
             <SidebarMenu>
               {section.items.map((item) => (
                 <SidebarMenuItem key={item.key}>
@@ -57,7 +63,7 @@ export function GroupedNav({ sections, activeUrl }: GroupedNavProps) {
                     asChild
                     isActive={item.url === activeUrl}
                     tooltip={item.title}
-                    className="[&>svg]:stroke-[1.75]"
+                    className={NAV_BUTTON_CLASS}
                   >
                     <Link
                       href={item.url}
@@ -67,27 +73,15 @@ export function GroupedNav({ sections, activeUrl }: GroupedNavProps) {
                     >
                       <item.icon />
                       <span>{item.title}</span>
-                      {item.badge && <GroupedNavBadge>{item.badge}</GroupedNavBadge>}
+                      {item.badge && <NavBadge variant="soon">{item.badge}</NavBadge>}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
-          </SidebarGroup>
+          </div>
         )
       )}
     </>
-  )
-}
-
-/** The dashed "Soon" pill the main sidebar uses, for rails built on GroupedNav. */
-export function GroupedNavBadge({ children }: { children: ReactNode }) {
-  return (
-    <Badge
-      variant="outline"
-      className="ms-auto shrink-0 rounded-full border-dashed px-1.5 py-0 text-[10px] text-muted-foreground group-data-[collapsible=icon]:hidden"
-    >
-      {children}
-    </Badge>
   )
 }

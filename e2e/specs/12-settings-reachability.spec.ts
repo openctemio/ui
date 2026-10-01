@@ -42,6 +42,36 @@ test('every settings rail entry opens', async ({ page }) => {
   }
 })
 
+for (const collapsed of [false, true]) {
+  test(`Back to app returns to the last app page (sidebar ${collapsed ? 'collapsed' : 'expanded'})`, async ({
+    page,
+    context,
+    e2eConfig,
+  }) => {
+    // The sidebar reads its state from this cookie on the server.
+    await context.addCookies([
+      { name: 'sidebar_state', value: String(!collapsed), url: e2eConfig.baseURL },
+    ])
+    await page.goto('/findings')
+    await expect(page.locator('h1')).toHaveCount(1, { timeout: 30_000 })
+    await page.goto('/settings/members')
+    await expect(page.locator(rail)).toBeVisible({ timeout: 30_000 })
+    const back = page.locator(rail).getByRole('link', { name: 'Back to app' })
+    if (collapsed) {
+      // Collapsed: icon only, with its label as a tooltip.
+      await back.hover()
+      await expect(page.getByRole('tooltip', { name: 'Back to app' })).toBeVisible()
+    }
+    await back.click()
+    await expect(page).toHaveURL(/\/findings$/)
+    // Keyboard: focus it and press Enter.
+    await page.goto('/settings/members')
+    await page.locator(rail).getByRole('link', { name: 'Back to app' }).focus()
+    await page.keyboard.press('Enter')
+    await expect(page).toHaveURL(/\/findings$/)
+  })
+}
+
 test('moved settings URLs answer 308 with the query kept', async ({ e2eConfig }) => {
   const ctx = await request.newContext({ baseURL: e2eConfig.baseURL })
   for (const r of LEGACY_SETTINGS_ROUTE_REDIRECTS) {
