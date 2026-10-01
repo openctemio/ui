@@ -9,11 +9,21 @@ const mockMutate = vi.fn()
 const mockCreate = vi.fn()
 const mockRevoke = vi.fn()
 let listData: { tokens: unknown[] } | undefined = { tokens: [] }
+let tenantAdmin = true
+let listEnabled: boolean | undefined
 
 vi.mock('@/features/scim-tokens/api/use-scim-tokens', () => ({
-  useScimTokens: () => ({ data: listData, isLoading: false, mutate: mockMutate }),
+  useScimTokens: (opts?: { enabled?: boolean }) => {
+    listEnabled = opts?.enabled
+    return { data: listData, isLoading: false, mutate: mockMutate }
+  },
   useCreateScimToken: () => ({ trigger: mockCreate, isMutating: false }),
   useRevokeScimToken: () => ({ trigger: mockRevoke, isMutating: false }),
+}))
+
+vi.mock('@/lib/permissions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/permissions')>()),
+  usePermissions: () => ({ isAdmin: () => tenantAdmin, isLoading: false }),
 }))
 
 vi.mock('sonner', () => ({
@@ -28,6 +38,19 @@ describe('ScimTokensPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     listData = { tokens: [] }
+    tenantAdmin = true
+    listEnabled = undefined
+  })
+
+  it('a member or viewer gets no Generate token and no token request', () => {
+    // The API refuses /scim-tokens to anyone but an owner or admin; the page
+    // used to show them an enabled button next to "Failed to load".
+    tenantAdmin = false
+    render(<ScimTokensPage />)
+    expect(screen.queryByRole('button', { name: /generate token/i })).toBeNull()
+    expect(screen.getByText("Managed by your team's owners and admins")).toBeInTheDocument()
+    expect(screen.queryByText('SCIM endpoint')).toBeNull()
+    expect(listEnabled).toBe(false)
   })
 
   it('is available to tenant admins who are not application administrators', () => {

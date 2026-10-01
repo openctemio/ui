@@ -28,7 +28,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { KeyRound, Plus, Ban, Copy, Check } from 'lucide-react'
+import { KeyRound, Plus, Ban, Copy, Check, ShieldCheck } from 'lucide-react'
 import {
   useScimTokens,
   useCreateScimToken,
@@ -38,6 +38,7 @@ import type { ScimToken } from '@/features/scim-tokens/types/scim-token.types'
 import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { toast } from 'sonner'
+import { usePermissions } from '@/lib/permissions'
 
 function isActive(t: ScimToken): boolean {
   return t.status === 'active'
@@ -253,7 +254,12 @@ function LoadingSkeleton() {
 }
 
 export default function ScimTokensPage() {
-  const { data, error, isLoading, mutate } = useScimTokens()
+  // SCIM tokens are an owner/admin operation: the API refuses every
+  // /scim-tokens call from anyone else. Members and viewers used to get an
+  // enabled "Generate token" button (and an error where the list should be).
+  const { isAdmin, isLoading: roleLoading } = usePermissions()
+  const canManage = isAdmin()
+  const { data, error, isLoading, mutate } = useScimTokens({ enabled: canManage })
   const [genOpen, setGenOpen] = useState(false)
   const [newToken, setNewToken] = useState('')
 
@@ -321,13 +327,25 @@ export default function ScimTokensPage() {
         title="SCIM provisioning"
         description="Automate user provisioning and deprovisioning from your identity provider."
       >
-        <Button size="sm" onClick={() => setGenOpen(true)}>
-          <Plus className="me-2 h-4 w-4" />
-          Generate token
-        </Button>
+        {canManage && (
+          <Button size="sm" onClick={() => setGenOpen(true)}>
+            <Plus className="me-2 h-4 w-4" />
+            Generate token
+          </Button>
+        )}
       </PageHeader>
 
-      {isLoading ? (
+      {roleLoading ? (
+        <LoadingSkeleton />
+      ) : !canManage ? (
+        <div className="mt-5">
+          <EmptyState
+            icon={ShieldCheck}
+            title="Managed by your team's owners and admins"
+            description="SCIM tokens let your identity provider create and remove accounts in this team. Ask an owner or admin to set it up."
+          />
+        </div>
+      ) : isLoading ? (
         <LoadingSkeleton />
       ) : error ? (
         // Don't render a failed read as "No SCIM tokens yet" with zeroed stats.

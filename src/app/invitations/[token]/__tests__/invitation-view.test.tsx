@@ -50,4 +50,23 @@ describe('InvitationView', () => {
     expect(await screen.findByRole('button', { name: /accept invitation/i })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /create your account/i })).toBeNull()
   })
+
+  it('names the inviter when the preview carries a name', async () => {
+    render(<InvitationView token="tok123" hasSession />)
+    expect(await screen.findByText('Alice')).toBeInTheDocument()
+    expect(screen.queryByText('A team member')).toBeNull()
+  })
+
+  it.each([undefined, '', '  '])(
+    'falls back to "A team member" for inviter_name %j',
+    async (name) => {
+      const unnamed = { ...preview, invitation: { ...preview.invitation, inviter_name: name } }
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => new Response(JSON.stringify(unnamed), { status: 200 }))
+      )
+      render(<InvitationView token="tok123" hasSession />)
+      expect(await screen.findByText('A team member')).toBeInTheDocument()
+    }
+  )
 })
