@@ -608,7 +608,9 @@ export function OrganizationSettings({ view }: { view: OrganizationSettingsView 
             <Card>
               <CardHeader>
                 <CardTitle>Sign-in</CardTitle>
-                <CardDescription>Two-factor, data scope, session length and e-mail verification</CardDescription>
+                <CardDescription>
+                  Two-factor, data scope, session length and e-mail verification
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center justify-between">
