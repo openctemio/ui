@@ -115,7 +115,7 @@ export const settingsNav: SettingsNavGroup[] = [
         id: 'my-notifications',
         title: 'Notifications',
         description: 'Which notifications you receive, and how.',
-        url: '/settings/notifications',
+        url: '/account/notifications',
         icon: Bell,
         keywords: ['email', 'digest', 'alerts', 'mute'],
       },

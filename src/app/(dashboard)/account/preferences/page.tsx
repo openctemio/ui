@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -14,7 +13,7 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Palette, Globe, Bell, Clock, Calendar, Save, Loader2, RotateCcw } from 'lucide-react'
+import { Palette, Globe, Clock, Calendar, Save, Loader2, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { useTheme } from 'next-themes'
@@ -22,11 +21,11 @@ import {
   usePreferences,
   useUpdatePreferences,
   getLocalPreferences,
-  setLocalPreferences,
+  mergeLocalPreferences,
   SUPPORTED_TIMEZONES,
   DATE_FORMATS,
 } from '@/features/account'
-import type { UpdatePreferencesInput, UserPreferences } from '@/features/account'
+import type { UpdatePreferencesInput } from '@/features/account'
 
 // The backend only persists user-preference `language` when it is one of
 // these (`oneof=en vi` in the API validator). Offering ja/ko/zh here made
@@ -50,21 +49,13 @@ export default function PreferencesPage() {
     timezone: 'UTC',
     date_format: 'DD/MM/YYYY',
     time_format: '24h',
-    email_notifications: {
-      security_alerts: true,
-      weekly_digest: true,
-      scan_completed: true,
-      new_findings: true,
-      team_updates: true,
-    },
-    desktop_notifications: false,
   })
   const [hasChanges, setHasChanges] = useState(false)
 
   // Populate form when preferences load.
   // The backend only stores `theme` + `language`. The remaining fields
-  // (timezone, date/time format, desktop + email notification toggles) have
-  // no backend column, so they are persisted in localStorage — otherwise a
+  // (timezone, date/time format) have no backend column, so they are
+  // persisted in localStorage — otherwise a
   // Save followed by a reload would silently lose them. This mirrors the
   // browser-local Display Preferences on the General Settings page.
   useEffect(() => {
@@ -76,14 +67,6 @@ export default function PreferencesPage() {
         timezone: local.timezone || 'UTC',
         date_format: local.date_format || 'DD/MM/YYYY',
         time_format: local.time_format || '24h',
-        email_notifications: local.email_notifications || {
-          security_alerts: true,
-          weekly_digest: true,
-          scan_completed: true,
-          new_findings: true,
-          team_updates: true,
-        },
-        desktop_notifications: local.desktop_notifications ?? false,
       })
       setHasChanges(false)
     }
@@ -110,36 +93,19 @@ export default function PreferencesPage() {
     }
   }
 
-  // Handle email notification change
-  const handleEmailNotificationChange = (
-    key: keyof NonNullable<UpdatePreferencesInput['email_notifications']>,
-    value: boolean
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      email_notifications: {
-        ...prev.email_notifications,
-        [key]: value,
-      },
-    }))
-    setHasChanges(true)
-  }
-
   // Save preferences.
   // Split the write: theme + language go to the server (the only fields it
-  // persists); the display + notification preferences are browser-local, so
+  // persists); the display preferences are browser-local, so
   // they are written to localStorage. Sending the phantom fields to the API
   // was a no-op (silently dropped), which is the bug this fixes.
   const handleSave = async () => {
     try {
-      setLocalPreferences({
+      // Merge: the same browser-local object also holds the desktop
+      // notification choice, which /account/notifications owns.
+      mergeLocalPreferences({
         timezone: formData.timezone,
         date_format: formData.date_format,
         time_format: formData.time_format,
-        // formData is seeded with all notification keys, so this is always a
-        // full object at runtime — the input type just declares them Partial.
-        email_notifications: formData.email_notifications as UserPreferences['email_notifications'],
-        desktop_notifications: formData.desktop_notifications,
       })
       const result = await updatePreferences({
         theme: formData.theme,
@@ -163,14 +129,6 @@ export default function PreferencesPage() {
       timezone: 'UTC',
       date_format: 'DD/MM/YYYY',
       time_format: '24h',
-      email_notifications: {
-        security_alerts: true,
-        weekly_digest: true,
-        scan_completed: true,
-        new_findings: true,
-        team_updates: true,
-      },
-      desktop_notifications: false,
     }
     setFormData(defaults)
     setTheme('system')
@@ -321,122 +279,6 @@ export default function PreferencesPage() {
                   <SelectItem value="12h">12-hour (2:30 PM)</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Notifications */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Notifications
-          </CardTitle>
-          <CardDescription>Manage how you receive notifications</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Desktop Notifications */}
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Desktop Notifications</Label>
-              <p className="text-sm text-muted-foreground">
-                Receive push notifications in your browser
-              </p>
-            </div>
-            <Switch
-              aria-label="Desktop Notifications"
-              checked={formData.desktop_notifications}
-              onCheckedChange={(checked) => handleChange('desktop_notifications', checked)}
-            />
-          </div>
-
-          <Separator />
-
-          {/* Email Notifications */}
-          <div className="space-y-4">
-            <Label>Email Notifications</Label>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Security Alerts</p>
-                  <p className="text-xs text-muted-foreground">
-                    Login attempts, password changes, and security events
-                  </p>
-                </div>
-                <Switch
-                  aria-label="Security Alerts"
-                  checked={formData.email_notifications?.security_alerts}
-                  onCheckedChange={(checked) =>
-                    handleEmailNotificationChange('security_alerts', checked)
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Weekly Digest</p>
-                  <p className="text-xs text-muted-foreground">
-                    Summary of findings and activity from the past week
-                  </p>
-                </div>
-                <Switch
-                  aria-label="Weekly Digest"
-                  checked={formData.email_notifications?.weekly_digest}
-                  onCheckedChange={(checked) =>
-                    handleEmailNotificationChange('weekly_digest', checked)
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Scan Completed</p>
-                  <p className="text-xs text-muted-foreground">
-                    Get notified when security scans finish
-                  </p>
-                </div>
-                <Switch
-                  aria-label="Scan Completed"
-                  checked={formData.email_notifications?.scan_completed}
-                  onCheckedChange={(checked) =>
-                    handleEmailNotificationChange('scan_completed', checked)
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">New Findings</p>
-                  <p className="text-xs text-muted-foreground">
-                    Alerts for critical and high severity findings
-                  </p>
-                </div>
-                <Switch
-                  aria-label="New Findings"
-                  checked={formData.email_notifications?.new_findings}
-                  onCheckedChange={(checked) =>
-                    handleEmailNotificationChange('new_findings', checked)
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Team Updates</p>
-                  <p className="text-xs text-muted-foreground">
-                    Member invitations, role changes, and team activity
-                  </p>
-                </div>
-                <Switch
-                  aria-label="Team Updates"
-                  checked={formData.email_notifications?.team_updates}
-                  onCheckedChange={(checked) =>
-                    handleEmailNotificationChange('team_updates', checked)
-                  }
-                />
-              </div>
             </div>
           </div>
         </CardContent>
