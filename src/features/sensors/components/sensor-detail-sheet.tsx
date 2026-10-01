@@ -265,7 +265,7 @@ export function SensorDetailSheet({
               <div className="rounded-xl border bg-card p-4 text-center">
                 <AlertTriangle
                   className={`mx-auto mb-2 h-5 w-5 ${
-                    sensor.total_findings > 0 ? 'text-amber-500' : 'text-muted-foreground'
+                    sensor.total_findings > 0 ? 'text-warning' : 'text-muted-foreground'
                   }`}
                 />
                 <p className="text-2xl font-bold">{sensor.total_findings.toLocaleString()}</p>
@@ -274,7 +274,7 @@ export function SensorDetailSheet({
               <div className="rounded-xl border bg-card p-4 text-center">
                 <AlertCircle
                   className={`mx-auto mb-2 h-5 w-5 ${
-                    sensor.error_count > 0 ? 'text-red-500' : 'text-muted-foreground'
+                    sensor.error_count > 0 ? 'text-destructive' : 'text-muted-foreground'
                   }`}
                 />
                 <p className="text-2xl font-bold">{sensor.error_count.toLocaleString()}</p>
