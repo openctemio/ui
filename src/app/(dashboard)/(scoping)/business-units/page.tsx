@@ -36,6 +36,7 @@ import {
   ChevronsUpDown,
   Check,
   Search,
+  Link2,
 } from 'lucide-react'
 import {
   Dialog,
@@ -70,7 +71,8 @@ import {
 } from '@/components/ui/command'
 import { cn } from '@/lib/utils'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsCount, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { BusinessUnitAssets } from '@/features/business-units/components/business-unit-assets'
 import { toast } from 'sonner'
 import { type BusinessUnit, type Criticality, type RiskTolerance } from '@/features/business-units'
 import {
@@ -276,6 +278,12 @@ export default function BusinessUnitsPage() {
     'business-units'
   )
   const [viewUnit, setViewUnit] = useState<BusinessUnit | null>(null)
+  // Which tab the detail sheet opens on: "Manage assets" opens it on Assets.
+  const [viewTab, setViewTab] = useState<'overview' | 'assets' | 'hierarchy'>('overview')
+  const openView = (unit: BusinessUnit, tab: 'overview' | 'assets' = 'overview') => {
+    setViewTab(tab)
+    setViewUnit(unit)
+  }
   const [editUnit, setEditUnit] = useState<BusinessUnit | null>(null)
   const [deleteUnit, setDeleteUnit] = useState<BusinessUnit | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -494,7 +502,13 @@ export default function BusinessUnitsPage() {
           <Can permission={Permission.AssetsWrite}>
             <DataTableRowActions
               actions={[
-                { label: 'View details', icon: Eye, onClick: () => setViewUnit(unit) },
+                { label: 'View details', icon: Eye, onClick: () => openView(unit) },
+                {
+                  label: 'Manage assets',
+                  icon: Link2,
+                  onClick: () => openView(unit, 'assets'),
+                  permission: Permission.AssetsWrite,
+                },
                 {
                   label: 'Edit',
                   icon: Pencil,
@@ -748,7 +762,7 @@ export default function BusinessUnitsPage() {
                 ? 'Create a business unit to map assets to the organization.'
                 : 'Try adjusting your search or filters.'
             }
-            onRowClick={(unit) => setViewUnit(unit)}
+            onRowClick={(unit) => openView(unit)}
           />
         </div>
       </Main>
@@ -805,11 +819,29 @@ export default function BusinessUnitsPage() {
               </SheetHeader>
 
               <SheetBody>
-                <Tabs defaultValue="overview" className="mt-2">
+                <Tabs
+                  value={viewTab}
+                  onValueChange={(v) => setViewTab(v as typeof viewTab)}
+                  className="mt-2"
+                >
                   <TabsList>
                     <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="assets">
+                      Assets{' '}
+                      <TabsCount
+                        value={
+                          // The sheet holds a snapshot; the list refreshes after a link.
+                          businessUnits.find((u) => u.id === viewUnit.id)?.assetCount ??
+                          viewUnit.assetCount
+                        }
+                      />
+                    </TabsTrigger>
                     <TabsTrigger value="hierarchy">Hierarchy</TabsTrigger>
                   </TabsList>
+
+                  <TabsContent value="assets" className="mt-4">
+                    <BusinessUnitAssets unit={viewUnit} onChanged={() => void refreshList()} />
+                  </TabsContent>
 
                   <TabsContent value="overview" className="mt-4">
                     {/* One definition list with dividers, not a stack of cards. */}

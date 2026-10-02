@@ -11,6 +11,7 @@ import {
   GatedSectionTabs,
   MetricStrip,
   PageHeader,
+  SheetBody,
   StackedCell,
   type MetricStripItem,
 } from '@/features/shared'
@@ -40,7 +41,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { Plus, Pencil, Trash2, AlertCircle, RefreshCw } from 'lucide-react'
+import { Plus, Pencil, Trash2, AlertCircle, RefreshCw, Link2 } from 'lucide-react'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { BusinessServiceAssets } from '@/features/business-services/components/business-service-assets'
 import { toast } from 'sonner'
 import { get, post, put, del } from '@/lib/api/client'
 import { Can, Permission } from '@/lib/permissions'
@@ -63,6 +72,8 @@ interface BusinessService {
   rto_minutes?: number
   owner_name: string
   owner_email: string
+  /** Linked assets (business_service_assets); absent on APIs before the count shipped. */
+  asset_count?: number
   created_at: string
   updated_at: string
 }
@@ -124,6 +135,8 @@ export default function BusinessServicesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingService, setEditingService] = useState<BusinessService | null>(null)
   const [deletingService, setDeletingService] = useState<BusinessService | null>(null)
+  // The service whose linked assets are open in the side sheet.
+  const [assetsService, setAssetsService] = useState<BusinessService | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -280,6 +293,22 @@ export default function BusinessServicesPage() {
         ),
       },
       {
+        accessorKey: 'asset_count',
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Assets" />,
+        cell: ({ row }) =>
+          row.original.asset_count === undefined ? (
+            '—'
+          ) : (
+            <button
+              type="button"
+              className="tabular-nums hover:underline"
+              onClick={() => setAssetsService(row.original)}
+            >
+              {row.original.asset_count}
+            </button>
+          ),
+      },
+      {
         accessorKey: 'availability_target',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Availability" />,
         cell: ({ row }) =>
@@ -293,16 +322,27 @@ export default function BusinessServicesPage() {
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => (
-          <Can permission={Permission.BusinessServicesWrite}>
+          <Can permission={[Permission.BusinessServicesRead, Permission.BusinessServicesWrite]}>
             <DataTableRowActions
               actions={[
-                { label: 'Edit', icon: Pencil, onClick: () => openEdit(row.original) },
+                {
+                  label: 'Linked assets',
+                  icon: Link2,
+                  onClick: () => setAssetsService(row.original),
+                },
+                {
+                  label: 'Edit',
+                  icon: Pencil,
+                  onClick: () => openEdit(row.original),
+                  permission: Permission.BusinessServicesWrite,
+                  separatorBefore: true,
+                },
                 {
                   label: 'Delete',
                   icon: Trash2,
                   onClick: () => setDeletingService(row.original),
                   destructive: true,
-                  separatorBefore: true,
+                  permission: Permission.BusinessServicesWrite,
                 },
               ]}
             />
@@ -435,6 +475,7 @@ export default function BusinessServicesPage() {
             columns={columns}
             data={services}
             searchPlaceholder="Search services..."
+            onRowClick={(service) => setAssetsService(service)}
             emptyMessage={quick ? 'No services match this filter' : 'No business services yet'}
             emptyDescription={
               quick ? 'Clear the filter to see every service.' : 'Create a service to get started.'
@@ -615,6 +656,24 @@ export default function BusinessServicesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Sheet open={!!assetsService} onOpenChange={(open) => !open && setAssetsService(null)}>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
+          {assetsService && (
+            <>
+              <SheetHeader>
+                <SheetTitle>{assetsService.name}</SheetTitle>
+                <SheetDescription>
+                  The assets this service runs on. A cycle scoped to the service covers them.
+                </SheetDescription>
+              </SheetHeader>
+              <SheetBody>
+                <BusinessServiceAssets service={assetsService} onChanged={() => void mutate()} />
+              </SheetBody>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
       <ConfirmDialog
         open={!!deletingService}

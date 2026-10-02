@@ -32,12 +32,13 @@ interface PaginatedResponse<T> {
   per_page: number
 }
 
-export function useBusinessUnits(search?: string) {
+/** Units (first 100). `enabled` false skips the request (e.g. a closed picker). */
+export function useBusinessUnits(search?: string, enabled = true) {
   const params = new URLSearchParams()
   params.set('per_page', '100')
   if (search) params.set('search', search)
   return useSWR<PaginatedResponse<BusinessUnit>>(
-    `/api/v1/business-units?${params.toString()}`,
+    enabled ? `/api/v1/business-units?${params.toString()}` : null,
     get,
     { revalidateOnFocus: false }
   )
@@ -62,9 +63,11 @@ export function useDeleteBusinessUnit(id: string) {
   return useSWRMutation(`/api/v1/business-units/${id}`, (url: string) => del(url))
 }
 
-export function useAddAssetToUnit(unitId: string) {
-  return useSWRMutation(
-    `/api/v1/business-units/${unitId}/assets`,
-    (url: string, { arg }: { arg: { asset_id: string } }) => post(url, arg)
-  )
+/** Add one asset to a unit (the endpoint takes one per call; 204). */
+export function addAssetToBusinessUnit(unitId: string, assetId: string): Promise<unknown> {
+  return post(`/api/v1/business-units/${unitId}/assets`, { asset_id: assetId })
+}
+
+export function removeAssetFromBusinessUnit(unitId: string, assetId: string): Promise<unknown> {
+  return del(`/api/v1/business-units/${unitId}/assets/${assetId}`)
 }
