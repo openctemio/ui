@@ -64,28 +64,41 @@ export const FIRST_HEARTBEAT_POLL_MS = 5000
 
 const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,99}$/
 
-type Step = 'name' | 'install' | 'connected'
+export type InstallStep = 'name' | 'install' | 'connected'
+type Step = InstallStep
 
-function StepList({ step, connected }: { step: Step; connected: boolean }) {
-  const steps = [
-    { key: 'name', title: 'Name it and pick a role', text: 'The name shows on this page.' },
-    {
-      key: 'install',
-      title: 'Run the command on the host',
-      text: 'docker run, Compose, Kubernetes or Helm. The key is already in it.',
-    },
-    {
-      key: 'wait',
-      title: 'Wait for the first heartbeat',
-      text: 'Usually under a minute. This page updates by itself.',
-    },
-    {
-      key: 'zone',
-      title: 'Assign it to a zone',
-      text: 'Optional. Private ranges need a zone to be scanned.',
-    },
-  ]
-  const doneIdx = step === 'name' ? 0 : connected ? 3 : 1
+const STEPS = [
+  { key: 'name', title: 'Name it and pick a role', text: 'The name shows on this page.' },
+  {
+    key: 'install',
+    title: 'Run the command on the host',
+    text: 'docker run, Compose, Kubernetes or Helm. The key is already in it.',
+  },
+  {
+    key: 'wait',
+    title: 'Wait for the first heartbeat',
+    text: 'Usually under a minute. This page updates by itself.',
+  },
+  {
+    key: 'zone',
+    title: 'Assign it to a zone',
+    text: 'Optional. Private ranges need a zone to be scanned.',
+  },
+] as const
+
+/** The step the flow is on, 0-based, and its title ("Step 2 of 4: Run the command on the host"). */
+export function installStepIndex(step: InstallStep): number {
+  return step === 'name' ? 0 : step === 'connected' ? 3 : 1
+}
+
+export function installStepLabel(step: InstallStep): string {
+  const i = installStepIndex(step)
+  return `Step ${i + 1} of ${STEPS.length}: ${STEPS[i].title}`
+}
+
+function StepList({ step }: { step: Step }) {
+  const steps = STEPS
+  const doneIdx = installStepIndex(step)
   return (
     <ol className="space-y-4" aria-label="Steps">
       {steps.map((s, i) => {
@@ -188,6 +201,14 @@ export interface SensorInstallFlowProps {
   onOpen?: (sensor: Sensor) => void
   /** Rendered beside the steps: "Install your first sensor" on an empty page. */
   title?: string
+  /**
+   * `card` (default): a self-contained card with its own title, for a page.
+   * `dialog`: no title or frame (the dialog's header bar has them); the form
+   * pane is an inset panel, so nothing tinted reaches the dialog's edge.
+   */
+  variant?: 'card' | 'dialog'
+  /** Called when the flow moves to another step (the dialog shows it in its header). */
+  onStepChange?: (step: InstallStep) => void
   className?: string
 }
 
@@ -201,15 +222,20 @@ export function SensorInstallFlow({
   onCreated,
   onOpen,
   title = 'Install a sensor',
+  variant = 'card',
+  onStepChange,
   className,
 }: SensorInstallFlowProps) {
-  const [step, setStep] = useState<Step>('name')
+  const [step, setStepState] = useState<Step>('name')
+  const setStep = (next: Step) => {
+    setStepState(next)
+    onStepChange?.(next)
+  }
   const [name, setName] = useState('')
   const [role, setRole] = useState<InstallRole>('scanner')
   const [tools, setTools] = useState<string[]>(INSTALL_ROLES.scanner.tools)
   const [zoneId, setZoneId] = useState<string>('')
   const [created, setCreated] = useState<{ sensor: Sensor; apiKey: string } | null>(null)
-  const [connected, setConnected] = useState(false)
   const [assigning, setAssigning] = useState(false)
 
   const { trigger: createSensor, isMutating } = useCreateSensor()
@@ -292,29 +318,51 @@ export function SensorInstallFlow({
     </div>
   )
 
+  const inDialog = variant === 'dialog'
+  const intro = (
+    <p className="max-w-prose text-sm text-muted-foreground">
+      A sensor runs inside your network. It scans what the platform can&apos;t reach and sends the
+      results back over HTTPS. It only connects out, so you don&apos;t open any inbound port.
+    </p>
+  )
+
   return (
     <div
       className={cn(
-        'grid min-w-0 overflow-hidden rounded-xl border bg-card md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]',
+        'grid min-w-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]',
+        inDialog ? 'gap-6 p-4 sm:p-6' : 'overflow-hidden rounded-xl border bg-card',
         className
       )}
     >
-      <div className="space-y-5 border-b p-6 md:border-e md:border-b-0">
-        <span className="grid size-10 place-items-center rounded-lg bg-muted" aria-hidden>
-          <RadioTower className="h-5 w-5" />
-        </span>
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold">{title}</h2>
-          <p className="max-w-prose text-sm text-muted-foreground">
-            A sensor runs inside your network. It scans what the platform can&apos;t reach and sends
-            the results back over HTTPS. It only connects out, so you don&apos;t open any inbound
-            port.
-          </p>
+      <div
+        className={cn('space-y-5', inDialog ? 'md:py-1' : 'border-b p-6 md:border-e md:border-b-0')}
+      >
+        {inDialog ? (
+          intro
+        ) : (
+          <>
+            <span className="grid size-10 place-items-center rounded-lg bg-muted" aria-hidden>
+              <RadioTower className="h-5 w-5" />
+            </span>
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold">{title}</h2>
+              {intro}
+            </div>
+          </>
+        )}
+        {/* On a phone the dialog's header says the step; the list would push the form below the fold. */}
+        <div className={cn(inDialog && 'hidden md:block')}>
+          <StepList step={step} />
         </div>
-        <StepList step={step} connected={connected} />
       </div>
 
-      <div className="min-w-0 space-y-4 bg-muted/30 p-6">
+      <div
+        className={cn(
+          'min-w-0 space-y-4 bg-muted/30',
+          inDialog ? 'rounded-lg border p-4 sm:p-5' : 'p-6'
+        )}
+        data-slot="install-form-pane"
+      >
         {step === 'name' ? (
           <form
             className="space-y-4"
@@ -431,10 +479,7 @@ export function SensorInstallFlow({
             <SensorInstallSnippets sensorId={created.sensor.id} apiKey={created.apiKey} />
             <FirstHeartbeat
               sensorId={created.sensor.id}
-              onConnected={() => {
-                setConnected(true)
-                setStep('connected')
-              }}
+              onConnected={() => setStep('connected')}
               onOpen={onOpen}
             />
             {zoneSelect}
