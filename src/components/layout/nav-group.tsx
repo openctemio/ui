@@ -438,9 +438,8 @@ const NavSection = memo(function NavSection({
             data-current={sectionActive}
             className={cn(NAV_BUTTON_CLASS, 'pe-8')}
           >
-            <Link
+            <SidebarLink
               href={url}
-              prefetch={false}
               onClick={() => {
                 setOpen(true)
                 setOpenMobile(false)
@@ -448,7 +447,7 @@ const NavSection = memo(function NavSection({
             >
               {SectionIcon && <SectionIcon />}
               <span>{label}</span>
-            </Link>
+            </SidebarLink>
           </SidebarMenuButton>
           <SidebarMenuAction
             aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
@@ -699,9 +698,7 @@ const NavSectionRailMenu = memo(function NavSectionRailMenu({
         {url ? (
           // The flyout's heading opens the section overview, like the header.
           <DropdownMenuItem asChild className="text-xs font-medium text-muted-foreground">
-            <Link href={url} prefetch={false}>
-              {label}
-            </Link>
+            <SidebarLink href={url}>{label}</SidebarLink>
           </DropdownMenuItem>
         ) : (
           <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
