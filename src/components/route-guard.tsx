@@ -140,28 +140,6 @@ export function RouteGuard({ children }: RouteGuardProps) {
 }
 
 /**
- * Loading state while checking permissions
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function RouteGuardLoading() {
-  return (
-    <div className="flex flex-1 items-center justify-center p-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <Skeleton className="mx-auto h-12 w-12 rounded-full" />
-          <Skeleton className="mx-auto mt-4 h-6 w-48" />
-          <Skeleton className="mx-auto mt-2 h-4 w-64" />
-        </CardHeader>
-        <CardContent className="flex justify-center gap-4">
-          <Skeleton className="h-10 w-24" />
-          <Skeleton className="h-10 w-24" />
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-/**
  * Access Denied Page
  *
  * Shown when user doesn't have access to a route.
