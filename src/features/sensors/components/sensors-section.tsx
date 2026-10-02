@@ -155,6 +155,10 @@ export function SensorsSection({
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [zoneCreateOpen, setZoneCreateOpen] = useState(false)
+  // The first sensor is installed from the empty page: keep that flow on
+  // screen after the sensor exists (the key, the wait, the tool review)
+  // until the admin finishes it, instead of swapping in the table.
+  const [inlineInstall, setInlineInstall] = useState(false)
 
   // Selected sensor for dialogs. The drawer follows the live list (and re-reads
   // GET /sensors/{id}), so it never shows a snapshot from when it was opened.
@@ -599,18 +603,26 @@ export function SensorsSection({
     </>
   )
 
-  const fleetEmpty = !isLoading && !error && scopedSensors.length === 0
+  const fleetEmpty = inlineInstall || (!isLoading && !error && scopedSensors.length === 0)
 
   let body: React.ReactNode
-  if (error) {
+  if (error && !inlineInstall) {
     body = <ErrorState title="sensors" error={error} onRetry={handleRefresh} />
-  } else if (isLoading) {
+  } else if (isLoading && !inlineInstall) {
     body = <TableSkeleton rows={5} />
   } else if (fleetEmpty) {
     // No sensors yet: the page is the install flow (admins), or says who can
     // install one (everyone else).
     body = canWriteSensors ? (
-      <SensorInstallFlow title="Install your first sensor" onOpen={handleViewSensor} />
+      <SensorInstallFlow
+        title="Install your first sensor"
+        onCreated={() => setInlineInstall(true)}
+        onOpen={(s) => {
+          setInlineInstall(false)
+          handleViewSensor(s)
+        }}
+        onDone={() => setInlineInstall(false)}
+      />
     ) : (
       <EmptyState
         icon={RadioTower}

@@ -4,6 +4,7 @@ import type { Sensor } from '@/lib/api/sensor-types'
 import type { ScanZone } from '@/lib/api/scan-zone-types'
 
 import { sensorHealthChecks, type HealthCheck } from '../health-checks'
+import { TEST_SENSOR_KEY_PREFIX } from '@/test/sensor-keys'
 
 const NOW = new Date('2026-10-02T12:00:00Z').getTime()
 const ago = (s: number) => new Date(NOW - s * 1000).toISOString()
@@ -20,7 +21,7 @@ function sensor(over: Partial<Sensor> = {}): Sensor {
     execution_mode: 'daemon',
     status: 'active',
     health: 'online',
-    api_key_prefix: 'rda_x',
+    api_key_prefix: TEST_SENSOR_KEY_PREFIX,
     cpu_percent: 0,
     memory_percent: 0,
     max_concurrent_jobs: 8,

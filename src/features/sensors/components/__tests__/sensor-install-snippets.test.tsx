@@ -3,10 +3,10 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { availableFormats, SensorInstallSnippets } from '../sensor-install-snippets'
+import { TEST_SENSOR_KEY } from '@/test/sensor-keys'
 
 const templates = {
-  docker:
-    "docker run -d --name dmz \\\n  -e API_KEY='rda_x' \\\n  ghcr.io/openctemio/sensor:v0.4.2\n",
+  docker: `docker run -d --name dmz \\\n  -e API_KEY='${TEST_SENSOR_KEY}' \\\n  ghcr.io/openctemio/sensor:v0.4.2\n`,
   compose: 'services:\n  sensor:\n    image: ghcr.io/openctemio/sensor:v0.4.2\n',
   kubernetes: 'apiVersion: v1\nkind: Secret\n',
   helm: 'helm upgrade openctem openctem/openctem --reuse-values \\\n  --set sensor.enabled=true\n',
@@ -50,12 +50,17 @@ describe('availableFormats', () => {
 describe('SensorInstallSnippets', () => {
   it('sends a just-issued key in a header (never the URL) and renders the commands', async () => {
     const fetchFn = mockFetch(templates)
-    render(<SensorInstallSnippets sensorId="11111111-1111-4111-8111-111111111111" apiKey="rda_x" />)
+    render(
+      <SensorInstallSnippets
+        sensorId="11111111-1111-4111-8111-111111111111"
+        apiKey={TEST_SENSOR_KEY}
+      />
+    )
     await screen.findByText(/docker run -d --name dmz/)
     const [url, init] = fetchFn.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toBe('/api/v1/sensors/11111111-1111-4111-8111-111111111111/config-templates')
-    expect(url).not.toContain('rda_x')
-    expect((init.headers as Record<string, string>)['X-Sensor-API-Key']).toBe('rda_x')
+    expect(url).not.toContain(TEST_SENSOR_KEY)
+    expect((init.headers as Record<string, string>)['X-Sensor-API-Key']).toBe(TEST_SENSOR_KEY)
     expect(init.cache).toBe('no-store')
     expect(
       screen.getByText('ghcr.io/openctemio/sensor:v0.4.2', { selector: 'span' })
