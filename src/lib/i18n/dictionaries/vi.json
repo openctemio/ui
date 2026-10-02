@@ -209,7 +209,10 @@
   "help.shortcut.toggle-comment": "Thêm bình luận (khi không chọn văn bản)",
   "help.shortcut.clear-selection": "Bỏ chọn các dòng đã chọn",
   "help.about.description": "Nền tảng quản lý phơi nhiễm mối đe dọa liên tục.",
-  "help.about.uiVersion": "Phiên bản ứng dụng web",
+  "help.about.webApp": "Ứng dụng web",
+  "help.about.api": "API",
   "help.about.devBuild": "Bản dựng phát triển",
-  "help.about.commit": "Commit"
+  "help.about.release": "Bản phát hành",
+  "help.about.unavailable": "không khả dụng",
+  "help.about.loading": "Đang tải phiên bản"
 }
