@@ -303,7 +303,9 @@ export class WebSocketClient {
         .fetchTicket()
         .then((ticket) => buildAndOpen({ ticket }))
         .catch((error) => {
-          devLog.error('[WebSocket] Failed to fetch ticket:', error)
+          // Transient (e.g. 502 while the API restarts) and retried with backoff
+          // by handleError, so a warning, not an error the dev overlay shows.
+          devLog.warn('[WebSocket] Failed to fetch ticket, will retry:', error)
           this.handleError(error instanceof Error ? error : new Error(String(error)))
         })
       return
