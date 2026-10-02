@@ -16,6 +16,7 @@ import useSWR, { type SWRConfiguration } from 'swr'
 import { get } from '@/lib/api/client'
 import { handleApiError } from '@/lib/api/error-handler'
 import { devLog } from '@/lib/logger'
+import { useBootstrapContextOptional } from '@/context/bootstrap-provider'
 
 // ============================================
 // TYPES
@@ -102,6 +103,8 @@ const defaultConfig: SWRConfiguration = {
 // HOOK
 // ============================================
 
+export const TENANT_MODULES_KEY = '/api/v1/me/modules'
+
 /**
  * Fetch tenant's enabled modules
  *
@@ -113,8 +116,17 @@ const defaultConfig: SWRConfiguration = {
  * ```
  */
 export function useTenantModules() {
+  // Inside the app shell, /me/bootstrap already returns this exact response
+  // (same handler code on the api), so start from it instead of fetching
+  // /me/modules on every page load. The SWR key stays, so
+  // mutate('/api/v1/me/modules') after a module toggle or a "module.updated"
+  // event still fetches fresh data, which then wins over the bootstrap copy.
+  // Outside the shell (no BootstrapProvider) the hook fetches as before.
+  const bootstrap = useBootstrapContextOptional()
+  const bootstrapModules = bootstrap?.data?.modules
+  const waitingForBootstrap = !!bootstrap && !bootstrap.isBootstrapped && bootstrap.isLoading
   const { data, error, isLoading, mutate } = useSWR<TenantModulesResponse>(
-    '/api/v1/me/modules',
+    waitingForBootstrap ? null : TENANT_MODULES_KEY,
     async (url: string) => {
       try {
         return await get<TenantModulesResponse>(url)
@@ -131,7 +143,9 @@ export function useTenantModules() {
         }
       }
     },
-    defaultConfig
+    bootstrapModules
+      ? { ...defaultConfig, fallbackData: bootstrapModules, revalidateOnMount: false }
+      : defaultConfig
   )
 
   return {
@@ -145,8 +159,8 @@ export function useTenantModules() {
     comingSoonModuleIds: data?.coming_soon_module_ids || [],
     /** Module IDs that are in beta */
     betaModuleIds: data?.beta_module_ids || [],
-    /** Loading state */
-    isLoading,
+    /** Loading state (also true while the app shell's bootstrap is in flight) */
+    isLoading: isLoading || waitingForBootstrap,
     /** Error object if request failed */
     error,
     /** Refetch function */
