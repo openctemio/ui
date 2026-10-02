@@ -16,6 +16,8 @@ import {
   SeverityShareList,
   humanize,
   TypeBreakdownUnavailable,
+  ExposuresTabs,
+  ViewFindingsButton,
 } from '@/features/exposures/components'
 import { useTenant } from '@/context/tenant-provider'
 import type { FindingSource } from '@/lib/api/finding-types'
@@ -56,7 +58,11 @@ export default function MisconfigurationsPage() {
       <PageHeader
         title="Misconfigurations"
         description="Infrastructure and application misconfigurations found by IaC scanning, by severity."
-      />
+      >
+        <ViewFindingsButton stats={typeStats} sources={MISCONFIG_SOURCES} isLoading={typeLoading} />
+      </PageHeader>
+
+      <ExposuresTabs />
 
       <div className="mt-5">
         {isLoading ? (

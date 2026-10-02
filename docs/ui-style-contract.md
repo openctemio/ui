@@ -20,6 +20,14 @@ Every page, top to bottom:
    header with `className="mt-4"`. The default underline style is the only tab
    style: no `className` overrides that change its look (no grids, pills,
    backgrounds). Put the active tab in the URL (`?tab=`).
+   - **Section tabs** — when the sub-views are separate routes (Remediation:
+     Tasks | Solution families; Exposures: Overview | Vulnerabilities | …), use
+     the shared `<SectionTabs>`, placed the same way: directly under the header
+     with `className="mt-4"` (its own `mb-5` spaces the content), or
+     `"mt-4 mb-0"` when the next block already carries `mt-5`. Define the list once in
+     `src/config/section-tabs.ts` and pass it as the sidebar item's `sections`:
+     the sidebar shows ONE row for the section (active on every tab's route), the
+     command palette lists each tab. Never a third sidebar level for them.
 4. **Content blocks** separated by `mt-5` (or `space-y-5` / `gap-5`).
 
 ## 2. Headline numbers

@@ -41,6 +41,7 @@ import {
 import { useTranslation } from '@/context/i18n-provider'
 import { cn } from '@/lib/utils'
 import { subModuleStatus } from '@/lib/permissions/sub-modules'
+import { activeSubItemUrl, checkIsActive, sectionHasActiveRoute } from './nav-active'
 
 /** Maps a sidebar group title to its i18n key, e.g. "Scoping" → "nav.group.scoping". */
 function groupTitleKey(title: string): string {
@@ -481,8 +482,8 @@ const NavSubLeaf = memo(function NavSubLeaf({
   nested?: boolean
   /**
    * Whether this row is the current page. Siblings are resolved together by the
-   * parent (longest matching url wins), so an "Overview" at `/exposures` does not
-   * light up alongside `/exposures/misconfigurations`.
+   * parent (longest matching url wins), so "Assets" at `/assets` does
+   * not light up alongside "What changed" at `/assets/changes`.
    */
   active?: boolean
 }) {
@@ -750,69 +751,6 @@ function CollapsedDropdownLeaf({
       </Link>
     </DropdownMenuItem>
   )
-}
-
-/**
- * A nav url is active for the current path on an exact match OR a child route
- * (`/assets/repositories` is active on `/assets/repositories/<id>`), but never
- * on a mere string prefix (`/scans` is NOT active on `/scan-profiles`).
- */
-function isUrlActive(pathname: string, url: unknown): boolean {
-  return typeof url === 'string' && (pathname === url || pathname.startsWith(`${url}/`))
-}
-
-/**
- * Of a group's sub-items, the url that best matches the current path — the
- * longest one that is active. Prevents a short "Overview" url (`/assets`) from
- * lighting up alongside the deeper item (`/assets/repositories`) on a detail page.
- */
-function activeSubItemUrl(
-  pathname: string,
-  items: readonly { url: NavLink['url'] }[]
-): string | undefined {
-  return items
-    .map((i) => i.url)
-    .filter((url): url is string => typeof url === 'string' && isUrlActive(pathname, url))
-    .sort((a, b) => b.length - a.length)[0]
-}
-
-/**
- * Whether any leaf route within a section (including nested subsections) matches
- * the current path. Drives the section's active highlight + auto-expand.
- */
-function sectionHasActiveRoute(pathname: string, items: NavItem[]): boolean {
-  return items.some((item) => {
-    if ('items' in item) {
-      return item.items.some((child) => isUrlActive(pathname, child.url))
-    }
-    return isUrlActive(pathname, (item as NavLink).url)
-  })
-}
-
-function checkIsActive(pathname: string, item: NavItem, mainNav = false) {
-  // For collapsible items with sub-items, active if any sub-item matches —
-  // including child/detail routes — so the group highlights + auto-opens.
-  if ('items' in item) {
-    return item.items.some((i) => isUrlActive(pathname, i.url))
-  }
-
-  // For leaf items with a url
-  if ('url' in item && typeof item.url === 'string') {
-    // Exact match or a child route (keeps the item active on its detail pages)
-    if (isUrlActive(pathname, item.url)) {
-      return true
-    }
-
-    // For mainNav items only (top-level, not sub-items), also use startsWith
-    // This allows top-level items to stay highlighted when on child pages
-    if (mainNav && pathname.startsWith(`/${item.url.split('/')[1]}`)) {
-      return true
-    }
-
-    return false
-  }
-
-  return false
 }
 
 /**

@@ -31,6 +31,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState, SeverityBadge, type Severity } from '@/features/shared'
 import { SEVERITY_CHART_COLORS, SEVERITY_ORDER, type SeverityLevel } from '@/lib/severity-colors'
+import { findingsHrefForSources } from './exposures-section'
 
 export const SEVERITY_LABELS: Record<SeverityLevel, string> = {
   critical: 'Critical',
@@ -119,7 +120,7 @@ export function TypeBreakdownUnavailable({
       description="The severity and status breakdown for this type needs a newer API version. The findings list shows them in full."
       action={
         <Button asChild variant="outline" size="sm">
-          <Link href={`/findings?sources=${sources.join(',')}`}>View in findings</Link>
+          <Link href={findingsHrefForSources(sources)}>View in findings</Link>
         </Button>
       }
     />

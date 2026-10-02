@@ -16,7 +16,7 @@ export interface SectionTab {
 }
 
 interface SectionTabsProps {
-  tabs: SectionTab[]
+  tabs: readonly SectionTab[]
   className?: string
   /** Accessible name for the tab navigation. */
   label?: string
