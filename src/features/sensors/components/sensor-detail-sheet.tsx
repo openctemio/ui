@@ -59,12 +59,14 @@ import type { Sensor, SensorCommand } from '@/lib/api/sensor-types'
 import { sensorRoleOf } from '@/lib/api/sensor-types'
 import { copyToClipboard } from '@/lib/clipboard'
 import { Permission, useHasPermission } from '@/lib/permissions'
+import { redactUrlQueries } from '@/lib/redact-url'
 import { cn } from '@/lib/utils'
 
 import { SensorActivity, SensorRecentActivity } from './sensor-activity'
 import { requestSensorContentRefresh, SensorContentSection } from './sensor-content-section'
 import { SensorStateBadge } from './sensor-state-badge'
 import {
+  distinctHostname,
   ProtocolTag,
   PROTOCOL_V1_SUNSET,
   PROTOCOL_V2_SENSOR_VERSION,
@@ -210,7 +212,7 @@ function RawError({ error }: { error: string }) {
         Show the error
       </summary>
       <p className="mt-1 rounded-md bg-background/60 p-2 font-mono break-all text-foreground">
-        {error}
+        {redactUrlQueries(error)}
       </p>
     </details>
   )
@@ -586,7 +588,7 @@ function ConnectionAndIdentity({
   zoneNames: string[]
 }) {
   const labels = Object.entries(sensor.labels ?? {})
-  const hostDiffers = !!sensor.hostname && sensor.hostname !== sensor.name
+  const host = distinctHostname(sensor)
   const created = new Date(sensor.created_at)
   return (
     <DetailSection title="Connection & identity">
@@ -615,14 +617,10 @@ function ConnectionAndIdentity({
         </DetailField>
         {sensor.ip_address && (
           <DetailField label="Connects from">
-            <span className="font-mono text-xs">{sensor.ip_address}</span>
+            <span className="tabular-nums">{sensor.ip_address}</span>
           </DetailField>
         )}
-        {hostDiffers && (
-          <DetailField label="Host name">
-            <span className="font-mono text-xs">{sensor.hostname}</span>
-          </DetailField>
-        )}
+        {host && <DetailField label="Host name">{host}</DetailField>}
         {zoneNames.length > 0 && <DetailField label="Zone">{zoneNames.join(', ')}</DetailField>}
         <DetailField label="Created">
           {Number.isNaN(created.getTime()) ? null : (
@@ -887,7 +885,7 @@ export function SensorDetailSheet({
   // says something the name does not.
   const subline = [
     `${role} · ${mode.toLowerCase()}`,
-    sensor.hostname && sensor.hostname !== sensor.name ? sensor.hostname : null,
+    distinctHostname(sensor),
     sensor.ip_address ?? null,
     zoneNames.length > 0 ? `zone ${zoneNames.join(', ')}` : null,
   ].filter((p): p is string => !!p)
