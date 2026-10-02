@@ -102,11 +102,12 @@ describe('Scoping rows', () => {
 })
 
 describe('moves out of Scoping', () => {
-  it('Attack surface, Asset groups and Relationships are Discovery rows', () => {
-    const discovery = links('Discovery').map((i) => i.url)
-    expect(discovery).toContain('/attack-surface')
-    expect(discovery).toContain('/asset-groups')
-    expect(discovery).toContain('/relationships/suggestions')
+  it('Attack surface is a Discovery row; Asset groups and Relationships are Assets tabs', () => {
+    const discovery = links('Discovery')
+    expect(discovery.map((i) => i.url)).toContain('/attack-surface')
+    const assetTabs = row('Discovery', 'Assets').sections!.map((s) => s.href)
+    expect(assetTabs).toContain('/asset-groups')
+    expect(assetTabs).toContain('/relationships/suggestions')
   })
 
   it('Compliance is an Insights row', () => {
@@ -125,9 +126,9 @@ describe('moves out of Scoping', () => {
     ['/attacker-profiles', 'Scoping', 'Threat model'],
     ['/attack-surface', 'Discovery', 'Attack surface'],
     ['/attack-surface/external', 'Discovery', 'Attack surface'],
-    ['/asset-groups', 'Discovery', 'Asset Groups'],
-    ['/asset-groups/abc', 'Discovery', 'Asset Groups'],
-    ['/relationships/suggestions', 'Discovery', 'Relationships'],
+    ['/asset-groups', 'Discovery', 'Assets'],
+    ['/asset-groups/abc', 'Discovery', 'Assets'],
+    ['/relationships/suggestions', 'Discovery', 'Assets'],
     ['/compliance', 'Insights', 'Compliance'],
   ])('%s is active on %s > %s', (path, groupTitle, title) => {
     const active = sidebarData.navGroups.flatMap((g) =>

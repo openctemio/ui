@@ -12,6 +12,7 @@
  * viewer's own tenant). Saved / named views are intentionally deferred to v2.
  */
 
+import { AssetsSectionTabs } from '../assets-section-tabs'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { Lock, RefreshCw, Search } from 'lucide-react'
@@ -303,6 +304,7 @@ export function AllAssetsInventory({ viewSwitcher }: { viewSwitcher?: ReactNode 
   return (
     <Main>
       <PageHeader title="Assets">{viewSwitcher}</PageHeader>
+      <AssetsSectionTabs />
 
       <InventoryStatStrip
         className="mt-5"

@@ -3,7 +3,7 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { TAB_CLASS, TAB_STRIP_CLASS, useTabStripScroll } from '@/components/ui/tabs'
+import { TAB_CLASS, TAB_STRIP_CLASS, TabsCount, useTabStripScroll } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 
 export interface SectionTab {
@@ -28,6 +28,11 @@ interface SectionTabsProps {
   className?: string
   /** Accessible name for the tab navigation. */
   label?: string
+  /**
+   * A count shown after a tab's label, keyed by the tab's href (Assets >
+   * Suggestions shows the pending suggestions). Zero and absent show nothing.
+   */
+  counts?: Readonly<Record<string, number | undefined>>
 }
 
 /**
@@ -37,7 +42,7 @@ interface SectionTabsProps {
  * kept in view. The active tab is derived from the pathname; the most specific
  * match wins, so `/account` is not active on `/account/security`.
  */
-export function SectionTabs({ tabs, className, label = 'Sections' }: SectionTabsProps) {
+export function SectionTabs({ tabs, className, label = 'Sections', counts }: SectionTabsProps) {
   const pathname = usePathname()
   const ref = React.useRef<HTMLElement>(null)
   useTabStripScroll(ref)
@@ -61,6 +66,7 @@ export function SectionTabs({ tabs, className, label = 'Sections' }: SectionTabs
           >
             {Icon && <Icon aria-hidden />}
             {tab.label}
+            {counts?.[tab.href] ? <TabsCount value={counts[tab.href]} /> : null}
           </Link>
         )
       })}

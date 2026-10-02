@@ -153,10 +153,26 @@ export const LEGACY_VALIDATION_ROUTE_REDIRECTS: LegacyRouteRedirect[] = [
   },
 ]
 
+/**
+ * Discovery pages retired by the Scoping IA (docs/ui/scoping-ia-2026-10.md, D5).
+ * /attack-surface/internal and /cloud were filtered asset lists nothing linked
+ * to (about 2000 lines duplicating the inventory). Each lands on the Assets
+ * inventory with the same filter the page applied.
+ */
+export const LEGACY_DISCOVERY_ROUTE_REDIRECTS: LegacyRouteRedirect[] = [
+  {
+    source: '/attack-surface/internal',
+    destination: '/assets?scopes=internal&types=host,database,network,container',
+    permanent: true,
+  },
+  { source: '/attack-surface/cloud', destination: '/assets?types=cloud_account', permanent: true },
+]
+
 export const LEGACY_ROUTE_REDIRECTS: LegacyRouteRedirect[] = [
   ...LEGACY_SENSOR_ROUTE_REDIRECTS,
   ...LEGACY_SETTINGS_ROUTE_REDIRECTS,
   ...LEGACY_VALIDATION_ROUTE_REDIRECTS,
+  ...LEGACY_DISCOVERY_ROUTE_REDIRECTS,
 ]
 
 /**

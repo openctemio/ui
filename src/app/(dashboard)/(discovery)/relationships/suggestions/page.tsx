@@ -1,5 +1,6 @@
 'use client'
 
+import { AssetsSectionTabs } from '@/features/assets/components/assets-section-tabs'
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
@@ -401,6 +402,7 @@ export default function RelationshipSuggestionsPage() {
           </AlertDialog>
         )}
       </PageHeader>
+      <AssetsSectionTabs />
 
       <div className="mt-5">
         {error && !isLoading ? (
