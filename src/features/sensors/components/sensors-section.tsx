@@ -35,7 +35,6 @@ import { cn } from '@/lib/utils'
 import { AddSensorDialog } from './add-sensor-dialog'
 import { EditSensorDialog } from './edit-sensor-dialog'
 import { RegenerateKeyDialog } from './regenerate-key-dialog'
-import { SensorConfigDialog } from './sensor-config-dialog'
 import { SensorDetailSheet } from './sensor-detail-sheet'
 import { SensorTable } from './sensor-table'
 import { FleetHealthStrip } from './fleet-health-strip'
@@ -142,7 +141,6 @@ export function SensorsSection({
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [regenerateKeyDialogOpen, setRegenerateKeyDialogOpen] = useState(false)
-  const [configDialogOpen, setConfigDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false)
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false)
@@ -380,12 +378,6 @@ export function SensorsSection({
     setSelectedSensor(sensor)
     setDetailSheetOpen(false)
     setRegenerateKeyDialogOpen(true)
-  }, [])
-
-  const handleViewConfig = useCallback((sensor: Sensor) => {
-    setSelectedSensor(sensor)
-    setDetailSheetOpen(false)
-    setConfigDialogOpen(true)
   }, [])
 
   const handleDeleteClick = useCallback((sensor: Sensor) => {
@@ -789,20 +781,16 @@ export function SensorsSection({
             sensor={selectedSensor}
           />
 
-          <SensorConfigDialog
-            open={configDialogOpen}
-            onOpenChange={setConfigDialogOpen}
-            sensor={selectedSensor}
-          />
-
           <SensorDetailSheet
             sensor={selectedSensor}
             thresholds={thresholds}
+            channel={channel}
+            zones={zones}
+            fleet={scopedSensors}
             open={detailSheetOpen}
             onOpenChange={setDetailSheetOpen}
             onEdit={handleEditSensor}
             onRegenerateKey={handleRegenerateKey}
-            onViewConfig={handleViewConfig}
             onDelete={handleDeleteClick}
             onActivate={handleActivateSensor}
             onDeactivate={handleDeactivateSensor}

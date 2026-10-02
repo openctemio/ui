@@ -1,0 +1,162 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+
+import type { Sensor } from '@/lib/api/sensor-types'
+
+const perms = vi.hoisted(() => ({ granted: new Set<string>() }))
+vi.mock('@/lib/permissions', () => ({
+  Permission: {
+    SensorsWrite: 'sensors:write',
+    SensorsDelete: 'sensors:delete',
+    AuditRead: 'audit:read',
+    CommandsRead: 'sensors:commands:read',
+  },
+  useHasPermission: (p: string) => perms.granted.has(p),
+}))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
+const phone = vi.hoisted(() => ({ value: false }))
+vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => phone.value }))
+vi.mock('@/lib/api/sensor-hooks', () => ({
+  SENSOR_REFRESH_MS: 15000,
+  useSensor: () => ({ data: undefined }),
+  useSensorCommands: () => ({ data: { data: [] }, isLoading: false }),
+}))
+vi.mock('@/lib/api/audit-hooks', () => ({
+  useResourceAuditHistory: () => ({ data: { items: [] }, isLoading: false }),
+}))
+vi.mock('@/features/scan-zones', () => ({ SensorZonesSection: () => null }))
+vi.mock('../sensor-audit-log', () => ({ SensorAuditLog: () => <p>audit log</p> }))
+vi.mock('../sensor-install-snippets', () => ({
+  SensorInstallSnippets: ({ sensorId }: { sensorId: string }) => <p>snippets for {sensorId}</p>,
+}))
+
+import { SensorDetailSheet } from '../sensor-detail-sheet'
+
+const now = Date.now()
+const sensor: Sensor = {
+  id: 's1',
+  tenant_id: 't',
+  name: 'k8s-scanner-a',
+  type: 'worker',
+  capabilities: [],
+  tools: ['nuclei'],
+  execution_mode: 'daemon',
+  status: 'active',
+  health: 'online',
+  api_key_prefix: 'rda_9f3c',
+  cpu_percent: 0,
+  memory_percent: 0,
+  max_concurrent_jobs: 8,
+  current_jobs: 1,
+  labels: { env: 'prod' },
+  config: {},
+  metadata: {},
+  total_findings: 1034,
+  total_scans: 212,
+  error_count: 0,
+  created_at: new Date(now - 86400000).toISOString(),
+  updated_at: new Date(now).toISOString(),
+  last_seen_at: new Date(now - 4000).toISOString(),
+  version: 'v0.4.2',
+  hostname: 'sensor-7d9f-a',
+  ip_address: '10.40.3.17',
+  key_expires_at: new Date(now + 6 * 86400000).toISOString(),
+  protocol: {
+    version: 1,
+    user_agent: 'openctem-sdk-go/0.6.0',
+    seen_at: new Date(now).toISOString(),
+    deprecated: true,
+  },
+}
+
+function open(extra: Partial<React.ComponentProps<typeof SensorDetailSheet>> = {}) {
+  const handlers = {
+    onOpenChange: vi.fn(),
+    onEdit: vi.fn(),
+    onRegenerateKey: vi.fn(),
+    onDelete: vi.fn(),
+    onDeactivate: vi.fn(),
+    onRevoke: vi.fn(),
+  }
+  render(
+    <SensorDetailSheet
+      sensor={sensor}
+      open
+      channel={{ latest: 'v0.4.2', min: 'v0.4.0' }}
+      {...handlers}
+      {...extra}
+    />
+  )
+  return handlers
+}
+
+describe('SensorDetailSheet', () => {
+  beforeEach(() => perms.granted.clear())
+
+  it('leads with the health checklist and four tabs (no Analytics)', () => {
+    perms.granted.add('audit:read')
+    open()
+    const dialog = screen.getByRole('dialog')
+    expect(
+      within(dialog)
+        .getAllByRole('tab')
+        .map((t) => t.textContent)
+    ).toEqual(['Overview', 'Jobs', 'Activity', 'Config'])
+    const health = screen.getByRole('list', { name: 'Health' })
+    expect(within(health).getByText('Heartbeat')).toBeInTheDocument()
+    expect(within(health).getByText(/Expires in 6 days/)).toBeInTheDocument()
+    expect(within(health).getByText(/v0.4.2, the latest release/)).toBeInTheDocument()
+  })
+
+  it('shows protocol v1 as deprecated with the upgrade deadline in the runtime section', () => {
+    open()
+    expect(
+      screen.getByText(/Protocol v1, deprecated: upgrade the sensor to v0.5.0 before 2027-04-01/)
+    ).toBeInTheDocument()
+    expect(screen.getByText('openctem-sdk-go/0.6.0')).toBeInTheDocument()
+    expect(screen.getByText('v1 · deprecated')).toBeInTheDocument()
+  })
+
+  it('a member sees a lock hint, no key or lifecycle actions, and never a plan message', () => {
+    open()
+    // No audit permission: no Activity tab at all (the audit log is admin-only).
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
+      'Overview',
+      'Jobs',
+      'Config',
+    ])
+    expect(screen.getByText('Editing, keys and disabling need an admin')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Rotate key' })).toBeNull()
+    expect(screen.queryByText(/plan/i)).toBeNull()
+  })
+
+  it('an admin gets Rotate key (also on the expiring-key line) and the actions menu', async () => {
+    perms.granted.add('sensors:write').add('sensors:delete')
+    const h = open()
+    const rotate = screen.getAllByRole('button', { name: 'Rotate key' })
+    // The header button and the key line's fix action (rendered for phone and desktop).
+    expect(rotate.length).toBeGreaterThanOrEqual(2)
+    await userEvent.click(rotate[1])
+    expect(h.onRegenerateKey).toHaveBeenCalledWith(expect.objectContaining({ id: 's1' }))
+    await userEvent.click(screen.getByRole('button', { name: 'More actions' }))
+    expect(await screen.findByRole('menuitem', { name: /Disable/ })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /Revoke access/ })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /Delete/ })).toBeInTheDocument()
+  })
+
+  it('opens as a bottom sheet on a phone', () => {
+    phone.value = true
+    open()
+    expect(screen.getByRole('dialog').className).toContain('rounded-t-2xl')
+    phone.value = false
+  })
+
+  it('Install command opens the Config tab with the snippets', async () => {
+    open()
+    // The header button (the protocol line offers the same fix).
+    await userEvent.click(screen.getAllByRole('button', { name: /Install command/ })[0])
+    expect(screen.getByText('snippets for s1')).toBeInTheDocument()
+  })
+})
