@@ -51,9 +51,24 @@ export function SensorTag({
   )
 }
 
-/** Name, host and address; badges for a platform sensor and the deprecated protocol. */
+/**
+ * The host name a sensor reports, or null when it adds nothing: not reported,
+ * or the same as the sensor's name (installs often name the sensor after its
+ * host).
+ */
+export function distinctHostname(sensor: Pick<Sensor, 'name' | 'hostname'>): string | null {
+  const host = sensor.hostname?.trim()
+  if (!host || host.toLowerCase() === sensor.name.trim().toLowerCase()) return null
+  return host
+}
+
+/**
+ * Name, then host and address on lines of their own (short lines instead of
+ * one long one); badges for a platform sensor and the deprecated protocol.
+ */
 export function SensorNameCell({ sensor }: { sensor: Sensor }) {
-  const host = [sensor.hostname, sensor.ip_address].filter(Boolean).join(' · ')
+  const host = distinctHostname(sensor)
+  const ip = sensor.ip_address || null
   const fallback = isOneShotSensor(sensor) ? 'CI/CD runner · one-shot' : 'No host reported yet'
   return (
     <div className="flex min-w-0 flex-col">
@@ -62,16 +77,25 @@ export function SensorNameCell({ sensor }: { sensor: Sensor }) {
         {sensor.is_platform_sensor && <SensorTag>Platform</SensorTag>}
         <ProtocolTag sensor={sensor} />
       </span>
-      {host ? (
+      {host && (
         <span
-          className={cn('truncate font-mono text-xs', muted)}
-          title="Host name and the address the platform sees the sensor connect from"
+          className={cn('truncate text-xs', muted)}
+          title="Host name the sensor reports"
+          data-slot="sensor-host"
         >
           {host}
         </span>
-      ) : (
-        <span className={cn('truncate text-xs', muted)}>{fallback}</span>
       )}
+      {ip && (
+        <span
+          className={cn('truncate text-xs tabular-nums', muted)}
+          title="Address the platform sees the sensor connect from"
+          data-slot="sensor-ip"
+        >
+          {ip}
+        </span>
+      )}
+      {!sensor.hostname && !ip && <span className={cn('truncate text-xs', muted)}>{fallback}</span>}
     </div>
   )
 }
