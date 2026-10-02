@@ -17,6 +17,7 @@ import {
   type LoginTenant,
 } from '@/features/auth/actions/local-auth-actions'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { useCanCreateOrganization } from '@/features/auth/hooks/use-can-create-organization'
 
 // Show the search input only when the user has more than this many teams.
 // Below this threshold scanning visually is faster than typing.
@@ -45,6 +46,7 @@ function parsePendingTenants(): PendingState {
 
 export default function SelectTenantPage() {
   const router = useRouter()
+  const { canCreate: canCreateTeam } = useCanCreateOrganization()
   const [isPending, startTransition] = useTransition()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -267,25 +269,29 @@ export default function SelectTenantPage() {
             distinct from the team list above so it reads as "another option"
             rather than "another team". p-3 on mobile (vs p-4) keeps it
             from dominating the small screen. */}
-        <button
-          onClick={() => router.push('/onboarding/create-team')}
-          disabled={isPending || isLoggingOut}
-          className={`
-            w-full flex items-center gap-3 p-3 sm:p-4 rounded-lg border border-dashed transition-colors
-            border-border hover:border-primary hover:bg-muted/30
-            ${isPending || isLoggingOut ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-          `}
-        >
-          <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-muted shrink-0">
-            <Plus className="h-5 w-5" />
-          </div>
-          <div className="flex-1 text-start min-w-0">
-            <p className="font-medium text-sm sm:text-base">Create a new team</p>
-            <p className="text-xs sm:text-sm text-muted-foreground truncate">
-              Start a fresh workspace for a different organisation
-            </p>
-          </div>
-        </button>
+        {/* Hidden when only the platform administrator creates organizations
+            (TENANT_CREATION_MODE=admin_only). */}
+        {canCreateTeam && (
+          <button
+            onClick={() => router.push('/onboarding/create-team')}
+            disabled={isPending || isLoggingOut}
+            className={`
+              w-full flex items-center gap-3 p-3 sm:p-4 rounded-lg border border-dashed transition-colors
+              border-border hover:border-primary hover:bg-muted/30
+              ${isPending || isLoggingOut ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+            `}
+          >
+            <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-muted shrink-0">
+              <Plus className="h-5 w-5" />
+            </div>
+            <div className="flex-1 text-start min-w-0">
+              <p className="font-medium text-sm sm:text-base">Create a new team</p>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                Start a fresh workspace for a different organisation
+              </p>
+            </div>
+          </button>
+        )}
 
         {/* Sign out */}
         <div className="pt-3 border-t">
