@@ -152,8 +152,20 @@ export function TeamSwitcher() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [displayTenants, handleSelectTeam])
 
+  // Load the organization list once the app is ready (one cached request), so
+  // the row knows whether there is anything to switch to before it is opened.
+  React.useEffect(() => {
+    if (isBootstrapped) loadTenants()
+  }, [isBootstrapped, loadTenants])
+
   // Get current tenant display info
   const currentTeamName = currentTenant?.name || currentTenant?.slug || 'Select Team'
+
+  // A selector only when there is a choice: two or more organizations, or the
+  // user may create one. With one organization the row just names it. While
+  // the list is still loading the row stays static, so no chevron flickers in
+  // for the common single-organization case.
+  const canSwitch = tenants.length > 1 || canCreateTeam
 
   // Loading state
   if (isLoading && displayTenants.length === 0) {
@@ -189,6 +201,33 @@ export function TeamSwitcher() {
             <span className="truncate font-semibold group-data-[collapsible=icon]:hidden">
               Create team
             </span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    )
+  }
+
+  if (!canSwitch) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          {/* Same fixed label as the admin console's context row. */}
+          <SidebarMenuButton
+            className={cn(SIDEBAR_CONTEXT_ROW_CLASS, 'pointer-events-none')}
+            tooltip={currentTeamName}
+            tabIndex={-1}
+            data-testid="team-switcher-static"
+          >
+            <div className={SIDEBAR_CHIP_CLASS}>
+              {isSwitching ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                orgInitials(currentTeamName)
+              )}
+            </div>
+            <div className="grid flex-1 text-start text-sm leading-tight group-data-[collapsible=icon]:hidden">
+              <span className="truncate font-semibold">{currentTeamName}</span>
+            </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
