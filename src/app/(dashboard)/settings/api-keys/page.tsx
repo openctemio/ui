@@ -282,7 +282,7 @@ function KeyRowActions({ k, onChanged }: { k: APIKey; onChanged: () => void }) {
             disabled={revoking}
             title="Revoke"
           >
-            <Ban className="h-4 w-4 text-orange-500" />
+            <Ban className="h-4 w-4 text-warning" />
           </Button>
         </Can>
       )}
@@ -292,7 +292,7 @@ function KeyRowActions({ k, onChanged }: { k: APIKey; onChanged: () => void }) {
           size="icon"
           onClick={() => setDeleteOpen(true)}
           title="Delete"
-          className="text-red-500 hover:text-red-600"
+          className="text-destructive hover:text-destructive"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
