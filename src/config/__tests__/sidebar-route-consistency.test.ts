@@ -50,6 +50,21 @@ function collectLeaves(): LeafBinding[] {
         }
         continue
       }
+      // Any-of rule: a row whose section tabs carry their own modules (one
+      // module per tab: Business context, Threat model) is visible while any
+      // tab is, so each tab must bind its route guard's module.
+      if (item.sections?.some((s) => s.module !== undefined)) {
+        for (const section of item.sections) {
+          leaves.push({
+            title: `${item.title} > ${section.label}`,
+            url: section.href,
+            module: section.module,
+            parentTitle: item.title,
+            parentModule: item.module,
+          })
+        }
+        continue
+      }
       if (typeof item.url === 'string' && item.url.startsWith('/')) {
         leaves.push({
           title: item.title,

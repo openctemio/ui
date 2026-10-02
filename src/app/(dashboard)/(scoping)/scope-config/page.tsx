@@ -7,7 +7,6 @@ import {
   PageHeader,
   DataTable,
   DataTableRowActions,
-  EmptyState,
   MetricStrip,
   type MetricStripItem,
 } from '@/features/shared'
@@ -16,25 +15,8 @@ import { useDebounce } from '@/hooks/use-debounce'
 import { useUrlFilter, useUrlFilterNumber } from '@/hooks/use-url-param'
 import { cn } from '@/lib/utils'
 import { Can, Permission, useHasPermission } from '@/lib/permissions'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { Progress } from '@/components/ui/progress'
-import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from '@/components/charts'
-import { useDashboardStats } from '@/features/dashboard/hooks/use-dashboard-stats'
-import { useTenant } from '@/context/tenant-provider'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
@@ -60,19 +42,13 @@ import {
   Plus,
   Pencil,
   Trash2,
-  Clock,
   Server,
   Code,
   Cloud,
   GitBranch,
-  Target,
   Ban,
-  Play,
   Search as SearchIcon,
   AlertTriangle,
-  CheckCircle2,
-  Info,
-  BarChart3,
   Database,
   Box,
   Mail,
@@ -83,13 +59,10 @@ import {
 import { toast } from 'sonner'
 import {
   type ScopeTargetType,
-  type ScanType,
-  type ScanFrequency,
   getScopeTypeConfig,
   // API hooks
   useScopeTargetsApi,
   useScopeExclusionsApi,
-  useScanSchedulesApi,
   useScopeStatsApi,
   useCreateScopeTargetApi,
   useUpdateScopeTargetApi,
@@ -97,31 +70,16 @@ import {
   useCreateScopeExclusionApi,
   useUpdateScopeExclusionApi,
   useDeleteScopeExclusionApi,
-  useCreateScanScheduleApi,
-  useUpdateScanScheduleApi,
-  useDeleteScanScheduleApi,
   invalidateScopeCache,
   invalidateScopeTargetsCache,
   invalidateScopeExclusionsCache,
-  invalidateScanSchedulesCache,
   invalidateScopeStatsCache,
   // API types
   type ApiScopeTarget,
   type ApiScopeExclusion,
-  type ApiScanSchedule,
 } from '@/features/scope'
 import { post } from '@/lib/api/client'
 import { getErrorMessage } from '@/lib/api/error-handler'
-
-const OVERVIEW_COLORS = [
-  '#3b82f6',
-  '#8b5cf6',
-  '#06b6d4',
-  '#22c55e',
-  '#f97316',
-  '#ef4444',
-  '#eab308',
-]
 
 // Use shared validation from scope feature types
 const validatePattern = (
@@ -215,17 +173,10 @@ const targetTypeCategories = [
   },
 ]
 
-const scanTypeLabels: Record<string, string> = {
-  vulnerability: 'Vulnerability',
-  port_scan: 'Port scan',
-  pentest: 'Pentest',
-  credential: 'Credential',
-  secret_scan: 'Secret scan',
-  compliance: 'Compliance',
-  configuration: 'Config audit',
-}
-
-const SCOPE_TABS = ['overview', 'targets', 'exclusions', 'schedules'] as const
+// Targets | Exclusions. The old Overview tab charted the whole inventory and the
+// Schedules tab never ran (nothing executes scope schedules; Scans owns
+// scheduling), so an old `?tab=overview` or `?tab=schedules` link lands on Targets.
+const SCOPE_TABS = ['targets', 'exclusions'] as const
 type ScopeTab = (typeof SCOPE_TABS)[number]
 const PAGE_SIZES = [10, 20, 30, 50, 100]
 
@@ -233,35 +184,14 @@ export default function ScopeConfigPage() {
   // Permission check for write operations
   const canWriteScope = useHasPermission(Permission.ScopeWrite)
 
-  // Dashboard stats for Overview tab
-  const { currentTenant } = useTenant()
-  const { stats: dashboardStats, isLoading: dashboardLoading } = useDashboardStats(
-    currentTenant?.id || null
-  )
-
-  const assetTypeData = useMemo(() => {
-    return Object.entries(dashboardStats.assets.byType).map(([name, value], index) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
-      value,
-      color: OVERVIEW_COLORS[index % OVERVIEW_COLORS.length],
-    }))
-  }, [dashboardStats.assets.byType])
-
-  const assetStatusData = useMemo(() => {
-    return Object.entries(dashboardStats.assets.byStatus).map(([name, value]) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
-      value,
-    }))
-  }, [dashboardStats.assets.byStatus])
-
   // Tab, search, type filter and page live in the URL so a view can be linked
   // to. One set of list params serves whichever table tab is open (they are
   // cleared on tab change), and each API call only receives them for its own tab
   // so the other tabs' counts stay unfiltered.
-  const [tabParam, setTabParam] = useUrlFilter('tab', 'overview')
+  const [tabParam, setTabParam] = useUrlFilter('tab', 'targets')
   const tab: ScopeTab = (SCOPE_TABS as readonly string[]).includes(tabParam)
     ? (tabParam as ScopeTab)
-    : 'overview'
+    : 'targets'
   const [searchParam, setSearchParam] = useUrlFilter('q', '')
   const [typeFilter, setTypeFilter] = useUrlFilter('type', 'all')
   const [page, setPage] = useUrlFilterNumber('page', 1)
@@ -296,7 +226,6 @@ export default function ScopeConfigPage() {
       : { search: undefined, type: undefined }
   const targetParams = listParams('targets')
   const exclusionParams = listParams('exclusions')
-  const scheduleParams = listParams('schedules')
 
   // Validation error state
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -304,13 +233,10 @@ export default function ScopeConfigPage() {
   // Dialog states
   const [isAddTargetOpen, setIsAddTargetOpen] = useState(false)
   const [isAddExclusionOpen, setIsAddExclusionOpen] = useState(false)
-  const [isAddScheduleOpen, setIsAddScheduleOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<ApiScopeTarget | null>(null)
   const [editExclusion, setEditExclusion] = useState<ApiScopeExclusion | null>(null)
-  const [editSchedule, setEditSchedule] = useState<ApiScanSchedule | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ApiScopeTarget | null>(null)
   const [deleteExclusion, setDeleteExclusion] = useState<ApiScopeExclusion | null>(null)
-  const [deleteSchedule, setDeleteSchedule] = useState<ApiScanSchedule | null>(null)
 
   // Form states
   const [targetForm, setTargetForm] = useState({
@@ -327,14 +253,6 @@ export default function ScopeConfigPage() {
     reason: '',
   })
 
-  const [scheduleForm, setScheduleForm] = useState({
-    name: '',
-    type: 'vulnerability' as ScanType,
-    targets: '',
-    frequency: 'daily' as ScanFrequency,
-    time: '',
-  })
-
   // API hooks for fetching data (using debounced search values)
   const { data: targetsData, isLoading: targetsLoading } = useScopeTargetsApi({
     search: targetParams.search,
@@ -348,13 +266,6 @@ export default function ScopeConfigPage() {
     exclusion_type: exclusionParams.type,
     page: tab === 'exclusions' ? page : 1,
     per_page: tab === 'exclusions' ? perPage : 20,
-  })
-
-  const { data: schedulesData, isLoading: schedulesLoading } = useScanSchedulesApi({
-    search: scheduleParams.search,
-    scan_type: scheduleParams.type as ScanType | undefined,
-    page: tab === 'schedules' ? page : 1,
-    per_page: tab === 'schedules' ? perPage : 20,
   })
 
   const { data: statsData, isLoading: statsLoading } = useScopeStatsApi()
@@ -376,18 +287,9 @@ export default function ScopeConfigPage() {
     deleteExclusion?.id || ''
   )
 
-  const { trigger: createSchedule, isMutating: isCreatingSchedule } = useCreateScanScheduleApi()
-  const { trigger: updateScheduleApi, isMutating: isUpdatingSchedule } = useUpdateScanScheduleApi(
-    editSchedule?.id || ''
-  )
-  const { trigger: removeSchedule, isMutating: isRemovingSchedule } = useDeleteScanScheduleApi(
-    deleteSchedule?.id || ''
-  )
-
   // Extracted data - memoized for stable references
   const targets = useMemo(() => targetsData?.data || [], [targetsData?.data])
   const exclusions = useMemo(() => exclusionsData?.data || [], [exclusionsData?.data])
-  const schedules = useMemo(() => schedulesData?.data || [], [schedulesData?.data])
 
   // Stats (with fallback to 0 for undefined values)
   const stats = useMemo(() => {
@@ -396,8 +298,9 @@ export default function ScopeConfigPage() {
         targets: statsData.total_targets ?? 0,
         activeTargets: statsData.active_targets ?? 0,
         exclusions: statsData.total_exclusions ?? 0,
-        activeSchedules: statsData.enabled_schedules ?? 0,
-        coverage: statsData.coverage ?? 0,
+        // Share of discovered assets an active target covers (and no
+        // exclusion removes), computed by the API; not a share of targets.
+        coverage: Math.round(statsData.coverage ?? 0),
       }
     }
     // Fallback when stats API hasn't loaded yet.
@@ -412,15 +315,10 @@ export default function ScopeConfigPage() {
       targets: targetsData?.total ?? 0,
       activeTargets: targets.filter((t) => t.status === 'active').length,
       exclusions: exclusionsData?.total ?? 0,
-      activeSchedules: schedules.filter((s) => s.enabled).length,
-      coverage:
-        targetsData?.total && targetsData.total > 0
-          ? Math.round(
-              (targets.filter((t) => t.status === 'active').length / targetsData.total) * 100
-            )
-          : 0,
+      // Only the API knows how much of the inventory the targets cover.
+      coverage: 0,
     }
-  }, [statsData, targetsData, exclusionsData, targets, schedules])
+  }, [statsData, targetsData, exclusionsData, targets])
 
   // Duplicate check helpers
   const checkDuplicateTarget = useCallback(
@@ -461,29 +359,6 @@ export default function ScopeConfigPage() {
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to update exclusion status'))
     }
-  }
-
-  // Toggle schedule status using enable/disable endpoints
-  const toggleScheduleStatus = async (schedule: ApiScanSchedule) => {
-    try {
-      const action = schedule.enabled ? 'disable' : 'enable'
-      await post<ApiScanSchedule>(`/api/v1/scope/schedules/${schedule.id}/${action}`)
-      await invalidateScanSchedulesCache()
-      await invalidateScopeStatsCache()
-      toast.success(`Schedule ${action}d successfully`)
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to update schedule status'))
-    }
-  }
-
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return '-'
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
   }
 
   // Target handlers
@@ -665,138 +540,6 @@ export default function ScopeConfigPage() {
     setEditExclusion(exclusion)
   }
 
-  // Schedule handlers
-  const resetScheduleForm = () => {
-    setScheduleForm({ name: '', type: 'vulnerability', targets: '', frequency: 'daily', time: '' })
-  }
-
-  // Map frontend frequency to backend schedule type and params
-  const mapFrequencyToSchedule = (
-    frequency: ScanFrequency
-  ): { schedule_type: string; cron_expression?: string; interval_hours?: number } => {
-    switch (frequency) {
-      case 'hourly':
-        return { schedule_type: 'interval', interval_hours: 1 }
-      case 'daily':
-        return { schedule_type: 'cron', cron_expression: '0 2 * * *' }
-      case 'weekly':
-        return { schedule_type: 'cron', cron_expression: '0 3 * * 0' }
-      case 'monthly':
-        return { schedule_type: 'cron', cron_expression: '0 4 1 * *' }
-      case 'quarterly':
-        return { schedule_type: 'cron', cron_expression: '0 4 1 */3 *' }
-      case 'continuous':
-        return { schedule_type: 'interval', interval_hours: 0 }
-      case 'on_commit':
-      case 'on_demand':
-      default:
-        return { schedule_type: 'cron', cron_expression: '' }
-    }
-  }
-
-  const handleAddSchedule = async () => {
-    if (!scheduleForm.name || !scheduleForm.targets) {
-      toast.error('Please fill in required fields')
-      return
-    }
-
-    const scheduleParams = mapFrequencyToSchedule(scheduleForm.frequency)
-
-    try {
-      await createSchedule({
-        name: scheduleForm.name,
-        scan_type: scheduleForm.type,
-        target_tags: scheduleForm.targets.split(',').map((t) => t.trim()),
-        ...scheduleParams,
-      })
-      await invalidateScopeCache()
-      toast.success('Schedule created successfully')
-      setIsAddScheduleOpen(false)
-      resetScheduleForm()
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to create schedule'))
-    }
-  }
-
-  const handleEditSchedule = async () => {
-    if (!editSchedule || !scheduleForm.name || !scheduleForm.targets) {
-      toast.error('Please fill in required fields')
-      return
-    }
-
-    const scheduleParams = mapFrequencyToSchedule(scheduleForm.frequency)
-
-    try {
-      await updateScheduleApi({
-        name: scheduleForm.name,
-        target_tags: scheduleForm.targets.split(',').map((t) => t.trim()),
-        ...scheduleParams,
-      })
-      await invalidateScopeCache()
-      toast.success('Schedule updated successfully')
-      setEditSchedule(null)
-      resetScheduleForm()
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to update schedule'))
-    }
-  }
-
-  const handleDeleteSchedule = async () => {
-    if (!deleteSchedule) return
-    try {
-      await removeSchedule()
-      await invalidateScopeCache()
-      toast.success('Schedule deleted successfully')
-      setDeleteSchedule(null)
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to delete schedule'))
-    }
-  }
-
-  // Reverse of mapFrequencyToSchedule: derive the form's frequency from the
-  // stored schedule so opening an existing schedule shows its real cadence.
-  // Previously this was hardcoded to 'daily', so editing (and re-saving) any
-  // weekly/monthly/… schedule silently overwrote its cron with the daily cron.
-  const mapScheduleToFrequency = (schedule: ApiScanSchedule): ScanFrequency => {
-    if (schedule.schedule_type === 'interval') {
-      return schedule.interval_hours === 0 ? 'continuous' : 'hourly'
-    }
-    switch (schedule.cron_expression) {
-      case '0 2 * * *':
-        return 'daily'
-      case '0 3 * * 0':
-        return 'weekly'
-      case '0 4 1 * *':
-        return 'monthly'
-      case '0 4 1 */3 *':
-        return 'quarterly'
-      default:
-        return 'daily'
-    }
-  }
-
-  const openEditSchedule = (schedule: ApiScanSchedule) => {
-    setScheduleForm({
-      name: schedule.name ?? '',
-      type: (schedule.scan_type ?? '') as ScanType,
-      targets: schedule.target_tags?.join(', ') || '',
-      frequency: mapScheduleToFrequency(schedule),
-      time: schedule.cron_expression || '',
-    })
-    setEditSchedule(schedule)
-  }
-
-  const handleRunNow = async (schedule: ApiScanSchedule) => {
-    try {
-      await post(`/api/v1/scope/schedules/${schedule.id}/run`, {})
-      await invalidateScanSchedulesCache()
-      await invalidateScopeStatsCache()
-      toast.success(`Started: ${schedule.name}`)
-    } catch {
-      toast.error(`Failed to run schedule: ${schedule.name}`)
-    }
-  }
-
   // Get pattern placeholder and help text from shared config
   const getTypeConfig = (type: ScopeTargetType) => {
     const config = getScopeTypeConfig(type)
@@ -951,115 +694,29 @@ export default function ScopeConfigPage() {
     </div>
   )
 
-  const scheduleFormFields = (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label>Name *</Label>
-        <Input
-          placeholder="e.g., Daily Vulnerability Scan"
-          value={scheduleForm.name}
-          onChange={(e) => setScheduleForm({ ...scheduleForm, name: e.target.value })}
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Scan type</Label>
-          <Select
-            value={scheduleForm.type}
-            disabled={!!editSchedule}
-            onValueChange={(v) => setScheduleForm({ ...scheduleForm, type: v as ScanType })}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="vulnerability">Vulnerability scan</SelectItem>
-              <SelectItem value="port_scan">Port scan</SelectItem>
-              <SelectItem value="pentest">Penetration test</SelectItem>
-              <SelectItem value="credential">Credential monitor</SelectItem>
-              <SelectItem value="secret_scan">Secret scan</SelectItem>
-              <SelectItem value="compliance">Compliance check</SelectItem>
-              <SelectItem value="configuration">Config audit</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Frequency</Label>
-          <Select
-            value={scheduleForm.frequency}
-            onValueChange={(v) =>
-              setScheduleForm({ ...scheduleForm, frequency: v as ScanFrequency })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="hourly">Hourly</SelectItem>
-              <SelectItem value="daily">Daily</SelectItem>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="monthly">Monthly</SelectItem>
-              <SelectItem value="quarterly">Quarterly</SelectItem>
-              <SelectItem value="continuous">Continuous</SelectItem>
-              <SelectItem value="on_commit">On commit</SelectItem>
-              <SelectItem value="on_demand">On demand</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="space-y-2">
-        <Label>Targets *</Label>
-        <Input
-          placeholder="Comma-separated targets (e.g., *.example.com, 10.0.0.0/8)"
-          value={scheduleForm.targets}
-          onChange={(e) => setScheduleForm({ ...scheduleForm, targets: e.target.value })}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label>Time</Label>
-        <Input
-          placeholder="e.g., 02:00 or Sunday 03:00"
-          value={scheduleForm.time}
-          onChange={(e) => setScheduleForm({ ...scheduleForm, time: e.target.value })}
-        />
-      </div>
-    </div>
-  )
-
   const typeFilterSelect = (
     <Select value={typeFilter} onValueChange={setTypeFilterAndReset}>
       <SelectTrigger className="h-9 w-auto min-w-36" aria-label="Filter by type">
         <SelectValue placeholder="Filter by type" />
       </SelectTrigger>
-      {tab === 'schedules' ? (
-        <SelectContent>
-          <SelectItem value="all">All types</SelectItem>
-          {Object.entries(scanTypeLabels).map(([value, label]) => (
-            <SelectItem key={value} value={value}>
-              {label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      ) : (
-        <SelectContent className="max-h-80">
-          <SelectItem value="all">All types</SelectItem>
-          {targetTypeCategories.map((category) => (
-            <div key={category.label}>
-              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                {category.label}
-              </div>
-              {category.types.map((type) => (
-                <SelectItem key={type} value={type}>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {targetTypeIcons[type]}
-                    {formatTypeLabel(type)}
-                  </div>
-                </SelectItem>
-              ))}
+      <SelectContent className="max-h-80">
+        <SelectItem value="all">All types</SelectItem>
+        {targetTypeCategories.map((category) => (
+          <div key={category.label}>
+            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+              {category.label}
             </div>
-          ))}
-        </SelectContent>
-      )}
+            {category.types.map((type) => (
+              <SelectItem key={type} value={type}>
+                <div className="flex flex-wrap items-center gap-2">
+                  {targetTypeIcons[type]}
+                  {formatTypeLabel(type)}
+                </div>
+              </SelectItem>
+            ))}
+          </div>
+        ))}
+      </SelectContent>
     </Select>
   )
 
@@ -1068,13 +725,7 @@ export default function ScopeConfigPage() {
       <div className="relative min-w-0 flex-1 sm:max-w-sm">
         <SearchIcon className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder={
-            tab === 'targets'
-              ? 'Search targets…'
-              : tab === 'exclusions'
-                ? 'Search exclusions…'
-                : 'Search schedules…'
-          }
+          placeholder={tab === 'targets' ? 'Search targets…' : 'Search exclusions…'}
           aria-label={`Search ${tab}`}
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
@@ -1267,118 +918,6 @@ export default function ScopeConfigPage() {
     },
   ]
 
-  const scheduleColumns: ColumnDef<ApiScanSchedule>[] = [
-    {
-      accessorKey: 'name',
-      header: 'Name',
-      enableHiding: false,
-      cell: ({ row }) => {
-        const schedule = row.original
-        return (
-          <div>
-            <p className="font-medium">{schedule.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {schedule.target_tags?.join(', ') || schedule.target_scope || 'All targets'}
-            </p>
-          </div>
-        )
-      },
-    },
-    {
-      accessorKey: 'scan_type',
-      header: 'Type',
-      cell: ({ row }) => (
-        <Badge variant="secondary">
-          {scanTypeLabels[row.original.scan_type ?? ''] ?? row.original.scan_type}
-        </Badge>
-      ),
-    },
-    {
-      id: 'schedule',
-      header: 'Schedule',
-      cell: ({ row }) => {
-        const schedule = row.original
-        return (
-          <div className="flex items-center gap-1 text-sm">
-            <Clock className="h-3 w-3 text-muted-foreground" />
-            {schedule.cron_expression ? (
-              <code className="text-xs">{schedule.cron_expression}</code>
-            ) : schedule.interval_hours ? (
-              `Every ${schedule.interval_hours}h`
-            ) : (
-              'On demand'
-            )}
-          </div>
-        )
-      },
-    },
-    {
-      accessorKey: 'last_run_at',
-      header: 'Last run',
-      cell: ({ row }) => <span className="text-sm">{formatDate(row.original.last_run_at)}</span>,
-    },
-    {
-      accessorKey: 'next_run_at',
-      header: 'Next run',
-      cell: ({ row }) => (
-        <span className="text-sm">
-          {row.original.next_run_at ? formatDate(row.original.next_run_at) : 'On trigger'}
-        </span>
-      ),
-    },
-    {
-      accessorKey: 'enabled',
-      header: 'Status',
-      cell: ({ row }) => {
-        const schedule = row.original
-        return (
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={schedule.enabled}
-              onCheckedChange={() => toggleScheduleStatus(schedule)}
-              disabled={!canWriteScope}
-              aria-label={`Toggle ${schedule.name}`}
-            />
-            <span className={cn('text-xs', !schedule.enabled && 'text-muted-foreground')}>
-              {schedule.enabled ? 'Active' : 'Paused'}
-            </span>
-          </div>
-        )
-      },
-    },
-    {
-      id: 'actions',
-      enableHiding: false,
-      cell: ({ row }) => (
-        <Can permission={[Permission.ScansExecute, Permission.ScopeWrite, Permission.ScopeDelete]}>
-          <DataTableRowActions
-            actions={[
-              {
-                label: 'Run now',
-                icon: Play,
-                onClick: () => handleRunNow(row.original),
-                permission: Permission.ScansExecute,
-              },
-              {
-                label: 'Edit',
-                icon: Pencil,
-                onClick: () => openEditSchedule(row.original),
-                permission: Permission.ScopeWrite,
-              },
-              {
-                label: 'Delete',
-                icon: Trash2,
-                onClick: () => setDeleteSchedule(row.original),
-                destructive: true,
-                permission: Permission.ScopeDelete,
-              },
-            ]}
-          />
-        </Can>
-      ),
-    },
-  ]
-
   const tableSkeleton = (
     <div className="space-y-2 rounded-xl border p-3">
       {[1, 2, 3, 4].map((i) => (
@@ -1402,16 +941,10 @@ export default function ScopeConfigPage() {
       onClick: () => selectTab('exclusions'),
     },
     {
-      key: 'schedules',
-      label: 'Active schedules',
-      value: stats.activeSchedules,
-      onClick: () => selectTab('schedules'),
-    },
-    {
       key: 'coverage',
-      label: 'Scope coverage',
+      label: 'Inventory in scope',
       value: `${stats.coverage}%`,
-      hint: `${stats.activeTargets} of ${stats.targets} targets active`,
+      hint: 'of discovered assets match an active target',
     },
   ]
 
@@ -1420,11 +953,6 @@ export default function ScopeConfigPage() {
       <Button size="sm" onClick={() => setIsAddExclusionOpen(true)}>
         <Plus className="me-2 h-4 w-4" />
         Add exclusion
-      </Button>
-    ) : tab === 'schedules' ? (
-      <Button size="sm" onClick={() => setIsAddScheduleOpen(true)}>
-        <Plus className="me-2 h-4 w-4" />
-        New schedule
       </Button>
     ) : (
       <Button size="sm" onClick={() => setIsAddTargetOpen(true)}>
@@ -1437,16 +965,17 @@ export default function ScopeConfigPage() {
     <>
       <Main>
         <PageHeader
-          title="Scope configuration"
-          description="What gets scanned: in-scope targets, exclusions and scan schedules."
+          title="Boundaries"
+          description="What the program covers, and what scans must never touch. Exclusions are enforced on every scan; schedule scans on the Scans page."
         >
           <Can permission={Permission.ScopeWrite}>{addButton}</Can>
         </PageHeader>
 
-        <Tabs value={tab} onValueChange={selectTab} className="mt-4">
+        <MetricStrip className="mt-5" loading={statsLoading} items={metrics} />
+
+        <Tabs value={tab} onValueChange={selectTab} className="mt-5">
           <div className="no-scrollbar -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
             <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="targets">
                 Targets{' '}
                 <TabsCount value={targetsLoading ? '…' : (targetsData?.total ?? targets.length)} />
@@ -1457,193 +986,8 @@ export default function ScopeConfigPage() {
                   value={exclusionsLoading ? '…' : (exclusionsData?.total ?? exclusions.length)}
                 />
               </TabsTrigger>
-              <TabsTrigger value="schedules">
-                Schedules{' '}
-                <TabsCount
-                  value={schedulesLoading ? '…' : (schedulesData?.total ?? schedules.length)}
-                />
-              </TabsTrigger>
             </TabsList>
           </div>
-
-          {/* Overview */}
-          <TabsContent value="overview" className="mt-5 space-y-5">
-            <MetricStrip loading={statsLoading} items={metrics} />
-            {dashboardLoading ? (
-              <div className="grid gap-5 lg:grid-cols-2">
-                {Array.from({ length: 2 }).map((_, i) => (
-                  <Skeleton key={i} className="h-80 w-full rounded-xl" />
-                ))}
-              </div>
-            ) : (
-              <div className="grid gap-5 lg:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Inventory by asset type</CardTitle>
-                    <CardDescription>Every asset in the inventory, in scope or not</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {assetTypeData.length === 0 ? (
-                      <EmptyState
-                        icon={BarChart3}
-                        title="No asset types yet"
-                        description="Asset types appear once discovery or an import adds assets."
-                        card={false}
-                        className="py-8"
-                      />
-                    ) : (
-                      <div className="flex flex-col items-center gap-4">
-                        {/* Chart area is its own flex item with a fixed
-                            square box. Built-in Recharts Legend was
-                            eating into the Pie's vertical space and
-                            squashing it into an oval when there were
-                            many asset-type entries; hoisting the
-                            legend out fixes that. */}
-                        <div className="h-[240px] w-[240px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={assetTypeData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius="60%"
-                                outerRadius="100%"
-                                dataKey="value"
-                                nameKey="name"
-                                paddingAngle={2}
-                              >
-                                {assetTypeData.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={entry.color} />
-                                ))}
-                              </Pie>
-                              <Tooltip />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                        <ul className="flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
-                          {assetTypeData.map((entry) => (
-                            <li
-                              key={entry.name}
-                              className="flex items-center gap-2 text-muted-foreground"
-                            >
-                              <span
-                                aria-hidden
-                                className="inline-block h-2.5 w-2.5 rounded-sm"
-                                style={{ backgroundColor: entry.color }}
-                              />
-                              <span className="text-foreground">{entry.name}</span>
-                              <span className="tabular-nums">{entry.value}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Asset status</CardTitle>
-                    <CardDescription>Status of every asset in the inventory</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {assetStatusData.length === 0 ? (
-                      <EmptyState
-                        icon={BarChart3}
-                        title="No status data"
-                        description="Status appears once discovery or an import adds assets."
-                        card={false}
-                        className="py-8"
-                      />
-                    ) : (
-                      <ResponsiveContainer width="100%" height={280}>
-                        <BarChart data={assetStatusData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" fontSize={12} />
-                          <YAxis fontSize={12} />
-                          <Tooltip />
-                          <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 0, 0]} name="Assets" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card className="lg:col-span-2">
-                  <CardHeader>
-                    <CardTitle className="text-base">Insights</CardTitle>
-                    <CardDescription>Where the scope boundaries could be tightened</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {stats.targets === 0 && dashboardStats.assets.total === 0 ? (
-                      <EmptyState
-                        icon={Target}
-                        title="No targets configured"
-                        description="Add targets to begin scoping."
-                        card={false}
-                        className="py-8"
-                      />
-                    ) : (
-                      <div className="divide-y">
-                        <div className="pb-4">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium">Scope coverage</p>
-                            <span className="text-sm font-semibold tabular-nums">
-                              {stats.activeTargets} / {stats.targets} targets active
-                            </span>
-                          </div>
-                          <Progress value={stats.coverage} className="mt-2 h-2" />
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {stats.coverage}% scope coverage — {stats.exclusions} exclusion
-                            {stats.exclusions !== 1 ? 's' : ''}, {stats.activeSchedules} active
-                            schedule{stats.activeSchedules !== 1 ? 's' : ''}
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-3 py-4">
-                          {stats.coverage < 80 ? (
-                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                          ) : (
-                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                          )}
-                          <div>
-                            <p className="text-sm font-medium">Target coverage</p>
-                            <p className="text-sm text-muted-foreground">
-                              {stats.coverage < 80
-                                ? `Only ${stats.activeTargets} of ${stats.targets} targets are active. Activate more targets to improve coverage.`
-                                : 'At least 80% of targets are active.'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3 py-4">
-                          <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                          <div>
-                            <p className="text-sm font-medium">Repository integration</p>
-                            <p className="text-sm text-muted-foreground">
-                              {dashboardStats.repositories.total > 0
-                                ? `${dashboardStats.repositories.total} repositories linked. ${dashboardStats.repositories.withFindings} have active findings.`
-                                : 'Connect repositories to expand scope for code assets.'}
-                            </p>
-                          </div>
-                        </div>
-                        {stats.activeSchedules === 0 && stats.targets > 0 && (
-                          <div className="flex items-start gap-3 pt-4">
-                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                            <div>
-                              <p className="text-sm font-medium">No active schedules</p>
-                              <p className="text-sm text-muted-foreground">
-                                You have {stats.targets} targets but no active scan schedules.
-                                Create a schedule to automate scanning.
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </TabsContent>
 
           <TabsContent value="targets" className="mt-5">
             {targetsLoading && !targetsData ? (
@@ -1690,30 +1034,6 @@ export default function ScopeConfigPage() {
                   filtersActive
                     ? 'Try adjusting your search or type filter.'
                     : 'Add an exclusion to keep something out of scans.'
-                }
-              />
-            )}
-          </TabsContent>
-
-          <TabsContent value="schedules" className="mt-5">
-            {schedulesLoading && !schedulesData ? (
-              tableSkeleton
-            ) : (
-              <DataTable
-                columns={scheduleColumns}
-                data={schedules}
-                showSearch={false}
-                toolbarStart={toolbarStart}
-                manualPagination
-                rowCount={schedulesData?.total ?? 0}
-                pagination={{ pageIndex: page - 1, pageSize: perPage }}
-                onPaginationChange={onTablePagination}
-                pageSizeOptions={PAGE_SIZES}
-                emptyMessage={filtersActive ? 'No schedules match' : 'No schedules configured yet'}
-                emptyDescription={
-                  filtersActive
-                    ? 'Try adjusting your search or type filter.'
-                    : 'Create a schedule to automate scanning.'
                 }
               />
             )}
@@ -1855,58 +1175,6 @@ export default function ScopeConfigPage() {
         destructive
         isLoading={isRemovingExclusion}
         handleConfirm={handleDeleteExclusion}
-      />
-
-      {/* Add Schedule Dialog */}
-      <Dialog open={isAddScheduleOpen} onOpenChange={setIsAddScheduleOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>New schedule</DialogTitle>
-            <DialogDescription>Create a new scan schedule</DialogDescription>
-          </DialogHeader>
-          {scheduleFormFields}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddScheduleOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAddSchedule} disabled={isCreatingSchedule}>
-              {isCreatingSchedule && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Create Schedule
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Schedule Dialog */}
-      <Dialog open={!!editSchedule} onOpenChange={(open) => !open && setEditSchedule(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit schedule</DialogTitle>
-            <DialogDescription>Update schedule configuration</DialogDescription>
-          </DialogHeader>
-          {scheduleFormFields}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditSchedule(null)}>
-              Cancel
-            </Button>
-            <Button onClick={handleEditSchedule} disabled={isUpdatingSchedule}>
-              {isUpdatingSchedule && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Schedule Dialog */}
-      <ConfirmDialog
-        open={!!deleteSchedule}
-        onOpenChange={(open) => !open && setDeleteSchedule(null)}
-        title="Delete schedule?"
-        desc={<>Delete &quot;{deleteSchedule?.name}&quot;? This cannot be undone.</>}
-        confirmText="Delete"
-        destructive
-        isLoading={isRemovingSchedule}
-        handleConfirm={handleDeleteSchedule}
       />
     </>
   )

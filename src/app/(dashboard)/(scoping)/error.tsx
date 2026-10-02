@@ -35,7 +35,7 @@ export default function ScopingError({ error, reset }: ErrorProps) {
             Scoping Error
           </CardTitle>
           <CardDescription>
-            Failed to load scope configuration. Please try again or contact support.
+            Failed to load this scoping page. Please try again or contact support.
           </CardDescription>
         </CardHeader>
         <CardContent className="text-center">

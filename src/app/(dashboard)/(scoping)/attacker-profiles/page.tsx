@@ -5,12 +5,14 @@ import type { ColumnDef } from '@tanstack/react-table'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
 import {
-  PageHeader,
-  EmptyState,
   DataTable,
   DataTableColumnHeader,
   DataTableRowActions,
+  EmptyState,
+  GatedSectionTabs,
+  PageHeader,
 } from '@/features/shared'
+import { THREAT_MODEL_SECTION_TABS } from '@/config/section-tabs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -278,6 +280,11 @@ export default function AttackerProfilesPage() {
             </Button>
           </Can>
         </PageHeader>
+        <GatedSectionTabs
+          tabs={THREAT_MODEL_SECTION_TABS}
+          label="Threat model sections"
+          className="mt-4 mb-0"
+        />
 
         <div className="mt-5">
           {isLoading ? (

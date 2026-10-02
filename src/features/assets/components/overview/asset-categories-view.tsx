@@ -11,6 +11,7 @@
  * - Code & CI/CD (repositories)
  */
 
+import { AssetsSectionTabs } from '../assets-section-tabs'
 import Link from 'next/link'
 import { Main } from '@/components/layout'
 import { PageHeader, EmptyState, StatsCard } from '@/features/shared'
@@ -213,15 +214,9 @@ export function AssetCategoriesView({ viewSwitcher }: { viewSwitcher?: ReactNode
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/asset-groups">
-                <Container className="me-2 h-4 w-4" />
-                Manage asset groups
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
               <Link href="/scope-config">
                 <Crosshair className="me-2 h-4 w-4" />
-                Configure scope
+                Scope boundaries
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
@@ -233,6 +228,7 @@ export function AssetCategoriesView({ viewSwitcher }: { viewSwitcher?: ReactNode
           </DropdownMenuContent>
         </DropdownMenu>
       </PageHeader>
+      <AssetsSectionTabs />
 
       {/* Duplicate review — surfaced contextually (only when the correlator
           has flagged something) instead of a permanent sidebar item. */}

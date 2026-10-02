@@ -132,15 +132,7 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.AssetsRead,
     module: Module.AttackSurface,
   },
-  '/attack-surface/cloud': {
-    permission: Permission.AssetsRead,
-    module: Module.AttackSurface,
-  },
   '/attack-surface/external': {
-    permission: Permission.AssetsRead,
-    module: Module.AttackSurface,
-  },
-  '/attack-surface/internal': {
     permission: Permission.AssetsRead,
     module: Module.AttackSurface,
   },

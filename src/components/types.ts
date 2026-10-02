@@ -77,6 +77,14 @@ type BaseNavItem = {
 type NavSectionLink = {
   label: string
   href: string
+  /**
+   * Module the tab's route needs (the route guard's module). A tab whose module
+   * is off is hidden from the page's tab strip, the command palette and the
+   * row's own link; the row hides when no tab is left.
+   */
+  module?: string
+  /** Permission the tab's route needs (ANY of them when an array). */
+  permission?: string | string[]
 }
 
 // ✅ Nav item là 1 link trực tiếp (không có submenu)
