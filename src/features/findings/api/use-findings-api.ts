@@ -57,7 +57,7 @@ const defaultConfig: SWRConfiguration = {
 // ENDPOINT BUILDERS
 // ============================================
 
-function buildFindingsEndpoint(filters?: FindingApiFilters): string {
+export function buildFindingsEndpoint(filters?: FindingApiFilters): string {
   const baseUrl = '/api/v1/findings'
 
   if (!filters) return baseUrl
@@ -96,6 +96,8 @@ function buildFindingsEndpoint(filters?: FindingApiFilters): string {
   if (filters.sla_statuses?.length) params.set('sla_status', filters.sla_statuses.join(','))
   if (filters.epss_min != null) params.set('epss_min', String(filters.epss_min))
   if (filters.finding_ids?.length) params.set('finding_ids', filters.finding_ids.join(','))
+  if (filters.cve_ids?.length) params.set('cve_ids', filters.cve_ids.join(','))
+  if (filters.finding_types?.length) params.set('finding_types', filters.finding_types.join(','))
   if (filters.sort) params.set('sort', filters.sort)
 
   const queryString = params.toString()
@@ -127,7 +129,7 @@ function buildAssetFindingsEndpoint(
 // FETCHER FUNCTIONS
 // ============================================
 
-async function fetchFindings(url: string): Promise<ApiFindingListResponse> {
+export async function fetchFindings(url: string): Promise<ApiFindingListResponse> {
   return get<ApiFindingListResponse>(url)
 }
 
