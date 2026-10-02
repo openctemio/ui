@@ -175,6 +175,13 @@ load.
 
 - Create / edit forms: `<Dialog>` (up to `sm:max-w-lg`; `sm:max-w-2xl` for
   long forms). Large editors: a full page.
+- A dialog laid out edge to edge (split panes, a tinted aside, a scrolling
+  body with a sticky footer): `<DialogContent showCloseButton={false}
+className="flex flex-col gap-0 p-0 sm:p-0 …">` with a `<DialogHeaderBar>`
+  (title, description, close) first, then the body. The close button stays on
+  the dialog surface, never on a tinted region; a secondary panel is inset
+  (margin + radius), not bled to the edge. Install sensor and Edit sensor are
+  the reference. Ordinary dialogs keep the default corner close button.
 - Quick detail views: `<Sheet side="right">`.
 - Destructive confirmation: `<ConfirmDialog destructive>`.
 

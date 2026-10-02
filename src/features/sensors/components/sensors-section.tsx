@@ -798,6 +798,8 @@ export function SensorsSection({
             open={editDialogOpen}
             onOpenChange={setEditDialogOpen}
             sensor={selectedSensor}
+            onSuccess={() => void mutate()}
+            onDeleted={() => setSelectedSensor(null)}
           />
 
           <RegenerateKeyDialog

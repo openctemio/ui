@@ -11,13 +11,6 @@ export const SENSOR_TYPE_OPTIONS = [
   { value: 'sensor', label: 'External (EASM)', description: 'Internet-facing EASM vantage point' },
 ] as const
 
-// Sensor status options (admin-controlled)
-export const SENSOR_STATUS_OPTIONS = [
-  { value: 'active', label: 'Active' },
-  { value: 'disabled', label: 'Disabled' },
-  { value: 'revoked', label: 'Revoked' },
-] as const
-
 // Sensor health options (heartbeat-based, automatic)
 export const SENSOR_HEALTH_OPTIONS = [
   { value: 'unknown', label: 'Unknown' },
@@ -60,31 +53,5 @@ export const createSensorSchema = z.object({
   capabilities: z.array(z.string()),
   tools: z.array(z.string()),
   execution_mode: executionModeSchema,
-  labels: z.record(z.string(), z.string()).optional(),
-})
-
-// Update sensor form data type (for form)
-export interface UpdateSensorFormData {
-  name?: string
-  description?: string
-  capabilities?: string[]
-  tools?: string[]
-  execution_mode?: 'standalone' | 'daemon'
-  status?: 'active' | 'disabled' | 'revoked'
-  labels?: Record<string, string>
-}
-
-// Update sensor schema
-export const updateSensorSchema = z.object({
-  name: z
-    .string()
-    .min(1, 'Name is required')
-    .max(255, 'Name must be less than 255 characters')
-    .optional(),
-  description: z.string().max(1000).optional(),
-  capabilities: z.array(z.string()).optional(),
-  tools: z.array(z.string()).optional(),
-  execution_mode: executionModeSchema.optional(),
-  status: sensorStatusSchema.optional(),
   labels: z.record(z.string(), z.string()).optional(),
 })

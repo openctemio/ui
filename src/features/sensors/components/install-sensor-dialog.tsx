@@ -1,11 +1,23 @@
 'use client'
 
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { useState } from 'react'
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeaderBar,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import type { Sensor } from '@/lib/api/sensor-types'
 
-import { SensorInstallFlow } from './sensor-install-flow'
+import { SensorInstallFlow, installStepLabel, type InstallStep } from './sensor-install-flow'
 
-/** "Install sensor" from the page header: the install flow in a dialog. */
+/**
+ * "Install sensor" from the page header: the install flow in a dialog. The
+ * title, the current step and the close button sit in a full-width header
+ * bar; the two panes start below it and only the body scrolls.
+ */
 export function InstallSensorDialog({
   open,
   onOpenChange,
@@ -16,14 +28,25 @@ export function InstallSensorDialog({
   /** "Open sensor" once it sent its first heartbeat. */
   onOpen?: (sensor: Sensor) => void
 }) {
+  const [step, setStep] = useState<InstallStep>('name')
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92svh] overflow-y-auto p-0 sm:max-w-5xl">
-        <DialogTitle className="sr-only">Install a sensor</DialogTitle>
-        <DialogDescription className="sr-only">
-          Name the sensor, run the command on the host and wait for its first heartbeat.
-        </DialogDescription>
-        <SensorInstallFlow onOpen={onOpen} className="rounded-none border-0" />
+      <DialogContent
+        showCloseButton={false}
+        className="flex max-h-[92svh] flex-col gap-0 overflow-hidden p-0 sm:p-0 sm:max-w-5xl"
+      >
+        <DialogHeaderBar>
+          <DialogTitle>Install a sensor</DialogTitle>
+          <DialogDescription>
+            <span className="sr-only">
+              Name the sensor, run the command on the host and wait for its first heartbeat.{' '}
+            </span>
+            <span aria-live="polite">{installStepLabel(step)}</span>
+          </DialogDescription>
+        </DialogHeaderBar>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <SensorInstallFlow variant="dialog" onOpen={onOpen} onStepChange={setStep} />
+        </div>
       </DialogContent>
     </Dialog>
   )
