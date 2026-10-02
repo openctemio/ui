@@ -177,7 +177,10 @@ Every settings page is listed once, in `src/config/settings-nav.ts` (groups My
 account, Organization, Access, Policies, Scanning, Integrations). That config
 drives the settings rail (the left sidebar swaps to it on `/settings/*`,
 `/account/*` and each item's URL), the `/settings` overview and the Settings
-section of the command palette. The main sidebar keeps one "Settings" link.
+section of the command palette. The main sidebar's one "Settings" link is
+pinned in its footer with Help (`sidebar-footer-links.tsx`, shared with the
+admin console); Help's shortcut list is `src/config/keyboard-shortcuts.ts`,
+and an entry needs a real handler (`keyboard-shortcuts.test.ts`).
 Adding a settings page: add the item (with the permission and module the route
 guard enforces, and en/vi strings); `settings-nav.test.ts` checks the rest.
 Moved pages get a 308 in `src/config/legacy-routes.ts`.
