@@ -7,14 +7,14 @@ that makes it resolvable is not the count — it is that a page being outside th
 sidebar does not make it broken, and a page importing a data hook does not make it
 real. You have to look at what data source it actually renders.
 
-**The sidebar exposes 74 URLs; there are 154 `page.tsx` files (144 under
+**The sidebar exposes 46 URLs; there are 154 `page.tsx` files (144 under
 `(dashboard)`).** Most pages outside the sidebar fall into three honest buckets:
 
-| | Pages | What it is |
-|---|---|---|
-| `/assets/*` type wrappers | ~30 | Thin config-driven wrappers, reached from the `/assets` hub + `?type=`. Fine. |
-| Own-domain sub-pages | many | Real features reached as tabs/cards from a parent that _is_ in the nav (e.g. `/findings/approvals`, `/components/*`, `/settings/integrations/*`). Fine. |
-| `useDashboardStats` only | **3** | Genuine scaffolds — nothing of their own behind them. |
+|                           | Pages | What it is                                                                                                                                              |
+| ------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/assets/*` type wrappers | ~30   | Thin config-driven wrappers, reached from the `/assets` hub + `?type=`. Fine.                                                                           |
+| Own-domain sub-pages      | many  | Real features reached as tabs/cards from a parent that _is_ in the nav (e.g. `/findings/approvals`, `/components/*`, `/settings/integrations/*`). Fine. |
+| `useDashboardStats` only  | **3** | Genuine scaffolds — nothing of their own behind them.                                                                                                   |
 
 ---
 
@@ -39,17 +39,17 @@ defect this test exists to prevent.
 The pages older revisions flagged as scaffolds are now backed by domain hooks and
 are live in the sidebar. Do not re-flag them:
 
-| Page | Source |
-|---|---|
-| `/sla` | `useFindingsApi` |
-| `/controls` | `useSWR` (compensating controls) |
-| `/control-testing` | `useControlTests`, `useControlTestStats` |
-| `/exceptions` | `useSuppressions` (+ approve/reject/delete) |
-| `/workflows` | `useWorkflows`, `useWorkflowRuns` |
-| `/attack-simulation` | `useSimulations`, `useRunSimulation` |
-| `/exposures/{secrets,code,misconfigurations,vulnerabilities}` | `useFindingTypeStats(tenantId, [...])` |
-| `/insights/{program-health,data-quality}` | delegate to `ProgramHealthView` / `DataQualityView` |
-| `/insights/{executive,ctem-maturity}` | `useSWR` / `useCtemMaturity` |
+| Page                                                                                              | Source                                              |
+| ------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `/sla`                                                                                            | `useFindingsApi`                                    |
+| `/controls`                                                                                       | `useSWR` (compensating controls)                    |
+| `/control-testing`                                                                                | `useControlTests`, `useControlTestStats`            |
+| `/exceptions`                                                                                     | `useSuppressions` (+ approve/reject/delete)         |
+| `/workflows`                                                                                      | `useWorkflows`, `useWorkflowRuns`                   |
+| `/attack-simulation`                                                                              | `useSimulations`, `useRunSimulation`                |
+| `/exposures/{secrets,code,misconfigurations,vulnerabilities}` (section tabs of the Exposures row) | `useFindingTypeStats(tenantId, [...])`              |
+| `/insights/{program-health,data-quality}`                                                         | delegate to `ProgramHealthView` / `DataQualityView` |
+| `/insights/{executive,ctem-maturity}`                                                             | `useSWR` / `useCtemMaturity`                        |
 
 ## Genuine scaffolds — 3 pages
 
@@ -85,7 +85,7 @@ this is not that it stays unresolved — it is someone resolving it the fast way
 # routes and nav URLs
 find src/app -name page.tsx | sed -E 's#^src/app/##; s#/page\.tsx$##; s#\([^)]*\)/##g; s#^#/#' \
   | sed 's#//*#/#g' | sort -u                                    # routes (some dynamic)
-grep -oE "url: '[^']+'" src/config/sidebar-data.ts | sed "s/url: '//; s/'//" | sort -u   # 74
+grep -oE "url: '[^']+'" src/config/sidebar-data.ts | sed "s/url: '//; s/'//" | sort -u   # 46
 
 # real vs scaffold, per page
 grep -oE "\buse[A-Z][A-Za-z0-9]*[(<]" "$page" | sed 's/[(<]$//' | sort -u \
@@ -96,5 +96,5 @@ grep -oE "\buse[A-Z][A-Za-z0-9]*[(<]" "$page" | sed 's/[(<]$//' | sort -u \
 
 **Do not try to find orphans by grepping for hrefs.** Navigation goes through config
 objects and template literals — `router.push(category.href)`,
-`` router.push(`/assets/${slug}`) `` — so no static pass answers "is this reachable".
+``router.push(`/assets/${slug}`)`` — so no static pass answers "is this reachable".
 Sidebar membership is the only figure exact without reading code.

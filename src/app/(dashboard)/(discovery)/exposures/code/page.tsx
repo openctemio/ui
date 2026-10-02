@@ -15,6 +15,8 @@ import {
   SeverityTrend,
   humanize,
   TypeBreakdownUnavailable,
+  ExposuresTabs,
+  ViewFindingsButton,
 } from '@/features/exposures/components'
 import { useTenant } from '@/context/tenant-provider'
 import type { FindingSource } from '@/lib/api/finding-types'
@@ -22,12 +24,12 @@ import { FileCode, AlertTriangle, Flame, GitBranch } from 'lucide-react'
 
 const CODE_SOURCES: FindingSource[] = ['sast']
 
-export default function CodeVulnerabilitiesPage() {
+export default function CodeWeaknessesPage() {
   const { currentTenant } = useTenant()
   const tenantId = currentTenant?.id || null
   // Org-wide context (repository coverage, asset mix, trend) has no per-type variant.
   const { stats, isLoading: dashboardLoading } = useDashboardStats(tenantId)
-  // Type-scoped finding stats: code vulnerabilities come from static analysis.
+  // Type-scoped finding stats: code weaknesses come from static analysis.
   const { stats: typeStats, isLoading: typeLoading } = useFindingTypeStats(tenantId, CODE_SOURCES)
   const isLoading = dashboardLoading || typeLoading
 
@@ -48,9 +50,13 @@ export default function CodeVulnerabilitiesPage() {
   return (
     <Main>
       <PageHeader
-        title="Code vulnerabilities"
-        description="Code-level security issues found by static analysis, by severity and over time."
-      />
+        title="Code weaknesses"
+        description="Weaknesses in your source code found by static analysis (SAST), by severity and over time."
+      >
+        <ViewFindingsButton stats={typeStats} sources={CODE_SOURCES} isLoading={typeLoading} />
+      </PageHeader>
+
+      <ExposuresTabs />
 
       <div className="mt-5">
         {isLoading ? (
@@ -58,8 +64,8 @@ export default function CodeVulnerabilitiesPage() {
         ) : typeStats.total === 0 ? (
           <EmptyState
             icon={FileCode}
-            title="No code vulnerabilities yet"
-            description="Configure static analysis scanners to detect code-level security vulnerabilities."
+            title="No code weaknesses yet"
+            description="Configure static analysis (SAST) scanners to detect security weaknesses in your code."
           />
         ) : !typeStats.scoped ? (
           <TypeBreakdownUnavailable

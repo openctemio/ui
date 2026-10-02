@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Can, Permission } from '@/lib/permissions'
+import { REMEDIATION_SECTION_TABS } from '@/config/section-tabs'
 import {
   useRemediationGroups,
   ResolveGroupDialog,
@@ -110,12 +111,7 @@ export default function RemediationsPage() {
         description="One fix, many findings — resolve a whole solution family in a single action."
       />
 
-      <SectionTabs
-        tabs={[
-          { label: 'Tasks', href: '/remediation' },
-          { label: 'Solution families', href: '/remediations' },
-        ]}
-      />
+      <SectionTabs tabs={REMEDIATION_SECTION_TABS} className="mt-4" />
 
       {isLoading ? (
         <div className="space-y-2">

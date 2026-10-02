@@ -17,7 +17,7 @@ groups (the `(group)` folder does not appear in the URL):
 plus top-level `insights/`, `findings/`, `reports/`, `settings/`, `account/`,
 `notifications/`.
 
-## 1. In the sidebar (74) — the live product
+## 1. In the sidebar (46 URLs) — the live product
 
 Grouped by CTEM stage in `src/config/sidebar-data.ts`:
 
@@ -26,8 +26,9 @@ Grouped by CTEM stage in `src/config/sidebar-data.ts`:
   Config, Business Services, Business Units, Crown Jewels, CTEM Cycles, Attacker
   Profiles, Relationships, Compliance, Threat Model, Scan Profiles, Scanner
   Templates, Template Sources, Secret Store, Tools, Capabilities, Sensors.
-- **Discovery** — Scans, Asset Inventory, Exposures (+ vulnerabilities, secrets,
-  code, misconfigurations), Credentials, Components.
+- **Discovery** — Scans, Sensors, Assets, What changed, Exposures (one row; its
+  Overview, Vulnerabilities, Secrets, Code weaknesses and Misconfigurations
+  views are in-page section tabs), Credential leaks, Components.
 - **Prioritization** — Exposure Chains, Attack Paths, Threat Intel, Business Impact.
 - **Validation** — Pentest (campaigns, findings, retests, templates, reports,
   MITRE coverage), Attack Simulation, Control Testing, Compensating Controls.
@@ -44,14 +45,14 @@ Grouped by CTEM stage in `src/config/sidebar-data.ts`:
 Earlier drafts of this catalog flagged several pages as "scaffolds to delete."
 That is now wrong. Each is sidebar-linked and backed by a real, domain-scoped hook:
 
-| Page | Backing hook(s) |
-|---|---|
-| `/sla` | `useFindingsApi` (SLA-relevant findings) |
-| `/controls` | `useSWR` (compensating-controls fetch) |
-| `/control-testing` | `useControlTests`, `useControlTestStats`, `useRecordControlTestResult` |
-| `/exceptions` | `useSuppressions` (+ approve/reject/delete mutations) |
-| `/workflows` | `useWorkflows`, `useWorkflowRuns` (+ create/trigger/delete) |
-| `/attack-simulation` | `useSimulations`, `useRunSimulation` |
+| Page                 | Backing hook(s)                                                        |
+| -------------------- | ---------------------------------------------------------------------- |
+| `/sla`               | `useFindingsApi` (SLA-relevant findings)                               |
+| `/controls`          | `useSWR` (compensating-controls fetch)                                 |
+| `/control-testing`   | `useControlTests`, `useControlTestStats`, `useRecordControlTestResult` |
+| `/exceptions`        | `useSuppressions` (+ approve/reject/delete mutations)                  |
+| `/workflows`         | `useWorkflows`, `useWorkflowRuns` (+ create/trigger/delete)            |
+| `/attack-simulation` | `useSimulations`, `useRunSimulation`                                   |
 
 ## 2. Reachable, intentionally NOT in the sidebar (not orphaned)
 
@@ -59,7 +60,7 @@ That is now wrong. Each is sidebar-linked and backed by a real, domain-scoped ho
   cloud-accounts, iam-users, repositories, …) plus `/assets/all` and
   `/assets/duplicates` → reached from the **/assets** hub cards + `?type=` filter.
 - **Exposures / Components sub-views** `/exposures/{vulnerabilities,misconfigurations,secrets,code}`
-  (also sidebar-linked) and `/components/{all,vulnerable,ecosystems,licenses,sbom-export}`
+  (the Exposures section tabs, `EXPOSURES_SECTION_TABS`) and `/components/{all,vulnerable,ecosystems,licenses,sbom-export}`
   → reached from the parent page's tabs/cards.
 - **Solution Families** `/remediations` → the "Solution Families" tab on `/remediation`.
 - **Findings** `/findings/approvals` → the approvals tab / queue on `/findings`.
