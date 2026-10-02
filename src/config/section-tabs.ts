@@ -10,9 +10,13 @@ import {
   Building,
   Building2,
   Crosshair,
+  Container,
   Crown,
   FileKey,
   FileWarning,
+  FolderKanban,
+  History,
+  Link2,
   Swords,
   Wrench,
 } from 'lucide-react'
@@ -87,5 +91,41 @@ export const THREAT_MODEL_SECTION_TABS: readonly SectionTab[] = [
     icon: Swords,
     module: 'attacker_profiles',
     permission: Permission.AttackerProfilesRead,
+  },
+]
+
+/**
+ * Discovery > Assets: the inventory, the groups that organise it, what changed
+ * in it and the relationships detected between assets. URLs predate the tabs
+ * and are unchanged; Suggestions is its own module.
+ */
+export const ASSETS_SECTION_TABS: readonly SectionTab[] = [
+  {
+    label: 'Inventory',
+    href: '/assets',
+    icon: Container,
+    module: 'assets',
+    permission: Permission.AssetsRead,
+  },
+  {
+    label: 'Groups',
+    href: '/asset-groups',
+    icon: FolderKanban,
+    module: 'assets',
+    permission: Permission.AssetGroupsRead,
+  },
+  {
+    label: 'What changed',
+    href: '/assets/changes',
+    icon: History,
+    module: 'assets',
+    permission: Permission.AssetsRead,
+  },
+  {
+    label: 'Suggestions',
+    href: '/relationships/suggestions',
+    icon: Link2,
+    module: 'relationships',
+    permission: Permission.AssetsRead,
   },
 ]

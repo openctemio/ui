@@ -42,10 +42,17 @@ describe('Discovery: one row per section', () => {
     expect(sectionHasActiveRoute(path, group('Discovery').items)).toBe(true)
   })
 
-  it('keeps Assets and What changed apart', () => {
+  it('Assets covers its tabs (What changed, Groups, Suggestions)', () => {
     expect(discoveryActive('/assets')).toBe('/assets')
     expect(discoveryActive('/assets/hosts')).toBe('/assets')
-    expect(discoveryActive('/assets/changes')).toBe('/assets/changes')
+    expect(discoveryActive('/assets/changes')).toBe('/assets')
+    expect(discoveryActive('/asset-groups/abc')).toBe('/assets')
+    expect(discoveryActive('/relationships/suggestions')).toBe('/assets')
+  })
+
+  it('keeps Attack surface apart from Assets', () => {
+    expect(discoveryActive('/attack-surface')).toBe('/attack-surface')
+    expect(discoveryActive('/attack-surface/external')).toBe('/attack-surface')
   })
 
   it('Credential leaks is its own row, not part of Exposures', () => {

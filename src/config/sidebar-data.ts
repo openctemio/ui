@@ -15,7 +15,6 @@
 
 import {
   LayoutDashboard,
-  FolderKanban,
   ClipboardCheck,
   Target,
   Settings2,
@@ -34,7 +33,6 @@ import {
   Crosshair,
   ClipboardList,
   RotateCcw,
-  History,
   Timer,
   RadioTower,
   Wrench,
@@ -44,7 +42,6 @@ import {
   // CTEM Phase 1 icons
   TrendingUp,
   AlertTriangle,
-  Link2,
   Fingerprint,
   // Access Control icons
   // Integration icons
@@ -69,6 +66,7 @@ import {
 import { type SidebarData } from '@/components/types'
 import { Permission, Role } from '@/lib/permissions'
 import {
+  ASSETS_SECTION_TABS,
   BUSINESS_CONTEXT_SECTION_TABS,
   EXPOSURES_SECTION_TABS,
   REMEDIATION_SECTION_TABS,
@@ -219,47 +217,19 @@ export const sidebarData: SidebarData = {
           module: 'attack_surface',
         },
         // ----------------------------------------
-        // ASSET INVENTORY
-        // Module: assets (core - available in all plans)
-        // Organized by CTEM categories for comprehensive attack surface visibility
+        // ASSETS: one row for the inventory and what organises it. Its views
+        // are in-page route tabs (ASSETS_SECTION_TABS): Inventory | Groups |
+        // What changed | Suggestions. What changed is the delta of the
+        // inventory (fed by the same scans); groups organise it into scan
+        // targets and RBAC scopes; relationship suggestions curate the asset
+        // graph. The row has no gate of its own: each tab carries its module
+        // (Suggestions is `relationships`), and the row shows while any tab is.
         // ----------------------------------------
         {
           title: 'Assets',
           url: '/assets',
           icon: Container,
-          permission: Permission.AssetsRead,
-          module: 'assets',
-        },
-        // ----------------------------------------
-        // WHAT CHANGED (change detection)
-        // Discovery, not Scoping: it is the delta of the inventory above (assets
-        // that appeared, disappeared or became internet-facing), fed by the
-        // same scans. Scoping decides what matters; this shows
-        // what moved. Same permission + module as the inventory it reads.
-        // ----------------------------------------
-        {
-          title: 'What changed',
-          url: '/assets/changes',
-          icon: History,
-          permission: Permission.AssetsRead,
-          module: 'assets',
-        },
-        // Groups organise the inventory into scan targets and RBAC scopes;
-        // relationship suggestions curate the asset graph. Both are Discovery
-        // (moved from Scoping).
-        {
-          title: 'Asset Groups',
-          url: '/asset-groups',
-          icon: FolderKanban,
-          permission: Permission.AssetGroupsRead,
-          module: 'assets',
-        },
-        {
-          title: 'Relationships',
-          url: '/relationships/suggestions',
-          icon: Link2,
-          permission: Permission.AssetsRead,
-          module: 'relationships',
+          sections: ASSETS_SECTION_TABS,
         },
         // /assets opens on the full, filterable list; the category cards are a
         // view switch on the same page (?view=categories). /assets/all redirects.

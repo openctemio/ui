@@ -1,5 +1,6 @@
 'use client'
 
+import { AssetsSectionTabs } from '@/features/assets/components/assets-section-tabs'
 import { useCallback, useMemo, useState } from 'react'
 import Link from 'next/link'
 import type { ColumnDef } from '@tanstack/react-table'
@@ -358,6 +359,7 @@ export default function AssetChangesPage() {
           </SelectContent>
         </Select>
       </PageHeader>
+      <AssetsSectionTabs />
 
       <MetricStrip className="mt-5" loading={countsLoading && !counts} items={metrics} />
 

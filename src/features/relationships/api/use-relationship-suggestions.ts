@@ -59,9 +59,10 @@ export function useRelationshipSuggestions(
   })
 }
 
-export function useSuggestionCount() {
+/** Pending suggestions. `enabled` false skips the request (module or permission off). */
+export function useSuggestionCount(enabled = true) {
   const { currentTenant } = useTenant()
-  const key = currentTenant ? `${BASE_URL}/count` : null
+  const key = currentTenant && enabled ? `${BASE_URL}/count` : null
 
   return useSWR<CountResponse>(key, (url: string) => get<CountResponse>(url), {
     revalidateOnFocus: false,
