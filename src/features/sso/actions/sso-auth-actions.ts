@@ -22,6 +22,7 @@ import { redirect } from 'next/navigation'
 import { env } from '@/lib/env'
 import { setServerCookie } from '@/lib/cookies-server'
 import { validateRedirectUrl } from '@/lib/redirect'
+import { isAllowedValue, sanitizeLogValue } from '@/lib/log-sanitize'
 
 import type { AuthSuccessResponse, AuthErrorResponse } from '@/features/auth/schemas/auth.schema'
 import type { SSOAuthorizeResponse, SSOCallbackResponse, SSOProviderType } from '../types/sso.types'
@@ -29,6 +30,14 @@ import type { SSOAuthorizeResponse, SSOCallbackResponse, SSOProviderType } from 
 // ============================================
 // HELPERS
 // ============================================
+
+// Server Action arguments come straight from the client: the provider is
+// checked against this list before it is put into a backend URL path.
+const SSO_PROVIDER_TYPES: readonly SSOProviderType[] = ['entra_id', 'okta', 'google_workspace']
+const UNSUPPORTED_PROVIDER: AuthErrorResponse = {
+  success: false,
+  error: 'Unsupported identity provider',
+}
 
 async function backendFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${env.api.url}${endpoint}`
@@ -61,6 +70,8 @@ export async function getSSOAuthorizeUrl(
   orgSlug: string,
   redirectTo?: string
 ): Promise<AuthSuccessResponse<{ authorizationUrl: string; state: string }> | AuthErrorResponse> {
+  if (!isAllowedValue(SSO_PROVIDER_TYPES, provider)) return UNSUPPORTED_PROVIDER
+
   try {
     const frontendCallbackUrl = `${env.app.url}/auth/sso/callback/${provider}`
 
@@ -117,7 +128,7 @@ export async function getSSOAuthorizeUrl(
   } catch (error) {
     // provider is passed as a separate arg (not interpolated into the format
     // string) so a tainted value can't act as a console format specifier.
-    console.error('SSO authorization error:', provider, error)
+    console.error('SSO authorization error:', sanitizeLogValue(provider), error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get SSO authorization URL',
@@ -137,6 +148,8 @@ export async function handleSSOCallback(
   code: string,
   state: string
 ): Promise<AuthSuccessResponse<SSOCallbackResponse> | AuthErrorResponse> {
+  if (!isAllowedValue(SSO_PROVIDER_TYPES, provider)) return UNSUPPORTED_PROVIDER
+
   try {
     const cookieStore = await cookies()
 
@@ -204,7 +217,7 @@ export async function handleSSOCallback(
       message: `Successfully signed in with SSO`,
     }
   } catch (error) {
-    console.error('SSO callback error:', provider, error)
+    console.error('SSO callback error:', sanitizeLogValue(provider), error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'SSO authentication failed',

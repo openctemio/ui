@@ -61,7 +61,7 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
         actions.onOpenChange(open)
       }}
     >
-      <AlertDialogContent className={cn(className && className)}>
+      <AlertDialogContent className={cn(className)}>
         <AlertDialogHeader className="text-start">
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription asChild>

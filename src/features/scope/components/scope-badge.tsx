@@ -46,7 +46,7 @@ export function ScopeBadge({ match, showDetails = true }: ScopeBadgeProps) {
       }
     }
 
-    if (isCovered && !inScope) {
+    if (isCovered) {
       // Matched by target but also excluded
       return {
         variant: 'outline' as const,
