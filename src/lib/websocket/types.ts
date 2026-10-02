@@ -29,8 +29,8 @@ export type MessageType = ClientMessageType | ServerMessageType
 export type ChannelType =
   | 'finding' // finding:{id} - Activity updates for a finding
   | 'scan' // scan:{id} - Scan progress updates
-  | 'tenant' // tenant:{id} - Tenant-wide notifications
-  | 'notification' // notification:{tenant_id} - Notification delivery
+  | 'tenant' // tenant:{id} - Events for every tenant member (module toggles); never notifications
+  | 'user' // user:{tenant_id}:{user_id} - The signed-in user's own notifications
   | 'triage' // triage:{finding_id} - AI triage progress
   | 'group' // group:{id} - Group membership/scope rule changes
 
@@ -39,6 +39,15 @@ export type ChannelType =
  */
 export function makeChannel(type: ChannelType, id: string): string {
   return `${type}:${id}`
+}
+
+/**
+ * Channel id of the signed-in user's own notification channel
+ * (`user:{tenant_id}:{user_id}`). The server only lets a connection subscribe
+ * to the channel of the user and tenant it authenticated as.
+ */
+export function userChannelId(tenantId: string, userId: string): string {
+  return `${tenantId}:${userId}`
 }
 
 /**
