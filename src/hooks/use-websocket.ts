@@ -17,6 +17,7 @@ import {
   type ConnectionState,
   type ChannelType,
   makeChannel,
+  userChannelId,
 } from '@/lib/websocket'
 import { useWebSocket } from '@/context/websocket-provider'
 import { env } from '@/lib/env'
@@ -296,7 +297,24 @@ export function useTriageChannel<T = unknown>(
 }
 
 /**
- * Hook to subscribe to tenant-wide notifications
+ * Hook to subscribe to the signed-in user's own in-app notifications.
+ * Notifications are never sent on the tenant channel: each one is pushed only
+ * to the users it is addressed to (and whose preferences allow it).
+ */
+export function useUserNotificationChannel<T = unknown>(
+  tenantId: string | null | undefined,
+  userId: string | null | undefined,
+  options: { enabled?: boolean; onData?: (data: T) => void } = {}
+) {
+  return useChannel<T>({
+    channelType: 'user',
+    channelId: tenantId && userId ? userChannelId(tenantId, userId) : null,
+    ...options,
+  })
+}
+
+/**
+ * Hook to subscribe to tenant-wide events (e.g. module toggles)
  */
 export function useTenantChannel<T = unknown>(
   tenantId: string | null,
