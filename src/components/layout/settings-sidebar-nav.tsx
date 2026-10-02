@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ArrowLeft, Search } from 'lucide-react'
 import {
@@ -20,6 +19,7 @@ import {
 } from '@/config/settings-nav'
 import { GroupedNav, type GroupedNavSection } from './grouped-nav'
 import { NAV_BUTTON_CLASS } from './nav-group'
+import { NavPendingHint, SidebarLink } from './sidebar-link'
 
 const RETURN_KEY = 'openctem:settings-return-to'
 
@@ -113,10 +113,13 @@ export function SettingsSidebarNav() {
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton asChild tooltip={backLabel} className={NAV_BUTTON_CLASS}>
-            <Link href={backHref} prefetch={false} onClick={() => setOpenMobile(false)}>
+            <SidebarLink href={backHref} onClick={() => setOpenMobile(false)}>
               <ArrowLeft className="rtl:rotate-180" />
-              <span>{backLabel}</span>
-            </Link>
+              <span>
+                {backLabel}
+                <NavPendingHint />
+              </span>
+            </SidebarLink>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

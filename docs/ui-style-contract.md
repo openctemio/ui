@@ -169,6 +169,14 @@ load.
 
 - **Loading**: `<Skeleton>` shaped like the content it replaces. Spinners
   (`Loader2`) only inside buttons that are working.
+- **Navigating**: no `loading.tsx` inside `(dashboard)` (a test enforces it).
+  Each page renders its own skeleton; a route-level loading file only adds a
+  second, differently shaped skeleton and makes React hold the page back for
+  300 ms. Navigation links in the sidebar, settings rail and breadcrumbs carry
+  `NavPendingHint` (`src/components/layout/sidebar-link.tsx`): after 120 ms
+  without the next page, the clicked row shows a moving bar and the window a
+  top progress bar. Sidebar links use `SidebarLink`, which prefetches on hover
+  or focus rather than on render.
 - **Empty**: the shared `<EmptyState>` (icon, title, one-line description,
   optional action). No ad-hoc "No X found" text.
 - **Error**: `<Alert variant="destructive">` with what failed and a retry.

@@ -22,19 +22,23 @@ plus top-level `insights/`, `findings/`, `reports/`, `settings/`, `account/`,
 Grouped by CTEM stage in `src/config/sidebar-data.ts`:
 
 - **Dashboard** — `/`
-- **Scoping** — Attack Surface (+ external/internal/cloud), Asset Groups, Scope
-  Config, Business Services, Business Units, Crown Jewels, CTEM Cycles, Attacker
-  Profiles, Relationships, Compliance, Threat Model, Scan Profiles, Scanner
-  Templates, Template Sources, Secret Store, Tools, Capabilities, Sensors.
-- **Discovery** — Scans, Sensors, Assets, What changed, Exposures (one row; its
+- **Scoping** (docs/ui/scoping-ia-2026-10.md) — Overview (`/scoping`, the
+  readiness hub; the section header opens it), Cycles (`/cycles`, detail
+  `/cycles/[id]`), Business context (tabs Crown jewels · Services · Units),
+  Boundaries (`/scope-config`: Targets · Exclusions), Threat model (tabs
+  Threats · Attacker profiles).
+- **Discovery** — Scans, Sensors, Attack surface (+ external), Assets (one row;
+  tabs Inventory · Groups · What changed · Suggestions), Exposures (one row; its
   Overview, Vulnerabilities, Secrets, Code weaknesses and Misconfigurations
   views are in-page section tabs), Credential leaks, Components.
+  `/attack-surface/internal` and `/cloud` were retired; they redirect to the
+  filtered inventory.
 - **Prioritization** — Exposure Chains, Attack Paths, Threat Intel, Business Impact.
 - **Validation** — Pentest (campaigns, findings, retests, templates, reports,
   MITRE coverage), Attack Simulation, Control Testing, Compensating Controls.
 - **Mobilization** — Remediation, Workflows, Pipelines, SLA, Exceptions.
 - **Insights** — Executive, CTEM Maturity, Program Health, Data Quality, Findings
-  list, Reports.
+  list, Reports, Compliance.
 - **Settings** — Users, Roles, Access Control (Groups, Permission Sets, Assignment
   Rules), Modules, Priority Rules, Scoring, SLA Policies, Asset Lifecycle, Audit,
   Tenant, Pentest, and Integrations (CI/CD, SCM, SIEM, Ticketing, Notifications,

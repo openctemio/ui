@@ -14,10 +14,17 @@ import type { AttackPathsResponse, ExposureChain } from '../../hooks/use-ctem-da
 interface AttackPathsCardProps {
   attackPaths?: AttackPathsResponse
   chains?: ExposureChain[]
+  /** Designated crown jewels (scoping summary); undefined when unknown. */
+  crownJewelsTotal?: number
   isLoading?: boolean
 }
 
-export function AttackPathsCard({ attackPaths, chains, isLoading }: AttackPathsCardProps) {
+export function AttackPathsCard({
+  attackPaths,
+  chains,
+  crownJewelsTotal,
+  isLoading,
+}: AttackPathsCardProps) {
   const reachable = attackPaths?.summary?.reachable_assets ?? 0
   const crownJewels = attackPaths?.summary?.crown_jewels_at_risk ?? 0
   const topChains = (chains ?? []).slice(0, 4)
@@ -34,6 +41,25 @@ export function AttackPathsCard({ attackPaths, chains, isLoading }: AttackPathsC
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>
+        ) : crownJewels === 0 && crownJewelsTotal !== 0 ? (
+          // None AT RISK is not none designated: say which one it is.
+          <EmptyState
+            icon={Crown}
+            title="No crown jewels at risk"
+            description={
+              crownJewelsTotal
+                ? `${crownJewelsTotal} crown jewel${crownJewelsTotal === 1 ? ' is' : 's are'} designated; no attack path reaches ${crownJewelsTotal === 1 ? 'it' : 'them'}.`
+                : 'No attack path reaches a crown jewel.'
+            }
+            card={false}
+            action={
+              <Button asChild size="sm" variant="outline">
+                <Link href="/crown-jewels">
+                  Review crown jewels <ArrowRight className="ms-1 h-4 w-4" />
+                </Link>
+              </Button>
+            }
+          />
         ) : crownJewels === 0 ? (
           <EmptyState
             icon={Crown}

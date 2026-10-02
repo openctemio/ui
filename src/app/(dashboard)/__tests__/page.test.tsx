@@ -31,6 +31,7 @@ vi.mock('@/context/tenant-provider', () => ({
 
 vi.mock('@/lib/permissions', () => ({
   Can: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useNavItemAccess: () => () => true,
   Permission: {
     ScansWrite: 'scans:write',
     FindingsRead: 'findings:read',
@@ -38,6 +39,11 @@ vi.mock('@/lib/permissions', () => ({
     ReportsRead: 'reports:read',
     DashboardRead: 'dashboard:read',
   },
+}))
+
+// The Scoping tile's readiness: summary not loaded here (the tile falls back).
+vi.mock('@/features/scoping/api', () => ({
+  useScopingSummary: () => ({ data: undefined, isLoading: false }),
 }))
 
 // Maturity module disabled so the gated section is absent.
