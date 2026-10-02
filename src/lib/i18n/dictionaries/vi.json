@@ -349,5 +349,9 @@
   "org.switched": "Đã chuyển sang {name}",
   "org.switchFailed": "Không thể chuyển tổ chức",
   "org.create": "Tạo tổ chức",
-  "org.signedInAs": "Đã đăng nhập với"
+  "org.signedInAs": "Đã đăng nhập với",
+  "nav.item.cycles": "Chu kỳ",
+  "nav.item.business-context": "Bối cảnh kinh doanh",
+  "nav.item.boundaries": "Ranh giới",
+  "nav.item.threat-model": "Mô hình mối đe dọa"
 }

@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import { Main } from '@/components/layout'
-import { PageHeader } from '@/features/shared'
+import { GatedSectionTabs, PageHeader } from '@/features/shared'
+import { THREAT_MODEL_SECTION_TABS } from '@/config/section-tabs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -171,6 +172,11 @@ export default function ThreatModelPage() {
       <PageHeader
         title="Threat model"
         description="Attack techniques derived per crown jewel, mapped to MITRE ATT&CK and scored by coverage."
+      />
+      <GatedSectionTabs
+        tabs={THREAT_MODEL_SECTION_TABS}
+        label="Threat model sections"
+        className="mt-4 mb-0"
       />
       <div className="mt-5 space-y-5">
         <ScopePicker
