@@ -11,6 +11,10 @@
  * we're in the additional-team flow. Heading copy and back-link adjust
  * accordingly. Both flows reuse `createFirstTeamAction` because that
  * action only requires the refresh_token, which both states have.
+ *
+ * When the installation lets only the platform administrator create
+ * organizations (TENANT_CREATION_MODE=admin_only), the form is replaced by a
+ * notice to ask the administrator for access, with sign-out (TeamOnboarding).
  */
 
 import Link from 'next/link'
@@ -18,7 +22,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { env } from '@/lib/env'
-import { CreateTeamForm, OnboardingLogout } from '@/features/tenant'
+import { OnboardingLogout, TeamOnboarding } from '@/features/tenant'
 
 // Helper to get suggested name from cookie
 async function getSuggestedName(): Promise<string> {
@@ -82,18 +86,7 @@ export default async function CreateFirstTeamPage() {
         </div>
       )}
 
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {hasPendingTenants ? 'Create another team' : 'Set up your first team'}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {hasPendingTenants
-            ? 'A new team is its own workspace. You can switch between teams from the sidebar at any time.'
-            : 'A team is your workspace for managing exposure across an organisation. You can invite teammates after this.'}
-        </p>
-      </div>
-
-      <CreateTeamForm showCancel={false} isFirstTeam={true} suggestedName={suggestedName} />
+      <TeamOnboarding hasOtherTeams={hasPendingTenants} suggestedName={suggestedName} />
     </div>
   )
 }

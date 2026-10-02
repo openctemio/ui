@@ -17,3 +17,4 @@ export {
   type UsePermissionsReturn,
 } from './use-permissions'
 export { useCanSelfRegister, type CanSelfRegister } from './use-can-self-register'
+export { useCanCreateOrganization, type CanCreateOrganization } from './use-can-create-organization'
