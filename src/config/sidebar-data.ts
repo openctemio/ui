@@ -162,18 +162,20 @@ export const sidebarData: SidebarData = {
           permission: Permission.BusinessServicesRead,
           module: 'business_services',
         },
+        // Business Units and Crown Jewels check assets:read, the permission the
+        // API enforces on /api/v1/business-units and PATCH /assets/{id}/crown-jewel.
         {
           title: 'Business Units',
           url: '/business-units',
           icon: Building2,
-          permission: Permission.ScopeRead,
+          permission: Permission.AssetsRead,
           module: 'business_units',
         },
         {
           title: 'Crown Jewels',
           url: '/crown-jewels',
           icon: Crown,
-          permission: Permission.ScopeRead,
+          permission: Permission.AssetsRead,
           module: 'crown_jewels',
         },
         {
