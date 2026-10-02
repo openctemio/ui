@@ -1367,8 +1367,8 @@ export interface paths {
     }
     put?: never
     /**
-     * Create a user in an organization (platform admin)
-     * @description Same as the organization administrator's POST /tenants/{tenant}/users, with a built-in role. The one-time set-password link is emailed when SMTP is configured, otherwise setup_token is returned once.
+     * Create the first owner of an organization (platform admin)
+     * @description Bootstrap only: creates the owner of an organization that has no active owner, and nothing else (409 when it has one: its owner and administrators add users themselves). The one-time set-password link is emailed when the organization can send email and is then never returned; only when email cannot be sent is setup_token returned, once. Written to the organization's audit log.
      */
     post: {
       parameters: {
@@ -1380,7 +1380,7 @@ export interface paths {
         }
         cookie?: never
       }
-      /** @description User */
+      /** @description First owner */
       requestBody: {
         content: {
           'application/json': components['schemas']['internal_infra_http_handler.AdminCreateOrgUserRequest']
@@ -1405,7 +1405,7 @@ export interface paths {
             'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
           }
         }
-        /** @description Account exists */
+        /** @description Organization already has an owner, or the account exists */
         409: {
           headers: {
             [name: string]: unknown
@@ -1728,6 +1728,45 @@ export interface paths {
         }
       }
     }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/admin/version': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * API version
+     * @description The running API build: release tag (or "<tag>-dev" on a development build), short commit, build time and channel.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_version.Info']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
     delete?: never
     options?: never
     head?: never
@@ -9774,6 +9813,177 @@ export interface paths {
         }
       }
     }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/ctem-cycles/{id}/profiles': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** List a cycle's attacker profiles */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Cycle ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.CTEMCycleProfilesResponse']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/ctem-cycles/{id}/profiles/{profileId}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Unlink an attacker profile from a cycle */
+    delete: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Cycle ID */
+          id: string
+          /** @description Profile ID */
+          profileId: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description No Content */
+        204: {
+          headers: {
+            [name: string]: unknown
+          }
+          content?: never
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            '*/*': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/ctem-cycles/{id}/scope': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get a cycle's scope snapshot */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Cycle ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.CTEMScopeSnapshotResponse'][]
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
     delete?: never
     options?: never
     head?: never
@@ -21158,6 +21368,15 @@ export interface paths {
             'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
           }
         }
+        /** @description The caller requested this exclusion (separation of duties) */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
         /** @description Not Found */
         404: {
           headers: {
@@ -22492,6 +22711,63 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/scoping/summary': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Scoping overview
+     * @description Tenant-wide readiness counts for CTEM scoping: the cycle in focus and its charter, crown jewels and their owners, business services and units, the boundary, attacker profiles, threat models and cycles.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_domain_scoping.Summary']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/secret-store': {
     parameters: {
       query?: never
@@ -23187,6 +23463,82 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/sensors/{id}/activity': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Sensor activity timeline
+     * @description What happened to a sensor, newest first: status changes (online, offline, restarts), updates (version, SDK, protocol, tools, capacity, content), jobs it claimed and finished, and administrator actions from the audit log. Audit items are included only when the caller holds audit:read.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Categories, comma-separated: people, status, updates, jobs (default all) */
+          types?: string
+          /** @description next_cursor of the previous page */
+          cursor?: string
+          /** @description Page size (1-100) */
+          limit?: number
+        }
+        header?: never
+        path: {
+          /** @description Sensor ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.SensorActivityResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/sensors/{id}/config-templates': {
     parameters: {
       query?: never
@@ -23196,7 +23548,7 @@ export interface paths {
     }
     /**
      * Get sensor configuration templates
-     * @description Returns rendered config templates for a sensor in multiple formats
+     * @description Returns the install and configuration snippets for a sensor: docker run, Compose, Kubernetes, Helm, YAML, env and CLI, pinned to the sensor image of SENSOR_LATEST_VERSION, pointed at the public platform URL, and installing the platform's private CA when SENSOR_CA_CERT_FILE is set.
      */
     get: {
       parameters: {
@@ -23220,6 +23572,15 @@ export interface paths {
           }
           content: {
             'application/json': components['schemas']['internal_infra_http_handler.SensorConfigTemplatesResponse']
+          }
+        }
+        /** @description X-Sensor-API-Key is malformed */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
           }
         }
         /** @description Not Found */
@@ -23253,6 +23614,75 @@ export interface paths {
     }
     put?: never
     post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/sensors/{id}/content/refresh': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Refresh a sensor's scanner content
+     * @description Queue a refresh_content command for the sensor (trivy DB, nuclei templates, semgrep rules). 409 when the sensor manages no content (an older sensor) or is disabled. A refresh already queued is returned instead of a new one.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Sensor ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: components['requestBodies']['internal_infra_http_handler.RefreshContentRequest']
+      responses: {
+        /** @description Accepted */
+        202: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.RefreshContentResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
     delete?: never
     options?: never
     head?: never
@@ -23327,6 +23757,147 @@ export interface paths {
         }
       }
     }
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/sensors/{id}/manifest': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Sensor manifest
+     * @description The sensor's current manifest (RFC-033): build, platform, resources, concurrency ceiling, and its tools with their kind, version, capabilities and content, as the platform kept them, plus what it ignored. 404 when the sensor has none yet.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Sensor ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.SensorManifestResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/sensors/{id}/manifests': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Sensor manifest history
+     * @description The sensor's manifest versions, most recently current first (RFC-033). The newest 50 are kept, older ones for 90 days.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Versions (1-50) */
+          limit?: number
+        }
+        header?: never
+        path: {
+          /** @description Sensor ID */
+          id: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.SensorManifestListResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
     delete?: never
     options?: never
     head?: never
@@ -23527,6 +24098,148 @@ export interface paths {
     }
     put?: never
     post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/sensors/content-policy': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get the scanner content policy
+     * @description The tenant's scanner content policy (RFC-031): refresh interval, and per content the maximum age, a pinned version and semgrep rulesets. Defaults are filled in.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.ContentPolicyResponse']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    /**
+     * Update the scanner content policy
+     * @description Replace the tenant's scanner content policy. With apply_now every sensor that manages content gets a refresh_content command carrying it.
+     */
+    put: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      /** @description Policy */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.UpdateContentPolicyRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.ContentPolicyResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/sensors/content/refresh': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Refresh scanner content on every sensor
+     * @description Queue a refresh_content command for every sensor of the tenant that manages content and has none queued.
+     */
+    post: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: components['requestBodies']['internal_infra_http_handler.RefreshContentRequest']
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.FleetRefreshContentResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
     delete?: never
     options?: never
     head?: never
@@ -26267,6 +26980,142 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/tenants/{tenant}/settings/data-scope': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get the data scope of members without an access group
+     * @description Returns what members who are in no access group see: everything (all assets and findings) or nothing. Owners and admins always see everything.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Tenant ID or slug */
+          tenant: string
+        }
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.DataScopePolicyResponse']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    /**
+     * Set the data scope of members without an access group
+     * @description Sets what members who are in no access group see: everything (all assets and findings) or nothing. Owners and admins always see everything. The change is audited.
+     */
+    patch: {
+      parameters: {
+        query?: never
+        header?: never
+        path: {
+          /** @description Tenant ID or slug */
+          tenant: string
+        }
+        cookie?: never
+      }
+      /** @description Policy */
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['internal_infra_http_handler.UpdateDataScopePolicyRequest']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['internal_infra_http_handler.DataScopePolicyResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+      }
+    }
+    trace?: never
+  }
   '/tenants/{tenant}/users': {
     parameters: {
       query?: never
@@ -26352,7 +27201,7 @@ export interface paths {
     put?: never
     /**
      * Issue a new set-password link for a pending account
-     * @description Replaces the one-time set-password link of an account an administrator created that has never been used and belongs to this organization only. Owner/admin only. 400 for any other account (its owner recovers it with forgot-password).
+     * @description Replaces the one-time set-password link of an account an administrator created that has never been used and belongs to this organization only. Owner/admin only; an owner or administrator account, or one holding a role the caller could not grant, needs an owner (403). 400 for any other account (its owner recovers it with forgot-password).
      */
     post: {
       parameters: {
@@ -26379,6 +27228,15 @@ export interface paths {
         }
         /** @description Bad Request */
         400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_apierror.Error']
+          }
+        }
+        /** @description Forbidden */
+        403: {
           headers: {
             [name: string]: unknown
           }
@@ -27836,6 +28694,45 @@ export interface paths {
             'application/json': {
               [key: string]: string
             }
+          }
+        }
+      }
+    }
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/version': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * API version
+     * @description The running API build: release tag (or "<tag>-dev" on a development build), short commit, build time and channel.
+     */
+    get: {
+      parameters: {
+        query?: never
+        header?: never
+        path?: never
+        cookie?: never
+      }
+      requestBody?: never
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/json': components['schemas']['github_com_openctemio_api_pkg_version.Info']
           }
         }
       }
@@ -30145,6 +31042,18 @@ export interface components {
       }
       title?: string
     }
+    /** @enum {string} */
+    'github_com_openctemio_api_pkg_domain_scan.ConfigSecretReason':
+      'key_name' | 'known_format' | 'high_entropy'
+    'github_com_openctemio_api_pkg_domain_scan.ConfigSecretWarning': {
+      /**
+       * @description Path locates the value: dotted keys, [n] for list items
+       *     ("headers.Authorization", "args[2]").
+       */
+      path?: string
+      /** @description Reason is why it was flagged. */
+      reason?: components['schemas']['github_com_openctemio_api_pkg_domain_scan.ConfigSecretReason']
+    }
     'github_com_openctemio_api_pkg_domain_scanprofile.FindingCounts': {
       critical?: number
       high?: number
@@ -30164,6 +31073,201 @@ export interface components {
       counts?: components['schemas']['github_com_openctemio_api_pkg_domain_scanprofile.FindingCounts']
       passed?: boolean
       reason?: string
+    }
+    'github_com_openctemio_api_pkg_domain_scoping.AssetSummary': {
+      in_business_unit?: number
+      total?: number
+    }
+    'github_com_openctemio_api_pkg_domain_scoping.BoundarySummary': {
+      exclusions?: number
+      targets?: number
+    }
+    'github_com_openctemio_api_pkg_domain_scoping.CountSummary': {
+      total?: number
+    }
+    'github_com_openctemio_api_pkg_domain_scoping.CrownJewelSummary': {
+      total?: number
+      with_owner?: number
+    }
+    'github_com_openctemio_api_pkg_domain_scoping.CycleSummary': {
+      /** @description AttackerProfiles is the number of profiles linked to the cycle. */
+      attacker_profiles?: number
+      end_date?: string
+      exclusions?: number
+      id?: string
+      in_scope_services?: number
+      name?: string
+      /** @description Charter array lengths. */
+      objectives?: number
+      /**
+       * @description ScopeAssets is the number of rows in the cycle's scope snapshot (zero
+       *     until the cycle is activated).
+       */
+      scope_assets?: number
+      start_date?: string
+      status?: string
+      success_criteria?: number
+      threat_scenarios?: number
+    }
+    'github_com_openctemio_api_pkg_domain_scoping.ServiceSummary': {
+      total?: number
+      with_assets?: number
+    }
+    'github_com_openctemio_api_pkg_domain_scoping.Summary': {
+      /**
+       * @description ActiveCycle is the cycle the scope is being written for: the tenant's
+       *     active cycle, else the most recent one in review, else the most recent
+       *     one in planning. Nil when there is none of those.
+       */
+      active_cycle?: components['schemas']['github_com_openctemio_api_pkg_domain_scoping.CycleSummary']
+      assets?: components['schemas']['github_com_openctemio_api_pkg_domain_scoping.AssetSummary']
+      attacker_profiles?: components['schemas']['github_com_openctemio_api_pkg_domain_scoping.CountSummary']
+      boundary?: components['schemas']['github_com_openctemio_api_pkg_domain_scoping.BoundarySummary']
+      business_services?: components['schemas']['github_com_openctemio_api_pkg_domain_scoping.ServiceSummary']
+      business_units?: components['schemas']['github_com_openctemio_api_pkg_domain_scoping.CountSummary']
+      crown_jewels?: components['schemas']['github_com_openctemio_api_pkg_domain_scoping.CrownJewelSummary']
+      cycles?: components['schemas']['github_com_openctemio_api_pkg_domain_scoping.CountSummary']
+      threat_models?: components['schemas']['github_com_openctemio_api_pkg_domain_scoping.ThreatModelSummary']
+    }
+    'github_com_openctemio_api_pkg_domain_scoping.ThreatModelSummary': {
+      crown_jewels_covered?: number
+      total?: number
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.CapabilityMismatch': {
+      /**
+       * @description CapabilitiesNotReported are capabilities the administrator set that
+       *     the sensor does not report.
+       */
+      capabilities_not_reported?: string[]
+      /**
+       * @description ToolsNotInstalled are tools the administrator set that the sensor
+       *     reports as not installed or does not report at all.
+       */
+      tools_not_installed?: string[]
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.Manifest': {
+      capabilities?: string[]
+      concurrency?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ManifestConcurrency']
+      platform?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ManifestPlatform']
+      resources?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ManifestResources']
+      schema?: number
+      sdk?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ManifestSDK']
+      sensor?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ManifestBuild']
+      tools?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ManifestTool'][]
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.ManifestBuild': {
+      build_time?: string
+      commit?: string
+      name?: string
+      version?: string
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.ManifestConcurrency': {
+      ceiling?: number
+      model?: string
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.ManifestContent': {
+      digest?: string
+      managed?: boolean
+      name?: string
+      source?: string
+      version?: string
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.ManifestIgnored': {
+      path?: string
+      reason?: string
+      value?: string
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.ManifestPlatform': {
+      arch?: string
+      os?: string
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.ManifestResources': {
+      cpu_cores?: number
+      mem_total_bytes?: number
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.ManifestSDK': {
+      name?: string
+      version?: string
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.ManifestTool': {
+      capabilities?: string[]
+      content?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ManifestContent'][]
+      installed?: boolean
+      kind?: string
+      name?: string
+      target_types?: string[]
+      version?: string
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.ReportedCapacity': {
+      active_jobs?: number
+      per_tool?: {
+        [key: string]: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ToolCost']
+      }
+      slots_free?: number
+      slots_total?: number
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.ReportedContent': {
+      /**
+       * @description CheckedAt is when the sensor last confirmed with its source that this
+       *     is still the newest (or pinned) version: old content is not stale
+       *     while it keeps being confirmed (sdk-go ContentInfo.Stale).
+       */
+      checked_at?: string
+      digest?: string
+      /** @description Error is the last refresh failure (the sensor keeps the old version). */
+      error?: string
+      fetched_at?: string
+      /**
+       * @description Managed is true when the sensor controls the content (it refreshes,
+       *     verifies and swaps it); false when the tool fetches it by itself.
+       */
+      managed?: boolean
+      name?: string
+      source?: string
+      /**
+       * @description Tool is the tool the content belongs to ("trivy", "nuclei"). Empty
+       *     while stored inside its ReportedTool; set by Sensor.ReportedContent.
+       */
+      tool?: string
+      updated_at?: string
+      version?: string
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.ReportedQueue': {
+      claimed?: number
+      oldest_age_seconds?: number
+      queued_local?: number
+      running?: number
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.ReportedResources': {
+      cpu_cores?: number
+      cpu_used_pct?: number
+      disk_free_bytes?: number
+      load1?: number
+      mem_available_bytes?: number
+      mem_total_bytes?: number
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.ReportedTool': {
+      /**
+       * @description Capabilities are what this tool serves besides its own name ("dast",
+       *     "validate:nuclei"), known names only; nil when the sensor did not say
+       *     (sdk-go before v0.13 reports only the sensor's flat list).
+       */
+      capabilities?: string[]
+      /**
+       * @description Content is the scanner content the tool scans with (RFC-031,
+       *     content.go); nil when the sensor reported none for it.
+       */
+      content?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ReportedContent'][]
+      installed?: boolean
+      /** @description Kind is "scanner" or "collector"; "" when the sensor did not say. */
+      kind?: string
+      name?: string
+      version?: string
+    }
+    'github_com_openctemio_api_pkg_domain_sensor.ToolCost': {
+      est_cpu_s?: number
+      est_mem_bytes?: number
+      throughput_targets_per_min?: number
     }
     'github_com_openctemio_api_pkg_domain_templatesource.GitSourceConfig': {
       /** @description none, ssh, token, oauth */
@@ -30350,6 +31454,19 @@ export interface components {
       status?: string
       tenant_id?: string
     }
+    'github_com_openctemio_api_pkg_version.Info': {
+      /** @example 2026-10-02T10:00:00Z */
+      build_time?: string
+      /**
+       * @example release
+       * @enum {string}
+       */
+      channel?: 'release' | 'development'
+      /** @example 4d2f4b02 */
+      commit?: string
+      /** @example v0.9.0 */
+      version?: string
+    }
     'internal_infra_http_handler.APIKeyDataRequest': {
       key: string
     }
@@ -30412,7 +31529,7 @@ export interface components {
       email: string
       name?: string
       /** @enum {string} */
-      role: 'admin' | 'member' | 'viewer'
+      role?: 'owner'
     }
     'internal_infra_http_handler.AdminCreateOrganizationRequest': {
       description?: string
@@ -30897,6 +32014,20 @@ export interface components {
        */
       total_assets_change?: number
     }
+    'internal_infra_http_handler.AttackerProfileResponse': {
+      assumptions?: string
+      capabilities?: {
+        [key: string]: unknown
+      }
+      created_at?: string
+      created_by?: string
+      description?: string
+      id?: string
+      is_default?: boolean
+      name?: string
+      profile_type?: string
+      updated_at?: string
+    }
     'internal_infra_http_handler.AuditLogListResponse': {
       data?: components['schemas']['internal_infra_http_handler.AuditLogResponse'][]
       page?: number
@@ -31097,6 +32228,9 @@ export interface components {
       notes?: string
       ransomware_use?: string
     }
+    'internal_infra_http_handler.CTEMCycleProfilesResponse': {
+      data?: components['schemas']['internal_infra_http_handler.AttackerProfileResponse'][]
+    }
     'internal_infra_http_handler.CTEMCycleResponse': {
       charter?: {
         [key: string]: unknown
@@ -31117,6 +32251,16 @@ export interface components {
       start_date?: string
       status?: string
       updated_at?: string
+    }
+    'internal_infra_http_handler.CTEMScopeSnapshotResponse': {
+      asset_criticality?: string
+      asset_id?: string
+      /** @description Asset fields, empty when the asset has since been deleted. */
+      asset_name?: string
+      asset_type?: string
+      id?: string
+      included_at?: string
+      scope_target_id?: string
     }
     'internal_infra_http_handler.CTISIngestRequest': {
       report?: components['schemas']['ctis.Report']
@@ -31250,6 +32394,29 @@ export interface components {
       updated_at?: string
       version?: string
       vulnerability_count?: number
+    }
+    'internal_infra_http_handler.ContentPinBody': {
+      max_age_hours?: number
+      rulesets?: string[]
+      version?: string
+    }
+    'internal_infra_http_handler.ContentPolicyBody': {
+      content?: {
+        [key: string]: components['schemas']['internal_infra_http_handler.ContentPinBody']
+      }
+      refresh_interval_hours?: number
+    }
+    'internal_infra_http_handler.ContentPolicyResponse': {
+      /** @description CommandsCreated / Skipped: only on PUT with apply_now. */
+      commands_created?: number
+      /** @description Defaults is the platform default. */
+      defaults?: components['schemas']['internal_infra_http_handler.ContentPolicyBody']
+      /** @description Policy is the effective policy (defaults filled in). */
+      policy?: components['schemas']['internal_infra_http_handler.ContentPolicyBody']
+      skipped?: number
+      /** @description UpdatedAt / UpdatedBy are null while the tenant uses the defaults. */
+      updated_at?: string
+      updated_by?: string
     }
     'internal_infra_http_handler.CreateAssetGroupRequest': {
       business_unit?: string
@@ -31808,6 +32975,14 @@ export interface components {
       /** @description Ordered steps from source to sink */
       steps?: components['schemas']['internal_infra_http_handler.DataFlowStepResponse'][]
     }
+    'internal_infra_http_handler.DataScopePolicyResponse': {
+      /**
+       * @description MembersWithoutGroupSee is "everything" (fail-open) or "nothing"
+       *     (fail-closed). Owners and admins always see everything.
+       * @enum {string}
+       */
+      members_without_group_see?: 'everything' | 'nothing'
+    }
     'internal_infra_http_handler.DedupKeyRequest': {
       branch?: string
       breach_date?: string
@@ -32247,6 +33422,14 @@ export interface components {
       /** @description Replacement string */
       replacement?: string
     }
+    'internal_infra_http_handler.FleetRefreshContentResponse': {
+      commands_created?: number
+      /**
+       * @description Skipped: sensors that do not manage content, are disabled or revoked,
+       *     or already have a refresh queued.
+       */
+      skipped?: number
+    }
     'internal_infra_http_handler.ForgotPasswordRequest': {
       email: string
     }
@@ -32366,6 +33549,9 @@ export interface components {
     }
     'internal_infra_http_handler.HeartbeatRequest': {
       active_jobs?: number
+      arch?: string
+      capabilities?: string[]
+      capacity?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ReportedCapacity']
       collectors?: string[]
       cpu_percent?: number
       /**
@@ -32377,11 +33563,26 @@ export interface components {
       disk_write_mbps?: number
       errors?: number
       hostname?: string
+      /**
+       * @description InstanceID is the random id of the sensor process (sdk-go v0.12+), for
+       *     clone detection. Optional; older SDKs do not send it.
+       */
+      instance_id?: string
+      /**
+       * @description ManifestDigest is the digest of the sensor's registered manifest, as
+       *     the platform returned it (RFC-033, protocol v2 feature "manifest").
+       *     When it is not the stored one the v2 answer asks for the manifest
+       *     (action send_manifest). Absent: the platform derives the manifest
+       *     from this heartbeat.
+       */
+      manifest_digest?: string
+      max_concurrent_jobs?: number
       memory_percent?: number
       message?: string
       name?: string
       network_rx_mbps?: number
       network_tx_mbps?: number
+      os?: string
       /**
        * @description Outbox is the state of the sensor's durable outbox (results queued on
        *     disk, waiting to be delivered). Optional: SDKs without an outbox omit
@@ -32389,11 +33590,52 @@ export interface components {
        *     Display data only; values are clamped before they are stored.
        */
       outbox?: components['schemas']['internal_infra_http_handler.HeartbeatOutbox']
+      queue?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ReportedQueue']
       region?: string
+      /**
+       * @description The sensor's load, computed by the SDK (RFC-030 §5.8), all optional:
+       *     the machine's resources (container limits when it runs in one), its
+       *     job slots and per-tool cost, and its local work queue. Untrusted:
+       *     clamped before it is stored, and it can only lower what dispatch
+       *     hands the sensor.
+       */
+      resources?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ReportedResources']
       scanners?: string[]
+      /**
+       * @description Build information, optional (docs/architecture/sensors.md "Build
+       *     information"): sdk {name, version} and sensor {name, version, commit,
+       *     build_time}. Kept raw and read leniently: a member of an unexpected
+       *     shape is ignored rather than failing the heartbeat. Untrusted; sensors
+       *     that omit it are read from their User-Agent.
+       */
+      sdk?: Record<string, never>
+      sensor?: Record<string, never>
       status?: string
+      /**
+       * @description What the sensor reports it can do (RFC-029 §4.3.1), all optional:
+       *     its tool inventory, the capabilities it serves, how many jobs it runs
+       *     at once, and its platform. An absent list is "not reported" (the
+       *     administrator's settings apply); [] is "none". Untrusted: sanitized
+       *     against the tool catalog before it is stored, and it can only narrow
+       *     what the administrator allows.
+       */
+      tools?: components['schemas']['internal_infra_http_handler.HeartbeatTool'][]
       total_scans?: number
       uptime_seconds?: number
+      version?: string
+    }
+    'internal_infra_http_handler.HeartbeatTool': {
+      /**
+       * @description Capabilities are what the tool serves besides its name (sdk-go
+       *     v0.13+); sanitized against the capability registry like the flat list.
+       */
+      capabilities?: string[]
+      /** @description Content is the scanner content the tool scans with (RFC-031). */
+      content?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ReportedContent'][]
+      installed?: boolean
+      /** @description Kind is "scanner" or "collector" (sdk-go v0.10+). */
+      kind?: string
+      name?: string
       version?: string
     }
     'internal_infra_http_handler.ImportMetadataRequest': {
@@ -33042,6 +34284,12 @@ export interface components {
       name?: string
     }
     'internal_infra_http_handler.ProvisionedUserResponse': {
+      /**
+       * @description EmailFailed: the organization can send email but the send failed, and
+       *     the link is deliberately not returned (platform administrator's
+       *     first-owner bootstrap). The person uses forgot-password.
+       */
+      email_failed?: boolean
       email_sent?: boolean
       membership_id?: string
       role?: string
@@ -33111,6 +34359,18 @@ export interface components {
     'internal_infra_http_handler.ReferenceResponse': {
       type?: string
       url?: string
+    }
+    'internal_infra_http_handler.RefreshContentRequest': {
+      content?: string[]
+      force?: boolean
+    }
+    'internal_infra_http_handler.RefreshContentResponse': {
+      /**
+       * @description AlreadyPending: a refresh was already queued for the sensor; that
+       *     command is returned and no new one was created.
+       */
+      already_pending?: boolean
+      command_id?: string
     }
     'internal_infra_http_handler.RefreshTokenRequest': {
       /** @description Optional if cookie is present */
@@ -33370,6 +34630,14 @@ export interface components {
       scanner_config?: {
         [key: string]: unknown
       }
+      /**
+       * @description ScannerConfigWarnings lists scanner_config values that look like
+       *     secrets (a token, a password, an Authorization header). The config is
+       *     sent to the sensor in clear inside every command, so a secret there
+       *     travels and rests unprotected. A warning, never a refusal; the value
+       *     itself is never echoed (RFC-032 Phase 0).
+       */
+      scanner_config_warnings?: components['schemas']['github_com_openctemio_api_pkg_domain_scan.ConfigSecretWarning'][]
       scanner_name?: string
       schedule_cron?: string
       schedule_day?: number
@@ -33602,14 +34870,146 @@ export interface components {
       tenant_id?: string
       updated_at?: string
     }
+    'internal_infra_http_handler.SensorActivityItemResponse': {
+      action?: string
+      actor?: string
+      at?: string
+      /** @enum {string} */
+      category?: 'people' | 'status' | 'updates' | 'jobs'
+      details?: {
+        [key: string]: unknown
+      }
+      id?: string
+      last_at?: string
+      repeat_count?: number
+      result?: string
+      /** @enum {string} */
+      source?: 'sensor' | 'audit' | 'job'
+      summary?: string
+      /**
+       * @description Type: online, offline, restarted (status); version_changed,
+       *     sdk_version_changed, protocol_changed, tools_changed,
+       *     capacity_changed, content_updated, content_refresh_failed (updates);
+       *     job_claimed, job_completed, job_failed, job_canceled, job_expired
+       *     (jobs); audit (people).
+       */
+      type?: string
+    }
+    'internal_infra_http_handler.SensorActivityResponse': {
+      /**
+       * @description AuditIncluded is false when the caller cannot read the audit log:
+       *     administrator actions (people) are then left out.
+       */
+      audit_included?: boolean
+      items?: components['schemas']['internal_infra_http_handler.SensorActivityItemResponse'][]
+      /** @description NextCursor fetches the next (older) page; "" when there is none. */
+      next_cursor?: string
+    }
     'internal_infra_http_handler.SensorConfigTemplatesResponse': {
+      /**
+       * @description APIKeyIncluded is true when the snippets carry the key passed in
+       *     X-Sensor-API-Key; otherwise they read it from OPENCTEM_API_KEY.
+       */
+      api_key_included?: boolean
+      /** @description APIURL is the platform URL the snippets point the sensor at. */
+      api_url?: string
+      /**
+       * @description CACertificate is the PEM of the platform's private CA the snippets
+       *     install (SENSOR_CA_CERT_FILE); "" when none is configured.
+       */
+      ca_certificate?: string
+      /** @description CAFingerprintSHA256 is the SHA-256 fingerprint of that CA, colon hex. */
+      ca_fingerprint_sha256?: string
       cli?: string
+      /**
+       * @description Compose is a compose.yaml for the sensor; Kubernetes a Secret, PVC and
+       *     Deployment (a Job for a one-shot sensor); Helm the commands that turn
+       *     on the sensor bundled with the openctem chart.
+       */
+      compose?: string
       docker?: string
       env?: string
+      helm?: string
+      /** @description Image is the sensor image the snippets run, with its pinned tag. */
+      image?: string
+      kubernetes?: string
       yaml?: string
+    }
+    'internal_infra_http_handler.SensorContentResponse': {
+      age_seconds?: number
+      /**
+       * @description CheckedAt is when the sensor last confirmed this is still the newest
+       *     (or pinned) version; stale needs both an age and a confirmation
+       *     older than max_age_hours.
+       */
+      checked_at?: string
+      digest?: string
+      /** @description Error is the last refresh failure ("" when the last refresh worked). */
+      error?: string
+      fetched_at?: string
+      /**
+       * @description Managed: the sensor refreshes, verifies and pins it; false when the
+       *     tool fetches its content itself (never stale-flagged).
+       */
+      managed?: boolean
+      max_age_hours?: number
+      /** @enum {string} */
+      name?: 'trivy-db' | 'trivy-java-db' | 'nuclei-templates' | 'semgrep-rules'
+      pin_mismatch?: boolean
+      pinned_version?: string
+      source?: string
+      stale?: boolean
+      tool?: string
+      updated_at?: string
+      version?: string
     }
     'internal_infra_http_handler.SensorDisableRequest': {
       reason?: string
+    }
+    'internal_infra_http_handler.SensorEffectiveResponse': {
+      capabilities?: string[]
+      max_concurrent_jobs?: number
+      tools?: string[]
+    }
+    'internal_infra_http_handler.SensorHealthReasonResponse': {
+      /** @enum {string} */
+      code?:
+        | 'outbox_backlog'
+        | 'outbox_dead_letters'
+        | 'outbox_evicted'
+        | 'key_expired'
+        | 'key_expiring'
+        | 'identity_cloned'
+        | 'version_unsupported'
+        | 'sdk_unsupported'
+        | 'no_tools'
+        | 'error_reported'
+        | 'content_stale'
+        | 'content_refresh_failed'
+      message?: string
+      /** @enum {string} */
+      severity?: 'warning' | 'critical'
+    }
+    'internal_infra_http_handler.SensorLoadResponse': {
+      capacity?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ReportedCapacity']
+      fresh?: boolean
+      queue?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ReportedQueue']
+      reported_at?: string
+      resources?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ReportedResources']
+    }
+    'internal_infra_http_handler.SensorManifestListResponse': {
+      items?: components['schemas']['internal_infra_http_handler.SensorManifestResponse'][]
+    }
+    'internal_infra_http_handler.SensorManifestResponse': {
+      current?: boolean
+      current_since?: string
+      digest?: string
+      first_seen_at?: string
+      ignored?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ManifestIgnored'][]
+      last_seen_at?: string
+      manifest?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.Manifest']
+      /** @enum {string} */
+      source?: 'sensor' | 'heartbeat'
     }
     'internal_infra_http_handler.SensorOutboxResponse': {
       dead_letter_count?: number
@@ -33619,33 +35019,118 @@ export interface components {
       pending_count?: number
       reported_at?: string
     }
+    'internal_infra_http_handler.SensorProtocolResponse': {
+      deprecated?: boolean
+      seen_at?: string
+      user_agent?: string
+      version?: number
+    }
     'internal_infra_http_handler.SensorRegenerateAPIKeyResponse': {
       api_key?: string
+    }
+    'internal_infra_http_handler.SensorReportedResponse': {
+      arch?: string
+      capabilities?: string[]
+      max_concurrent_jobs?: number
+      os?: string
+      reported_at?: string
+      tools?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.ReportedTool'][]
     }
     'internal_infra_http_handler.SensorResponse': {
       api_key_prefix?: string
       available_slots?: number
       capabilities?: string[]
+      /**
+       * @description CapabilityMismatch lists settings the sensor's report contradicts
+       *     (a tool set here that the sensor does not have); omitted when none.
+       */
+      capability_mismatch?: components['schemas']['github_com_openctemio_api_pkg_domain_sensor.CapabilityMismatch']
+      /**
+       * @description Content is the scanner content the sensor reports (trivy DB, nuclei
+       *     templates, semgrep rules; RFC-031), one entry per tool and content,
+       *     judged against the tenant's content policy. Never null.
+       */
+      content?: components['schemas']['internal_infra_http_handler.SensorContentResponse'][]
+      /**
+       * @description ContentRefreshSupported: the sensor manages content, so it accepts
+       *     POST /sensors/{id}/content/refresh.
+       */
+      content_refresh_supported?: boolean
       /** @description System metrics */
       cpu_percent?: number
       created_at?: string
       current_jobs?: number
       description?: string
+      effective?: components['schemas']['internal_infra_http_handler.SensorEffectiveResponse']
       error_count?: number
       execution_mode?: string
       /** @description Automatic: unknown, online, offline, error */
       health?: string
+      /**
+       * @description HealthReasons lists the problems found (never null): an outbox backlog
+       *     or lost results, an expired or expiring key, a version below the
+       *     minimum, no scan tools, an error the sensor reported.
+       */
+      health_reasons?: components['schemas']['internal_infra_http_handler.SensorHealthReasonResponse'][]
       hostname?: string
       id?: string
+      /**
+       * @description IdentityClonedAt is when two live processes were seen using this
+       *     sensor's key (health reason identity_cloned); null = not flagged.
+       */
+      identity_cloned_at?: string
+      /**
+       * @description InstanceID is the sensor process of the last heartbeat that changed
+       *     it: the SDK's per-process id, or "host:<hash>" for SDKs that send none.
+       */
+      instance_id?: string
       ip_address?: string
+      /** @description IsPlatformSensor marks shared platform infrastructure. */
+      is_platform_sensor?: boolean
+      /** @description KeyExpiresAt is when the current API key stops working; null = never. */
+      key_expires_at?: string
+      /**
+       * @description KeyLastUsedAt and KeyLastUsedIP are the last authenticated request with
+       *     any of the sensor's keys and the client address it came from (behind a
+       *     trusted proxy, the forwarded address); null until recorded.
+       */
+      key_last_used_at?: string
+      key_last_used_ip?: string
       labels?: {
         [key: string]: unknown
       }
+      /** @description LastErrorAt is when the sensor last reported an error. */
+      last_error_at?: string
+      /** @description LastOfflineAt is when the sensor was last marked offline. */
+      last_offline_at?: string
       /** @description Statistics */
       last_seen_at?: string
+      /**
+       * @description Load is the load the sensor last reported on its heartbeat
+       *     (resources, capacity, local queue); null when it never reported one.
+       *     fresh is false once it is older than 3 minutes (dispatch then ignores
+       *     it).
+       */
+      load?: components['schemas']['internal_infra_http_handler.SensorLoadResponse']
       /** @description 0.0 to 1.0 */
       load_factor?: number
-      /** @description Load balancing */
+      manifest_at?: string
+      /**
+       * @description The current manifest (RFC-033): its digest, when it became current
+       *     and where it came from (sensor: registered; heartbeat: derived by the
+       *     platform). "" / null before the first one. The document itself is
+       *     GET /sensors/{id}/manifest.
+       */
+      manifest_digest?: string
+      /** @enum {string} */
+      manifest_source?: '' | 'sensor' | 'heartbeat'
+      /**
+       * @description Load balancing. current_jobs is the number of commands the sensor
+       *     holds now (acknowledged or running), counted by the platform;
+       *     available_slots is what dispatch may still hand it: its effective
+       *     capacity minus current_jobs, and no more than the free slots of a
+       *     fresh load report (RFC-030 §5.8).
+       */
       max_concurrent_jobs?: number
       memory_percent?: number
       name?: string
@@ -33660,7 +35145,59 @@ export interface components {
        *     oldest_age_seconds > 3600. False when there is no snapshot.
        */
       outbox_warning?: boolean
+      /**
+       * @description Protocol is what the platform last saw of the sensor's protocol
+       *     (RFC-029 §5.3); null before the first heartbeat that recorded it.
+       *     deprecated is true for protocol v1: the sensor needs an upgrade.
+       */
+      protocol?: components['schemas']['internal_infra_http_handler.SensorProtocolResponse']
       region?: string
+      /**
+       * @description capabilities, tools and max_concurrent_jobs above are the
+       *     administrator's settings (limits). Reported is what the sensor last
+       *     reported it has (RFC-029 §4.3.1), null when it never reported;
+       *     Effective is what dispatch uses: the report narrowed by the
+       *     administrator's settings (the settings alone without a report).
+       */
+      reported?: components['schemas']['internal_infra_http_handler.SensorReportedResponse']
+      /**
+       * @description Build information the sensor reported on its heartbeat, or that was
+       *     read from its User-Agent (older sensors). "" / null when unknown.
+       */
+      sdk_name?: string
+      /**
+       * @description SDKStatus compares sdk_version with SENSOR_SDK_MIN_VERSION and
+       *     SENSOR_SDK_LATEST_VERSION.
+       * @enum {string}
+       */
+      sdk_status?: 'current' | 'outdated' | 'unsupported' | 'unknown'
+      sdk_version?: string
+      sensor_build_time?: string
+      sensor_commit?: string
+      sensor_product?: string
+      /**
+       * @description StartedAt is when the sensor process started (from the uptime its
+       *     heartbeat reports); null when it never reported one.
+       */
+      started_at?: string
+      /**
+       * @description State is the computed operational state: online, degraded, stale,
+       *     offline, idle (a CI sensor between runs), never_connected, disabled or
+       *     revoked. Online means a heartbeat within the online window (see
+       *     GET /sensors/stats online_window_seconds); stale is older than that but
+       *     within the heartbeat timeout; degraded is heartbeating with at least
+       *     one health reason.
+       * @enum {string}
+       */
+      state?:
+        | 'online'
+        | 'degraded'
+        | 'stale'
+        | 'offline'
+        | 'idle'
+        | 'never_connected'
+        | 'disabled'
+        | 'revoked'
       /** @description Admin-controlled: active, disabled, revoked */
       status?: string
       status_message?: string
@@ -33670,7 +35207,17 @@ export interface components {
       total_scans?: number
       type?: string
       updated_at?: string
+      /**
+       * @description UptimeSeconds is the process uptime at the last heartbeat; null unless
+       *     the sensor is heartbeating and reports its uptime.
+       */
+      uptime_seconds?: number
       version?: string
+      /**
+       * @description VersionStatus compares the version with the release channel.
+       * @enum {string}
+       */
+      version_status?: 'latest' | 'update_available' | 'unsupported' | 'unknown'
     }
     'internal_infra_http_handler.SensorRevokeRequest': {
       reason?: string
@@ -33683,13 +35230,67 @@ export interface components {
       by_health?: {
         [key: string]: number
       }
+      /** @description BySDKStatus counts sensors per SDK status (every status present). */
+      by_sdk_status?: {
+        [key: string]: number
+      }
+      /**
+       * @description BySDKVersion counts sensors per reported SDK version ("unknown" when
+       *     none); its keys are the values GET /sensors?sdk_version= accepts.
+       */
+      by_sdk_version?: {
+        [key: string]: number
+      }
+      /**
+       * @description ByState counts sensors per computed state (every state is present,
+       *     zeros included); the same state GET /sensors returns per sensor.
+       */
+      by_state?: {
+        [key: string]: number
+      }
       by_status?: {
         [key: string]: number
       }
       by_type?: {
         [key: string]: number
       }
+      /** @description ByVersionStatus counts sensors per version status. */
+      by_version_status?: {
+        [key: string]: number
+      }
+      /**
+       * @description CanTakeJobs counts sensors that can be dispatched work now: enabled,
+       *     long-running (not one-shot CI) and online or degraded.
+       */
+      can_take_jobs?: number
+      job_slots?: number
+      /**
+       * @description JobsRunning is the sum of current jobs on those sensors, JobSlots the
+       *     sum of their max concurrent jobs.
+       */
+      jobs_running?: number
+      /**
+       * @description LatestVersion and MinVersion are the release channel
+       *     (SENSOR_LATEST_VERSION, SENSOR_MIN_VERSION); "" when not configured.
+       */
+      latest_version?: string
+      min_version?: string
+      /** @description NeedsAttention counts enabled sensors with at least one health reason. */
+      needs_attention?: number
+      offline_after_seconds?: number
       online_active?: number
+      /**
+       * @description OnlineWindowSeconds and OfflineAfterSeconds are the thresholds of the
+       *     state ladder: a heartbeat at most online_window_seconds old is online,
+       *     one older than offline_after_seconds is offline, stale in between.
+       */
+      online_window_seconds?: number
+      sdk_latest_version?: string
+      /**
+       * @description SDKMinVersion and SDKLatestVersion are the SDK policy
+       *     (SENSOR_SDK_MIN_VERSION, SENSOR_SDK_LATEST_VERSION); "" when not set.
+       */
+      sdk_min_version?: string
       total?: number
     }
     'internal_infra_http_handler.SensorSuppressionRule': {
@@ -34124,10 +35725,23 @@ export interface components {
       version?: string
       vulnerability_count?: number
     }
+    'internal_infra_http_handler.UpdateContentPolicyRequest': {
+      /**
+       * @description ApplyNow sends the policy to every sensor that manages content now (a
+       *     refresh_content command each, not forced). Otherwise sensors get it
+       *     with their next refresh request.
+       */
+      apply_now?: boolean
+      policy?: components['schemas']['internal_infra_http_handler.ContentPolicyBody']
+    }
     'internal_infra_http_handler.UpdateCredentialRequest': {
       description?: string
       expires_at?: string
       name?: string
+    }
+    'internal_infra_http_handler.UpdateDataScopePolicyRequest': {
+      /** @enum {string} */
+      members_without_group_see: 'everything' | 'nothing'
     }
     'internal_infra_http_handler.UpdateFindingStatusRequest': {
       resolution?: string
@@ -34497,6 +36111,12 @@ export interface components {
     'internal_infra_http_handler.UpdateToolRequest': {
       content: {
         'application/json': components['schemas']['internal_infra_http_handler.UpdateToolRequest']
+      }
+    }
+    /** @description Content to refresh */
+    'internal_infra_http_handler.RefreshContentRequest': {
+      content: {
+        'application/json': components['schemas']['internal_infra_http_handler.RefreshContentRequest']
       }
     }
     /** @description Tool data */
