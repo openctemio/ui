@@ -16,6 +16,10 @@ import {
   Settings,
 } from 'lucide-react'
 import { Main } from '@/components/layout'
+import { useWebSocket } from '@/context/websocket-provider'
+import { useTenant } from '@/context/tenant-provider'
+import { useDisplayUser } from '@/hooks/use-display-user'
+import { useUserNotificationChannel } from '@/hooks/use-websocket'
 import { PageHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -168,9 +172,22 @@ export default function NotificationsPage() {
     return f
   }, [severityFilter, readFilter])
 
-  // The full list is on screen here, so keep it fresh while the page is open.
-  const { data, isLoading, error } = useNotificationsApi(page, PER_PAGE, filters, {
-    refreshInterval: 60000,
+  // The full list is on screen here, so keep it fresh while the page is open:
+  // refetch on each notification pushed over the WebSocket, and poll only while
+  // the socket is down.
+  const { isConnected } = useWebSocket()
+  const { currentTenant } = useTenant()
+  const user = useDisplayUser()
+  const { data, isLoading, error, mutate } = useNotificationsApi(page, PER_PAGE, filters, {
+    refreshInterval: isConnected ? 0 : 60000,
+  })
+  useUserNotificationChannel(currentTenant?.id, user?.id, {
+    onData: useCallback(
+      (event: Record<string, unknown>) => {
+        if (event?.type === 'notification') void mutate()
+      },
+      [mutate]
+    ),
   })
   const { data: unreadData } = useUnreadCountApi()
 

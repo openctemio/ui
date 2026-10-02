@@ -301,6 +301,9 @@ export function PermissionProvider({ children }: PermissionProviderProps) {
     if (!tenantId) return
 
     const intervalId = setInterval(() => {
+      // A hidden tab does not need fresh permissions; the focus handler below
+      // syncs once the user comes back after a while.
+      if (document.hidden) return
       fetchPermissions()
     }, POLL_INTERVAL_MS)
 
