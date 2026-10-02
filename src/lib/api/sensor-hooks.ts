@@ -21,6 +21,7 @@ import type {
   UpdateSensorRequest,
   RegenerateAPIKeyResponse,
   AvailableCapabilitiesResponse,
+  SensorCommandListResponse,
 } from './sensor-types'
 
 // ============================================
@@ -191,6 +192,20 @@ export function useTenantSensorStats(config?: SWRConfiguration) {
     refreshInterval: SENSOR_REFRESH_MS,
     ...config,
   })
+}
+
+/**
+ * The latest jobs dispatched to a sensor, refreshed with the drawer. Pass
+ * `enabled: false` without sensors:commands:read (no request, no 403 toast).
+ */
+export function useSensorCommands(sensorId: string | null, enabled = true) {
+  const { currentTenant } = useTenant()
+  const key = currentTenant && sensorId && enabled ? sensorEndpoints.commands(sensorId) : null
+  return useSWR<SensorCommandListResponse>(
+    key,
+    (url: string) => get<SensorCommandListResponse>(url),
+    { ...defaultConfig, refreshInterval: SENSOR_REFRESH_MS }
+  )
 }
 
 /**

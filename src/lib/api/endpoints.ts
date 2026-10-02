@@ -25,6 +25,7 @@ export const API_BASE = {
   DASHBOARD: '/api/v1/dashboard',
   AUDIT_LOGS: '/api/v1/audit-logs',
   SENSORS: '/api/v1/sensors',
+  COMMANDS: '/api/v1/commands',
   SCAN_ZONES: '/api/v1/scan-zones',
   SCAN_PROFILES: '/api/v1/scan-profiles',
   SCANNER_TEMPLATES: '/api/v1/scanner-templates',
@@ -1062,6 +1063,13 @@ export const sensorEndpoints = {
    */
   availableCapabilities: (includePlatform: boolean = true) =>
     `${API_BASE.SENSORS}/available-capabilities?include_platform=${includePlatform}`,
+
+  /**
+   * The jobs (commands) dispatched to one sensor, newest first
+   * (GET /commands?sensor_id=, needs sensors:commands:read).
+   */
+  commands: (sensorId: string, perPage = 20) =>
+    `${API_BASE.COMMANDS}${buildQueryString({ sensor_id: sensorId, per_page: perPage })}`,
 } as const
 
 // ============================================

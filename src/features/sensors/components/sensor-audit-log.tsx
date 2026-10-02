@@ -154,7 +154,7 @@ function AuditLogEntry({ log }: { log: AuditLog }) {
         {log.changes && (log.changes.before || log.changes.after) && (
           <div className="mt-2 rounded-md bg-muted/50 p-2 text-xs">
             {log.changes.before && Object.keys(log.changes.before).length > 0 && (
-              <div className="text-red-500/80">
+              <div className="text-destructive">
                 <span className="font-medium">-</span>{' '}
                 {Object.entries(log.changes.before)
                   .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
@@ -162,7 +162,7 @@ function AuditLogEntry({ log }: { log: AuditLog }) {
               </div>
             )}
             {log.changes.after && Object.keys(log.changes.after).length > 0 && (
-              <div className="text-green-500/80">
+              <div className="text-success">
                 <span className="font-medium">+</span>{' '}
                 {Object.entries(log.changes.after)
                   .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)

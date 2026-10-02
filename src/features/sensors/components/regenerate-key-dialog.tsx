@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, KeyRound, AlertTriangle, Check, FileCode } from 'lucide-react'
+import { Loader2, KeyRound, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
 
@@ -17,8 +17,8 @@ import {
 import { OneTimeSecretField } from '@/features/shared'
 
 import { useRegenerateSensorKey, invalidateSensorsCache } from '@/lib/api/sensor-hooks'
-import { SensorConfigDialog } from './sensor-config-dialog'
 import type { Sensor } from '@/lib/api/sensor-types'
+import { SensorInstallSnippets } from './sensor-install-snippets'
 
 interface RegenerateKeyDialogProps {
   open: boolean
@@ -27,6 +27,10 @@ interface RegenerateKeyDialogProps {
   onSuccess?: () => void
 }
 
+/**
+ * Rotate a sensor's API key (an admin action): the old key stops working at
+ * once, the new one is shown once, with the install commands that carry it.
+ */
 export function RegenerateKeyDialog({
   open,
   onOpenChange,
@@ -34,49 +38,30 @@ export function RegenerateKeyDialog({
   onSuccess,
 }: RegenerateKeyDialogProps) {
   const [apiKey, setApiKey] = useState<string | null>(null)
-  const [configDialogOpen, setConfigDialogOpen] = useState(false)
 
   const { trigger: regenerateKey, isMutating } = useRegenerateSensorKey()
 
   // Reset state when dialog opens
   useEffect(() => {
-    if (open) {
-      setApiKey(null)
-      setConfigDialogOpen(false)
-    }
+    if (open) setApiKey(null)
   }, [open])
 
   const handleRegenerate = async () => {
     try {
       const result = await regenerateKey(sensor.id)
-
-      // Try to extract api_key from various possible structures
-      let newApiKey: string | undefined
-
-      if (typeof result === 'object' && result !== null) {
-        // Direct access
-        if ('api_key' in result && typeof result.api_key === 'string') {
-          newApiKey = result.api_key
-        }
-        // Maybe wrapped in data
-        else if ('data' in result && typeof result.data === 'object' && result.data !== null) {
-          const data = result.data as Record<string, unknown>
-          if ('api_key' in data && typeof data.api_key === 'string') {
-            newApiKey = data.api_key
-          }
-        }
-      }
-
-      if (newApiKey) {
-        // Set the key first - DO NOT invalidate cache here
-        // Cache will be invalidated when dialog is closed
+      const newApiKey =
+        result && typeof result === 'object' && 'api_key' in result
+          ? (result as { api_key?: unknown }).api_key
+          : undefined
+      if (typeof newApiKey === 'string' && newApiKey) {
+        // Keep the list cache until the dialog closes (the key is shown once).
         setApiKey(newApiKey)
-        toast.success('API key regenerated successfully')
+        toast.success('API key rotated')
       } else {
-        toast.error('Failed to get new API key from response')
+        toast.error('The new API key was not in the response')
       }
     } catch (error) {
-      toast.error(getErrorMessage(error, 'Failed to regenerate API key'))
+      toast.error(getErrorMessage(error, 'Failed to rotate the API key'))
     }
   }
 
@@ -84,106 +69,65 @@ export function RegenerateKeyDialog({
     const hadNewKey = !!apiKey
     setApiKey(null)
     onOpenChange(false)
-
-    // Invalidate cache after dialog closes if we regenerated a key
     if (hadNewKey) {
       await invalidateSensorsCache()
       onSuccess?.()
     }
   }
 
-  // Show the new API key after regeneration
   if (apiKey) {
     return (
-      <>
-        <Dialog open={open} onOpenChange={handleClose}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-green-600">
-                <Check className="h-5 w-5" />
-                API Key Regenerated
-              </DialogTitle>
-              <DialogDescription>
-                Save this new API key now. You won&apos;t be able to see it again.
-              </DialogDescription>
-            </DialogHeader>
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>New API key for {sensor.name}</DialogTitle>
+            <DialogDescription>
+              The old key no longer works. Copy the new one now: it is shown only once.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="space-y-4">
-              <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-4">
-                <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400 mb-2">
-                  Important: Save your new API key
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  The old API key has been invalidated. Any sensors using the old key will no longer
-                  be able to authenticate.
-                </p>
-              </div>
-
-              <OneTimeSecretField label="New API key" noun="API key" value={apiKey} />
+          <div className="min-w-0 space-y-4">
+            <OneTimeSecretField label="New API key" noun="API key" value={apiKey} />
+            <div>
+              <p className="mb-2 text-sm font-medium">Restart the sensor with it</p>
+              <SensorInstallSnippets sensorId={sensor.id} apiKey={apiKey} />
             </div>
+          </div>
 
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setConfigDialogOpen(true)}
-                className="w-full sm:w-auto"
-              >
-                <FileCode className="me-2 h-4 w-4" />
-                View Config
-              </Button>
-              <Button onClick={handleClose} className="w-full sm:w-auto">
-                Done
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Config dialog with actual API key */}
-        <SensorConfigDialog
-          open={configDialogOpen}
-          onOpenChange={setConfigDialogOpen}
-          sensor={sensor}
-          apiKey={apiKey}
-        />
-      </>
+          <DialogFooter>
+            <Button onClick={handleClose}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     )
   }
 
-  // Show warning dialog before regeneration
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <KeyRound className="h-5 w-5" />
-            Regenerate API Key
+            Rotate API key
           </DialogTitle>
           <DialogDescription>
-            Generate a new API key for <strong>{sensor.name}</strong>
+            Issue a new API key for <strong>{sensor.name}</strong>.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-4">
-          <div className="flex gap-3">
-            <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 shrink-0" />
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400">
-                Warning: This will invalidate the current API key
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Any sensors currently using this API key will no longer be able to authenticate.
-                Make sure to update your sensor configuration with the new key.
-              </p>
-            </div>
+        <div className="flex gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-warning" aria-hidden />
+          <div className="space-y-1 text-sm">
+            <p className="font-medium">The current key stops working at once</p>
+            <p className="text-muted-foreground">
+              The sensor disconnects until it is restarted with the new key.
+            </p>
           </div>
         </div>
 
-        <div className="text-sm text-muted-foreground">
-          <p>
-            Current API key prefix:{' '}
-            <code className="bg-muted px-1 rounded">{sensor.api_key_prefix}...</code>
-          </p>
-        </div>
+        <p className="text-sm text-muted-foreground">
+          Current key <span className="font-mono">{sensor.api_key_prefix}…</span>
+        </p>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={handleClose} disabled={isMutating}>
@@ -191,7 +135,7 @@ export function RegenerateKeyDialog({
           </Button>
           <Button variant="destructive" onClick={handleRegenerate} disabled={isMutating}>
             {isMutating && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
-            Regenerate Key
+            Rotate key
           </Button>
         </DialogFooter>
       </DialogContent>
