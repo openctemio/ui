@@ -489,7 +489,7 @@ export default function BusinessUnitsPage() {
       cell: ({ row }) => {
         const unit = row.original
         return (
-          <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
+          <Can permission={Permission.AssetsWrite}>
             <DataTableRowActions
               actions={[
                 { label: 'View details', icon: Eye, onClick: () => setViewUnit(unit) },
@@ -497,7 +497,7 @@ export default function BusinessUnitsPage() {
                   label: 'Edit',
                   icon: Pencil,
                   onClick: () => openEdit(unit),
-                  permission: Permission.ScopeWrite,
+                  permission: Permission.AssetsWrite,
                 },
                 {
                   label: 'Delete',
@@ -505,7 +505,7 @@ export default function BusinessUnitsPage() {
                   onClick: () => setDeleteUnit(unit),
                   destructive: true,
                   separatorBefore: true,
-                  permission: Permission.ScopeDelete,
+                  permission: Permission.AssetsWrite,
                 },
               ]}
             />
@@ -663,7 +663,7 @@ export default function BusinessUnitsPage() {
           title="Business units"
           description="Your organizational structure, so security priorities follow the business."
         >
-          <Can permission={Permission.ScopeWrite}>
+          <Can permission={Permission.AssetsWrite}>
             <Button size="sm" onClick={() => setIsCreateOpen(true)}>
               <Plus className="me-2 h-4 w-4" />
               New business unit

@@ -467,7 +467,7 @@ export default function CrownJewelsPage() {
       cell: ({ row }) => {
         const jewel = row.original
         return (
-          <Can permission={[Permission.ScopeWrite, Permission.ScopeDelete]}>
+          <Can permission={Permission.AssetsWrite}>
             <DataTableRowActions
               actions={[
                 { label: 'View details', icon: Eye, onClick: () => setViewJewel(jewel) },
@@ -475,7 +475,7 @@ export default function CrownJewelsPage() {
                   label: 'Edit',
                   icon: Pencil,
                   onClick: () => openEdit(jewel),
-                  permission: Permission.ScopeWrite,
+                  permission: Permission.AssetsWrite,
                 },
                 {
                   label: 'Remove',
@@ -483,7 +483,7 @@ export default function CrownJewelsPage() {
                   onClick: () => setDeleteJewel(jewel),
                   destructive: true,
                   separatorBefore: true,
-                  permission: Permission.ScopeDelete,
+                  permission: Permission.AssetsWrite,
                 },
               ]}
             />
@@ -500,7 +500,7 @@ export default function CrownJewelsPage() {
           title="Crown jewels"
           description="The assets whose compromise would hurt the business most."
         >
-          <Can permission={Permission.ScopeWrite}>
+          <Can permission={Permission.AssetsWrite}>
             <Button size="sm" onClick={() => setIsCreateOpen(true)}>
               <Plus className="me-2 h-4 w-4" />
               Designate crown jewel
