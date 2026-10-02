@@ -209,7 +209,10 @@
   "help.shortcut.toggle-comment": "Add a comment (when no text is selected)",
   "help.shortcut.clear-selection": "Clear the selected rows",
   "help.about.description": "Continuous threat exposure management platform.",
-  "help.about.uiVersion": "Web app version",
+  "help.about.webApp": "Web app",
+  "help.about.api": "API",
   "help.about.devBuild": "Development build",
-  "help.about.commit": "Commit"
+  "help.about.release": "Release",
+  "help.about.unavailable": "unavailable",
+  "help.about.loading": "Loading version"
 }

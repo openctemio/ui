@@ -75,7 +75,7 @@ describe('getAppVersion', () => {
   it('reads the release version and short commit baked in at build time', () => {
     vi.stubEnv('NEXT_PUBLIC_APP_VERSION', 'v0.9.0')
     vi.stubEnv('NEXT_PUBLIC_APP_COMMIT', '0123456789abcdef')
-    expect(getAppVersion()).toEqual({ version: 'v0.9.0', commit: '0123456' })
+    expect(getAppVersion()).toEqual({ version: 'v0.9.0', commit: '01234567' })
   })
 
   it('reports nothing outside a release build (never package.json)', () => {
