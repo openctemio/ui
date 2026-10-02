@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import {
   Dialog,
@@ -8,6 +8,7 @@ import {
   DialogDescription,
   DialogHeaderBar,
   DialogTitle,
+  focusDialogBody,
 } from '@/components/ui/dialog'
 import type { Sensor } from '@/lib/api/sensor-types'
 
@@ -29,10 +30,12 @@ export function InstallSensorDialog({
   onOpen?: (sensor: Sensor) => void
 }) {
   const [step, setStep] = useState<InstallStep>('name')
+  const bodyRef = useRef<HTMLDivElement>(null)
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
+        onOpenAutoFocus={(e) => focusDialogBody(e, bodyRef.current)}
         className="flex max-h-[92svh] flex-col gap-0 overflow-hidden p-0 sm:p-0 sm:max-w-5xl"
       >
         <DialogHeaderBar>
@@ -44,7 +47,7 @@ export function InstallSensorDialog({
             <span aria-live="polite">{installStepLabel(step)}</span>
           </DialogDescription>
         </DialogHeaderBar>
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div ref={bodyRef} tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto outline-none">
           <SensorInstallFlow variant="dialog" onOpen={onOpen} onStepChange={setStep} />
         </div>
       </DialogContent>
