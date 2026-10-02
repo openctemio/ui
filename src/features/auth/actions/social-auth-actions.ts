@@ -22,6 +22,7 @@ import { env } from '@/lib/env'
 import { setServerCookie } from '@/lib/cookies-server'
 import { authEndpoints } from '@/lib/api/endpoints'
 import { validateRedirectUrl } from '@/lib/redirect'
+import { isAllowedValue, sanitizeLogValue } from '@/lib/log-sanitize'
 
 import type { AuthSuccessResponse, AuthErrorResponse } from '../schemas/auth.schema'
 
@@ -30,6 +31,14 @@ import type { AuthSuccessResponse, AuthErrorResponse } from '../schemas/auth.sch
 // ============================================
 
 export type SocialProvider = 'google' | 'github' | 'microsoft'
+
+// Server Action arguments come straight from the client: the provider is
+// checked against this list before it is put into a backend URL path.
+const SOCIAL_PROVIDERS: readonly SocialProvider[] = ['google', 'github', 'microsoft']
+const UNSUPPORTED_PROVIDER: AuthErrorResponse = {
+  success: false,
+  error: 'Unsupported sign-in provider',
+}
 
 export interface OAuthUser {
   id: string
@@ -91,6 +100,8 @@ export async function getOAuthAuthorizationUrl(
   provider: SocialProvider,
   redirectTo?: string
 ): Promise<AuthSuccessResponse<{ authorizationUrl: string; state: string }> | AuthErrorResponse> {
+  if (!isAllowedValue(SOCIAL_PROVIDERS, provider)) return UNSUPPORTED_PROVIDER
+
   try {
     // Build the callback URL that the OAuth provider will redirect to
     const frontendCallbackUrl = `${env.app.url}/auth/callback/${provider}`
@@ -132,7 +143,7 @@ export async function getOAuthAuthorizationUrl(
       },
     }
   } catch (error) {
-    console.error('OAuth authorization error:', provider, error)
+    console.error('OAuth authorization error:', sanitizeLogValue(provider), error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get authorization URL',
@@ -153,6 +164,8 @@ export async function handleOAuthCallback(
   code: string,
   state: string
 ): Promise<AuthSuccessResponse<OAuthUser> | AuthErrorResponse> {
+  if (!isAllowedValue(SOCIAL_PROVIDERS, provider)) return UNSUPPORTED_PROVIDER
+
   try {
     const cookieStore = await cookies()
 
@@ -207,7 +220,7 @@ export async function handleOAuthCallback(
       message: `Successfully signed in with ${provider}`,
     }
   } catch (error) {
-    console.error('OAuth callback error:', provider, error)
+    console.error('OAuth callback error:', sanitizeLogValue(provider), error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'OAuth authentication failed',
