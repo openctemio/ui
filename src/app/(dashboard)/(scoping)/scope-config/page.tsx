@@ -1479,15 +1479,15 @@ export default function ScopeConfigPage() {
               <div className="grid gap-5 lg:grid-cols-2">
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Scope by asset type</CardTitle>
-                    <CardDescription>Scoped assets across categories</CardDescription>
+                    <CardTitle className="text-base">Inventory by asset type</CardTitle>
+                    <CardDescription>Every asset in the inventory, in scope or not</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {assetTypeData.length === 0 ? (
                       <EmptyState
                         icon={BarChart3}
                         title="No asset types yet"
-                        description="Asset types appear once assets are in scope."
+                        description="Asset types appear once discovery or an import adds assets."
                         card={false}
                         className="py-8"
                       />
@@ -1544,14 +1544,14 @@ export default function ScopeConfigPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">Asset status</CardTitle>
-                    <CardDescription>Management status of scoped assets</CardDescription>
+                    <CardDescription>Status of every asset in the inventory</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {assetStatusData.length === 0 ? (
                       <EmptyState
                         icon={BarChart3}
                         title="No status data"
-                        description="Status appears once assets are in scope."
+                        description="Status appears once discovery or an import adds assets."
                         card={false}
                         className="py-8"
                       />
@@ -1610,7 +1610,7 @@ export default function ScopeConfigPage() {
                             <p className="text-sm text-muted-foreground">
                               {stats.coverage < 80
                                 ? `Only ${stats.activeTargets} of ${stats.targets} targets are active. Activate more targets to improve coverage.`
-                                : 'Scope coverage is above target threshold. All active targets are being scanned.'}
+                                : 'At least 80% of targets are active.'}
                             </p>
                           </div>
                         </div>
