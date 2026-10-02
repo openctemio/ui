@@ -184,7 +184,17 @@ className="flex flex-col gap-0 p-0 sm:p-0 …">` with a `<DialogHeaderBar>`
   the dialog surface, never on a tinted region; a secondary panel is inset
   (margin + radius), not bled to the edge. Install sensor and Edit sensor are
   the reference. Ordinary dialogs keep the default corner close button.
-- Quick detail views: `<Sheet side="right">`.
+- Quick detail views: `<Sheet side="right">`. Read top to bottom as state →
+  why → what it can do → what it did → identity, with the parts in
+  `src/features/shared/components/detail-sheet.tsx`: a `<DetailCallout>`
+  first when something is wrong (the problem in plain words, the fix as a
+  button; nothing when all is well), a `<DetailStatGrid>` of 2–4
+  `<DetailStat>`s (leave out a number the data does not have), then
+  `<DetailSections>` (dividers, not cards) ending with identity and trivia
+  (IDs, legacy fields) behind a "More details" disclosure. Header: at most one
+  primary and one outline button; security and lifecycle actions (rotate key,
+  disable, revoke, delete) go in the `⋯` menu. The sensor drawer is the
+  reference.
 - Destructive confirmation: `<ConfirmDialog destructive>`.
 
 ## 9. Responsiveness
