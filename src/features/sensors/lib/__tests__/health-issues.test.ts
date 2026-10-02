@@ -4,6 +4,7 @@ import type { Sensor, SensorContent } from '@/lib/api/sensor-types'
 
 import { sensorHealthChecks } from '../health-checks'
 import { sensorHealthIssues, worstIssueSeverity } from '../health-issues'
+import { TEST_SENSOR_KEY_PREFIX } from '@/test/sensor-keys'
 
 const NOW = new Date('2026-10-02T08:10:00Z').getTime()
 
@@ -17,7 +18,7 @@ const base: Sensor = {
   execution_mode: 'daemon',
   status: 'active',
   health: 'online',
-  api_key_prefix: 'rda_1',
+  api_key_prefix: TEST_SENSOR_KEY_PREFIX,
   cpu_percent: 0,
   memory_percent: 0,
   max_concurrent_jobs: 5,

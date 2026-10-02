@@ -130,6 +130,67 @@ export function sensorUpdateBody(
   return body
 }
 
+/**
+ * The PUT body for the "Allow these tools" review after the first heartbeat:
+ * every installed tool the sensor reported checked means no limit (all
+ * reported tools, now and later); a subset becomes the limit. null when
+ * nothing would change, so "Done" with everything checked sends nothing.
+ */
+export function allowedToolsBody(
+  sensor: Pick<
+    Sensor,
+    'name' | 'description' | 'status' | 'tools' | 'max_concurrent_jobs' | 'reported'
+  >,
+  allowed: string[],
+  capabilitiesForTools: (tools: string[]) => string[]
+): UpdateSensorRequest | null {
+  const installed = reportedToolNames(sensor) ?? []
+  const picked = [...new Set(allowed.filter((t) => installed.includes(t)))].sort()
+  const initial = sensorEditDraft(sensor)
+  const all = installed.every((t) => picked.includes(t))
+  const draft: SensorEditDraft = {
+    ...initial,
+    toolMode: all ? 'all' : 'only',
+    tools: all ? [] : picked,
+  }
+  // An empty subset is not a limit the API can express ([] means all): the
+  // review keeps "Done" disabled then, and this refuses it as well.
+  if (draft.toolMode === 'only' && picked.length === 0) return null
+  if (!toolsChanged(draft, initial)) return null
+  return sensorUpdateBody(sensor, draft, initial, capabilitiesForTools)
+}
+
+/**
+ * Installed tools the sensor reports that its tool limit leaves out: a tool
+ * installed after the administrator narrowed the list. Empty when there is
+ * no limit (every reported tool is allowed) or no report.
+ */
+export function toolsInstalledNotAllowed(sensor: Pick<Sensor, 'tools' | 'reported'>): string[] {
+  const limit = sensor.tools ?? []
+  if (limit.length === 0) return []
+  const installed = reportedToolNames(sensor) ?? []
+  return installed.filter((t) => !limit.includes(t as (typeof limit)[number]))
+}
+
+/**
+ * The PUT body that adds one installed tool to the sensor's tool limit. The
+ * limit stays a limit (the administrator chose to narrow it), so a tool
+ * installed later still needs allowing.
+ */
+export function allowToolBody(
+  sensor: Pick<Sensor, 'tools' | 'reported'>,
+  tool: string,
+  capabilitiesForTools: (tools: string[]) => string[]
+): UpdateSensorRequest {
+  const tools = [...new Set([...(sensor.tools ?? []), tool])].sort()
+  return {
+    tools: tools as UpdateSensorRequest['tools'],
+    capabilities: (sensor.reported?.capabilities != null
+      ? []
+      : capabilitiesForTools(tools)) as UpdateSensorRequest['capabilities'],
+  }
+}
+
 /** Zone membership changes: zones to join and zones to leave. */
 export function zoneChanges(draft: SensorEditDraft, initial: SensorEditDraft) {
   return {
