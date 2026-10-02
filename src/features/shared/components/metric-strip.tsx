@@ -11,10 +11,16 @@ export interface MetricStripItem {
   /** Small caption under the value. */
   hint?: string
   /**
-   * `danger` colours the value only while it is a positive number — a zero is
-   * good news and stays neutral (a red "0" reads as an alarm that isn't one).
+   * `danger` / `warning` colour the value only while it is a positive number —
+   * a zero is good news and stays neutral (a red "0" reads as an alarm that
+   * isn't one).
    */
-  tone?: 'default' | 'danger'
+  tone?: 'default' | 'danger' | 'warning'
+  /**
+   * Extra content under the value (a one-line explanation, a small
+   * breakdown bar). Keep it short: the strip is a summary, not a card.
+   */
+  detail?: React.ReactNode
   /** Clickable metrics act as quick filters. */
   onClick?: () => void
   /** The filter this metric applies is currently on. */
@@ -61,7 +67,9 @@ export function MetricStrip({
     >
       {items.map((item) => {
         const numeric = typeof item.value === 'number'
-        const alarming = item.tone === 'danger' && numeric && (item.value as number) > 0
+        const positive = numeric && (item.value as number) > 0
+        const alarming = item.tone === 'danger' && positive
+        const warning = item.tone === 'warning' && positive
         const body = (
           <>
             <dt className="truncate text-xs text-muted-foreground">{item.label}</dt>
@@ -72,7 +80,8 @@ export function MetricStrip({
                 <span
                   className={cn(
                     'text-2xl font-semibold tabular-nums tracking-tight',
-                    alarming && 'text-destructive'
+                    alarming && 'text-destructive',
+                    warning && 'text-warning'
                   )}
                 >
                   {numeric ? (item.value as number).toLocaleString() : item.value}
@@ -82,6 +91,9 @@ export function MetricStrip({
                 <span className="ms-1.5 text-xs text-muted-foreground">{item.hint}</span>
               ) : null}
             </dd>
+            {item.detail && !loading ? (
+              <dd className="mt-1 min-w-0 text-xs text-muted-foreground">{item.detail}</dd>
+            ) : null}
           </>
         )
         const cellClass = cn(

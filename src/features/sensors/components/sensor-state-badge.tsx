@@ -1,10 +1,9 @@
 'use client'
 
-import { formatDistanceToNowStrict } from 'date-fns'
-
 import { cn } from '@/lib/utils'
 import type { Sensor } from '@/lib/api/sensor-types'
 
+import { formatDurationShort } from '../lib/format'
 import {
   SENSOR_STATE_META,
   sensorState,
@@ -34,7 +33,7 @@ function ago(iso: string | undefined | null, now: number): string | null {
   if (Number.isNaN(t)) return null
   // A heartbeat a few seconds "in the future" (clock skew) reads as just now.
   if (t >= now - 1000) return 'just now'
-  return `${formatDistanceToNowStrict(t)} ago`
+  return `${formatDurationShort((now - t) / 1000)} ago`
 }
 
 /**

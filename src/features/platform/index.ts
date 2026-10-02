@@ -9,3 +9,4 @@
 // Components
 export { TierBadge, MaxTierBadge, AccessibleTiersList } from './components/tier-badge'
 export { PlatformStatsCard, PlatformStatsInline } from './components/platform-stats-card'
+export { PlatformSensorsPage, PlatformSensorsLink } from './components/platform-sensors-page'

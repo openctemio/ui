@@ -24,6 +24,11 @@ const SIDEBAR_LABELS: Map<string, string> = (() => {
   return map
 })()
 
+/** Sub-pages the sidebar does not list, by full path. */
+const PATH_LABELS: Record<string, string> = {
+  '/sensors/platform': 'Platform sensors',
+}
+
 /** Segments that are not sidebar entries themselves (section roots, sub-pages). */
 const FALLBACK_LABELS: Record<string, string> = {
   assets: 'Asset inventory',
@@ -66,6 +71,7 @@ const GENERIC_TITLES = new Set(['Overview', 'All', 'All integrations', 'Profile'
 
 /** Label for the breadcrumb item at `path` whose last segment is `segment`. */
 export function breadcrumbLabel(path: string, segment: string): string {
+  if (PATH_LABELS[path]) return PATH_LABELS[path]
   const fromSidebar = SIDEBAR_LABELS.get(path)
   if (fromSidebar && !GENERIC_TITLES.has(fromSidebar)) return fromSidebar
   return FALLBACK_LABELS[segment] ?? humanize(segment)

@@ -60,3 +60,19 @@ describe('MetricStrip', () => {
     expect(screen.queryByText('93')).not.toBeInTheDocument()
   })
 })
+
+describe('MetricStrip warning tone and detail', () => {
+  it('colours a warning metric only while positive, and shows its detail', () => {
+    render(
+      <MetricStrip
+        items={[
+          { key: 'a', label: 'Needs attention', value: 3, tone: 'warning', detail: 'backlog, key' },
+          { key: 'b', label: 'Updates', value: 0, tone: 'warning' },
+        ]}
+      />
+    )
+    expect(screen.getByText('3')).toHaveClass('text-warning')
+    expect(screen.getByText('0')).not.toHaveClass('text-warning')
+    expect(screen.getByText('backlog, key')).toBeInTheDocument()
+  })
+})
