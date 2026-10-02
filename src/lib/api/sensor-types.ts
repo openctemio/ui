@@ -279,6 +279,12 @@ export interface Sensor {
   reported?: SensorReported | null
   /** What dispatch uses: the report narrowed by the limits. */
   effective?: SensorEffective
+  /** The current manifest's digest (RFC-033); "" before the first one. */
+  manifest_digest?: string
+  /** When it became current. */
+  manifest_at?: string | null
+  /** sensor: registered by the sensor; heartbeat: derived by the platform. */
+  manifest_source?: 'sensor' | 'heartbeat' | '' | (string & {})
   /**
    * The load the sensor last reported on its heartbeat (api RFC-030 §5.8);
    * null when it never reported one, absent on APIs without it.
@@ -465,6 +471,79 @@ export interface AvailableCapabilitiesResponse {
 }
 
 // ============================================
+// SENSOR MANIFEST (api RFC-033: GET /api/v1/sensors/{id}/manifest[s])
+// ============================================
+
+/** One tool of a sensor manifest. */
+export interface SensorManifestTool {
+  name: string
+  kind?: 'scanner' | 'collector' | (string & {})
+  version?: string
+  installed: boolean
+  capabilities?: string[] | null
+  target_types?: string[] | null
+  content?:
+    { name: string; version?: string; digest?: string; source?: string; managed: boolean }[] | null
+}
+
+/** What a sensor is (RFC-033 §6.2), as the platform kept it. */
+export interface SensorManifestDocument {
+  schema: number
+  sensor?: { name?: string; version?: string; commit?: string; build_time?: string } | null
+  sdk?: { name?: string; version?: string } | null
+  platform?: { os?: string; arch?: string } | null
+  /** What the sensor may use (container limits when it runs in one). */
+  resources?: { cpu_cores?: number; mem_total_bytes?: number } | null
+  /** The operator's cap (0: none) and how slots are sized. */
+  concurrency?: { ceiling: number; model?: 'dynamic' | 'fixed' | (string & {}) } | null
+  /** Served whatever the tools (e.g. validate). */
+  capabilities?: string[] | null
+  tools: SensorManifestTool[]
+}
+
+/** An item of a manifest the platform dropped. */
+export interface SensorManifestIgnored {
+  path: string
+  value?: string
+  reason:
+    | 'unknown-member'
+    | 'unknown-tool'
+    | 'invalid-name'
+    | 'unknown-capability'
+    | 'limit'
+    | (string & {})
+}
+
+/** One stored version of a sensor's manifest. */
+export interface SensorManifestVersion {
+  digest: string
+  /** sensor: the sensor registered it; heartbeat: derived from its heartbeat. */
+  source: 'sensor' | 'heartbeat' | (string & {})
+  current: boolean
+  manifest: SensorManifestDocument
+  ignored: SensorManifestIgnored[]
+  first_seen_at: string
+  current_since: string
+  last_seen_at: string
+}
+
+export interface SensorManifestListResponse {
+  items: SensorManifestVersion[]
+}
+
+/** What changed between two manifests (manifest_changed details.diff). */
+export interface SensorManifestDiff {
+  tools_added?: string[]
+  tools_removed?: string[]
+  versions?: { tool: string; from: string; to: string }[]
+  installed?: { tool: string; from: string; to: string }[]
+  capabilities?: { tool?: string; added?: string[]; removed?: string[] }[]
+  sensor_wide?: { added?: string[]; removed?: string[] } | null
+  /** build, sdk, platform, resources, concurrency */
+  other?: string[]
+}
+
+// ============================================
 // SENSOR ACTIVITY (GET /api/v1/sensors/{id}/activity)
 // ============================================
 
@@ -491,6 +570,7 @@ export type SensorActivityType =
   | 'capacity_changed'
   | 'content_updated'
   | 'content_refresh_failed'
+  | 'manifest_changed'
   // jobs
   | 'job_claimed'
   | 'job_completed'
@@ -520,6 +600,11 @@ export interface SensorActivityDetails {
   updated?: { name: string; from?: string; to?: string }[]
   // content_updated / content_refresh_failed
   items?: { tool?: string; name?: string; from?: string; to?: string; error?: string }[]
+  // manifest_changed (RFC-033)
+  diff?: SensorManifestDiff
+  manifest_digest?: string
+  previous_manifest_digest?: string
+  previous_source?: string
   // online / offline
   offline_seconds?: number
   last_seen_at?: string
