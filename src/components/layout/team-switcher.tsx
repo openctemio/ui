@@ -1,156 +1,138 @@
 'use client'
 
 /**
- * Team Switcher Component
+ * Organization context row (sidebar header).
  *
- * Displays current team and allows switching between teams.
- * - Fetches real tenant data from API
- * - Supports keyboard shortcuts (⌘1, ⌘2, etc.)
- * - Shows loading state during switch
+ * Names the current organization and its plan. Clicking it always opens the
+ * organization card (org-card.tsx): role, member count, ID, the API keys link,
+ * and, when there is a choice, the other organizations and "Create
+ * organization". The chevron only shows when there is something to do
+ * (switch or create); the card itself is informative and opens regardless.
+ *
+ * ⌘⇧1-9 / Ctrl+Shift+1-9 switch to the n-th organization.
  */
 
 import * as React from 'react'
 import { devLog } from '@/lib/logger'
 import { useRouter } from 'next/navigation'
-import { ChevronsUpDown, Plus, Check, Loader2 } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { ChevronsUpDown, Plus, Loader2 } from 'lucide-react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
+  useSidebarActions,
 } from '@/components/ui/sidebar'
 import { useTenant } from '@/context/tenant-provider'
 import { useBootstrapContextSafe } from '@/context/bootstrap-provider'
+import { useTranslation } from '@/context/i18n-provider'
 import { cn } from '@/lib/utils'
 import { SIDEBAR_CHIP_CLASS, SIDEBAR_CONTEXT_ROW_CLASS } from './sidebar-brand'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { useCanCreateOrganization } from '@/features/auth/hooks/use-can-create-organization'
+import { useMemberStats } from '@/features/organization/api/use-members'
+import { useSettingsNav } from '@/hooks/use-settings-nav'
+import { useDisplayUser } from '@/hooks/use-display-user'
+import { OrgCard, orgInitials, useOrgLabels, type OrgCardOrganization } from './org-card'
 
-/** Up to two initials, e.g. "ORG tenant" -> "OT", "acme" -> "AC". */
-function orgInitials(name: string): string {
-  const words = name
-    .trim()
-    .split(/[\s_-]+/)
-    .filter(Boolean)
-  if (words.length === 0) return '?'
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
-  return (words[0][0] + words[1][0]).toUpperCase()
-}
+const CREATE_ORGANIZATION_URL = '/settings/tenant/create'
 
-/**
- * Org avatar: initials on a neutral tile, so each organization is recognisable
- * in the switcher (previously a decorative icon cycled by list index, which
- * told the user nothing and changed when the list order changed).
- */
-function OrgAvatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' }) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        'flex shrink-0 items-center justify-center rounded-md bg-sidebar-accent font-semibold text-sidebar-accent-foreground ring-1 ring-sidebar-border',
-        size === 'md' ? 'size-7 text-[11px]' : 'size-6 text-[10px]'
-      )}
-    >
-      {orgInitials(name)}
-    </span>
-  )
+function isClipboardTextarea(target: EventTarget | null): boolean {
+  return target instanceof HTMLTextAreaElement && target.getAttribute('aria-hidden') === 'true'
 }
 
 export function TeamSwitcher() {
   const router = useRouter()
-  const { canCreate: canCreateTeam } = useCanCreateOrganization()
+  const { t } = useTranslation()
+  const labels = useOrgLabels()
+  const { canCreate } = useCanCreateOrganization()
   const { isMobile } = useSidebar()
+  const { setOpenMobile } = useSidebarActions()
   const { currentTenant, tenants, isLoading, isSwitching, switchTeam, error, loadTenants } =
     useTenant()
   const { isBootstrapped } = useBootstrapContextSafe()
+  const user = useDisplayUser()
+  const settingsNav = useSettingsNav()
 
   // Disable switching while an API call or bootstrap is in progress
   const isTransitioning = isSwitching || !isBootstrapped
 
   const [isOpen, setIsOpen] = React.useState(false)
 
-  // If API returns empty but we have current tenant, show it in the list
-  const displayTenants = React.useMemo(() => {
-    if (tenants.length > 0) return tenants
+  // The settings pages the card links to, when the user may open them (the
+  // same permission/module decision as the settings rail).
+  const { membersLink, apiKeysLink } = React.useMemo(() => {
+    const items = settingsNav.flatMap((g) => g.items)
+    const link = (id: string) => {
+      const item = items.find((i) => i.id === id)
+      return item ? { label: item.label, url: item.url } : undefined
+    }
+    return { membersLink: link('members'), apiKeysLink: link('api-keys') }
+  }, [settingsNav])
 
-    // Fallback: create a tenant entry from current tenant cookie
+  // Member count: one cheap stats call, only once the card is open and only
+  // when the user may read members (the hook also checks the permission).
+  const { stats: memberStats, isLoading: memberStatsLoading } = useMemberStats(
+    isOpen && membersLink ? currentTenant?.id : undefined
+  )
+
+  // The organizations to list. If the API returned none but we know the
+  // current one (from the cookie), list that.
+  const organizations = React.useMemo<OrgCardOrganization[]>(() => {
+    if (tenants.length > 0) return tenants.map((o) => ({ id: o.id, name: o.name, role: o.role }))
     if (currentTenant) {
       return [
         {
           id: currentTenant.id,
           name: currentTenant.name || currentTenant.slug,
-          slug: currentTenant.slug,
-          plan: (currentTenant.plan || 'free') as 'free' | 'paid',
           role: currentTenant.role,
-          joined_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
         },
       ]
     }
-
     return []
   }, [tenants, currentTenant])
 
-  // Log errors for debugging
   React.useEffect(() => {
-    if (error) {
-      devLog.error('[TeamSwitcher] Error fetching tenants:', error)
-    }
+    if (error) devLog.error('[TeamSwitcher] Error fetching tenants:', error)
   }, [error])
 
-  // Handle team selection
-  const handleSelectTeam = React.useCallback(
+  const handleSelect = React.useCallback(
     async (tenantId: string) => {
       if (isTransitioning) return
-
+      const target = organizations.find((o) => o.id === tenantId)
       try {
         await switchTeam(tenantId)
         setIsOpen(false)
-        toast.success('Team switched successfully')
-      } catch (error) {
-        toast.error(getErrorMessage(error, 'Failed to switch team'))
+        toast.success(t('org.switched', 'Switched to {name}', { name: target?.name ?? '' }))
+      } catch (err) {
+        toast.error(getErrorMessage(err, t('org.switchFailed', 'Could not switch organization')))
       }
     },
-    [switchTeam, isTransitioning]
+    [switchTeam, isTransitioning, organizations, t]
   )
 
-  // Keyboard shortcuts for team switching: ⌘⇧1-9 / Ctrl+Shift+1-9.
+  // Keyboard shortcuts: ⌘⇧1-9 / Ctrl+Shift+1-9.
   //
-  // We use Shift as a modifier to AVOID conflicting with the browser's
-  // built-in tab-switching shortcuts (⌘1, ⌘2, … in Chrome/Safari/Firefox
-  // on macOS; Ctrl+1, Ctrl+2, … on Windows/Linux). The previous version
-  // hijacked those shortcuts and made it impossible to switch browser
-  // tabs while focused on the dashboard.
-  //
-  // Implementation note: when Shift is held, `event.key` for `Shift+1` is
-  // the *shifted* character (`!`), not `1`. We have to use `event.code`
-  // (the physical key, e.g. `Digit1`) so the shortcut works regardless of
-  // keyboard layout.
+  // Shift avoids the browser's own tab shortcuts (⌘1… on macOS, Ctrl+1… on
+  // Windows/Linux). With Shift held, `event.key` is the shifted character
+  // (`!`), so match the physical key (`event.code`, e.g. `Digit1`).
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || !event.shiftKey) return
       const match = event.code.match(/^Digit([1-9])$/)
       if (!match) return
       const index = parseInt(match[1], 10) - 1
-      if (index < displayTenants.length) {
+      if (index < organizations.length) {
         event.preventDefault()
-        handleSelectTeam(displayTenants[index].id)
+        handleSelect(organizations[index].id)
       }
     }
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [displayTenants, handleSelectTeam])
+  }, [organizations, handleSelect])
 
   // Load the organization list once the app is ready (one cached request), so
   // the row knows whether there is anything to switch to before it is opened.
@@ -158,17 +140,26 @@ export function TeamSwitcher() {
     if (isBootstrapped) loadTenants()
   }, [isBootstrapped, loadTenants])
 
-  // Get current tenant display info
-  const currentTeamName = currentTenant?.name || currentTenant?.slug || 'Select Team'
+  const closeAll = React.useCallback(() => {
+    setIsOpen(false)
+    setOpenMobile(false)
+  }, [setOpenMobile])
 
-  // A selector only when there is a choice: two or more organizations, or the
-  // user may create one. With one organization the row just names it. While
-  // the list is still loading the row stays static, so no chevron flickers in
-  // for the common single-organization case.
-  const canSwitch = tenants.length > 1 || canCreateTeam
+  const goCreate = React.useCallback(() => {
+    closeAll()
+    router.push(CREATE_ORGANIZATION_URL)
+  }, [closeAll, router])
+
+  const currentName = currentTenant?.name || currentTenant?.slug || ''
+  // The tenant cookie carries no plan; the membership list does.
+  const currentPlan =
+    currentTenant?.plan ?? tenants.find((o) => o.id === currentTenant?.id)?.plan ?? undefined
+  const plan = labels.plan(currentPlan)
+  // Something to do besides reading: another organization, or creating one.
+  const hasActions = tenants.length > 1 || canCreate
 
   // Loading state
-  if (isLoading && displayTenants.length === 0) {
+  if (isLoading && organizations.length === 0) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
@@ -183,51 +174,25 @@ export function TeamSwitcher() {
     )
   }
 
-  // No teams state. Nothing to offer when only the platform administrator
+  // No organization. Nothing to offer when only the platform administrator
   // creates organizations.
-  if (!isLoading && displayTenants.length === 0 && !currentTenant) {
-    if (!canCreateTeam) return null
+  if (!currentTenant) {
+    if (isLoading || organizations.length > 0 || !canCreate) return null
+    const createLabel = t('org.create', 'Create organization')
     return (
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton
             className={SIDEBAR_CONTEXT_ROW_CLASS}
-            tooltip="Create team"
-            onClick={() => router.push('/settings/tenant/create')}
+            tooltip={createLabel}
+            onClick={goCreate}
           >
             <div className={cn(SIDEBAR_CHIP_CLASS, 'bg-transparent ring-0 border border-dashed')}>
               <Plus className="size-4" />
             </div>
             <span className="truncate font-semibold group-data-[collapsible=icon]:hidden">
-              Create team
+              {createLabel}
             </span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
-    )
-  }
-
-  if (!canSwitch) {
-    return (
-      <SidebarMenu>
-        <SidebarMenuItem>
-          {/* Same fixed label as the admin console's context row. */}
-          <SidebarMenuButton
-            className={cn(SIDEBAR_CONTEXT_ROW_CLASS, 'pointer-events-none')}
-            tooltip={currentTeamName}
-            tabIndex={-1}
-            data-testid="team-switcher-static"
-          >
-            <div className={SIDEBAR_CHIP_CLASS}>
-              {isSwitching ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                orgInitials(currentTeamName)
-              )}
-            </div>
-            <div className="grid flex-1 text-start text-sm leading-tight group-data-[collapsible=icon]:hidden">
-              <span className="truncate font-semibold">{currentTeamName}</span>
-            </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -237,106 +202,84 @@ export function TeamSwitcher() {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu
+        <Popover
           open={isOpen}
           onOpenChange={(open) => {
             setIsOpen(open)
-            // Trigger lazy load of tenant list when dropdown is opened
-            if (open) {
-              loadTenants()
-            }
+            if (open) loadTenants()
           }}
         >
-          <DropdownMenuTrigger asChild>
+          <PopoverTrigger asChild>
             <SidebarMenuButton
               className={cn(
                 SIDEBAR_CONTEXT_ROW_CLASS,
                 'data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
               )}
-              tooltip={currentTeamName}
+              tooltip={currentName}
+              aria-label={t('org.details', 'Organization details') + `: ${currentName}`}
               disabled={isTransitioning}
+              data-testid="team-switcher-trigger"
             >
               <div className={SIDEBAR_CHIP_CLASS}>
                 {isTransitioning ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  orgInitials(currentTeamName)
+                  orgInitials(currentName)
                 )}
               </div>
 
-              <div className="grid flex-1 text-start text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                <span className="truncate font-semibold">{currentTeamName}</span>
-              </div>
-
-              <ChevronsUpDown className="ms-auto size-4 group-data-[collapsible=icon]:hidden" />
+              <span className="min-w-0 flex-1 truncate text-start text-sm font-semibold group-data-[collapsible=icon]:hidden">
+                {currentName}
+              </span>
+              {plan && (
+                <span className="shrink-0 text-xs font-normal text-muted-foreground group-data-[collapsible=icon]:hidden">
+                  {plan}
+                </span>
+              )}
+              {hasActions && (
+                <ChevronsUpDown
+                  className="size-4 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden"
+                  data-testid="team-switcher-chevron"
+                  aria-hidden
+                />
+              )}
             </SidebarMenuButton>
-          </DropdownMenuTrigger>
+          </PopoverTrigger>
 
-          <DropdownMenuContent
-            className="min-w-[14rem] rounded-lg"
+          <PopoverContent
+            className="w-80 max-w-[calc(100vw-2rem)] p-0"
             align="start"
             side={isMobile ? 'bottom' : 'right'}
-            sideOffset={4}
+            sideOffset={isMobile ? 4 : 8}
+            collisionPadding={16}
+            aria-label={t('org.details', 'Organization details')}
+            // Copying over plain HTTP focuses a hidden textarea on <body>
+            // (src/lib/clipboard.ts); that is not the user leaving the card.
+            onFocusOutside={(event) => {
+              if (isClipboardTextarea(event.target)) event.preventDefault()
+            }}
           >
-            <DropdownMenuLabel className="text-muted-foreground text-xs flex items-center gap-2">
-              Teams
-              {isLoading && <Loader2 className="size-3 animate-spin text-muted-foreground" />}
-            </DropdownMenuLabel>
-
-            {displayTenants.map((tenant, index) => {
-              const isActive = currentTenant?.id === tenant.id
-
-              return (
-                <DropdownMenuItem
-                  key={tenant.id}
-                  onClick={() => handleSelectTeam(tenant.id)}
-                  className={cn('gap-2 p-2', isActive && 'bg-accent')}
-                  disabled={isTransitioning}
-                >
-                  <OrgAvatar name={tenant.name} size="sm" />
-                  <span className="flex-1">{tenant.name}</span>
-                  {isActive && <Check className="size-4 text-primary" />}
-                  {/* ⌘⇧1-9 / Ctrl+Shift+1-9. Shift is required to avoid
-                      hijacking the browser's tab-switching shortcuts. */}
-                  <DropdownMenuShortcut>⌘⇧{index + 1}</DropdownMenuShortcut>
-                </DropdownMenuItem>
-              )
-            })}
-
-            {/* Show skeleton items while loading additional teams */}
-            {isLoading && displayTenants.length <= 1 && (
-              <>
-                <DropdownMenuItem disabled className="gap-2 p-2 opacity-50">
-                  <div className="flex size-6 items-center justify-center rounded-sm border bg-muted animate-pulse" />
-                  <div className="h-4 w-24 bg-muted rounded animate-pulse" />
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled className="gap-2 p-2 opacity-50">
-                  <div className="flex size-6 items-center justify-center rounded-sm border bg-muted animate-pulse" />
-                  <div className="h-4 w-20 bg-muted rounded animate-pulse" />
-                </DropdownMenuItem>
-              </>
-            )}
-
-            {canCreateTeam && (
-              <>
-                <DropdownMenuSeparator />
-
-                <DropdownMenuItem
-                  className="gap-2 p-2"
-                  onClick={() => {
-                    setIsOpen(false)
-                    router.push('/settings/tenant/create')
-                  }}
-                >
-                  <div className="bg-background flex size-6 items-center justify-center rounded-md border">
-                    <Plus className="size-4" />
-                  </div>
-                  <div className="text-muted-foreground font-medium">Add team</div>
-                </DropdownMenuItem>
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+            <OrgCard
+              current={{
+                id: currentTenant.id,
+                name: currentName,
+                plan: currentPlan,
+                role: currentTenant.role,
+              }}
+              organizations={organizations}
+              membersLink={membersLink}
+              memberCount={memberStats?.total_members}
+              memberCountLoading={memberStatsLoading}
+              apiKeysLink={apiKeysLink}
+              canCreate={canCreate}
+              email={user?.email}
+              isSwitching={isTransitioning}
+              onSwitch={handleSelect}
+              onCreate={goCreate}
+              onNavigate={closeAll}
+            />
+          </PopoverContent>
+        </Popover>
       </SidebarMenuItem>
     </SidebarMenu>
   )
