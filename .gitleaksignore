@@ -1,0 +1,9 @@
+# Fingerprints (commit:file:rule:line) that betterleaks/gitleaks skip. The
+# security workflow scans the whole git history (`betterleaks git`,
+# fetch-depth 0), so a fake value removed from the code is still reported
+# from the commit that added it. List only values that were never secrets,
+# with the reason.
+
+# Fake sensor key in a test fixture (sensor-install-flow test); tests now use
+# src/test/sensor-keys.ts placeholders.
+fbbce60f758c51a92819385d0a0852942a32b919:src/features/sensors/components/__tests__/sensor-install-flow.test.tsx:generic-api-key:53
