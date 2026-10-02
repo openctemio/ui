@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight, ChevronRight, Laptop, Moon, Sun } from 'lucide-react'
+import { ArrowRight, BookOpen, ChevronRight, Laptop, Moon, Sun } from 'lucide-react'
 import { useSearch } from '@/context/search-provider'
 import { useTheme } from 'next-themes'
 import {
@@ -20,6 +20,7 @@ import { useFilteredSidebarData } from '@/lib/permissions'
 import { useSettingsNav } from '@/hooks/use-settings-nav'
 import { useTranslation } from '@/context/i18n-provider'
 import { commandFilter } from '@/lib/command-filter'
+import { DOCS_URL } from '@/config/help-links'
 import { ScrollArea } from './ui/scroll-area'
 
 export function CommandMenu() {
@@ -108,6 +109,19 @@ export function CommandMenu() {
             </CommandGroup>
           ))}
           <CommandGroup heading={t('nav.item.settings', 'Settings')}>
+            {/* The overview, which the sidebar footer's Settings row opens. */}
+            <CommandItem
+              value={t('nav.item.settings', 'Settings')}
+              keywords={['Settings']}
+              onSelect={() => {
+                runCommand(() => router.push('/settings'))
+              }}
+            >
+              <div className="flex size-4 items-center justify-center">
+                <ArrowRight className="text-muted-foreground/80 size-2" />
+              </div>
+              {t('nav.item.settings', 'Settings')}
+            </CommandItem>
             {settingsGroups.flatMap((group) =>
               group.items.map((item) => (
                 <CommandItem
@@ -128,6 +142,18 @@ export function CommandMenu() {
                 </CommandItem>
               ))
             )}
+          </CommandGroup>
+          <CommandGroup heading={t('help.menu', 'Help')}>
+            <CommandItem
+              value={t('help.documentation', 'Documentation')}
+              keywords={['Help', 'Docs']}
+              onSelect={() => {
+                runCommand(() => window.open(DOCS_URL, '_blank', 'noopener,noreferrer'))
+              }}
+            >
+              <BookOpen />
+              <span>{t('help.documentation', 'Documentation')}</span>
+            </CommandItem>
           </CommandGroup>
           <CommandSeparator />
           <CommandGroup heading="Theme">
