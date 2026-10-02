@@ -67,6 +67,8 @@ export interface ActivityTimelineProps {
   emptyDescription?: string
   /** A note above the list (e.g. what this viewer cannot see). */
   notice?: ReactNode
+  /** `compact`: smaller icons and spacing, for a preview of the latest few. */
+  density?: 'default' | 'compact'
   className?: string
 }
 
@@ -115,8 +117,10 @@ export function ActivityTimeline({
   emptyTitle,
   emptyDescription,
   notice,
+  density = 'default',
   className,
 }: ActivityTimelineProps) {
+  const compact = density === 'compact'
   const { t, locale } = useTranslation()
   const dfLocale = dateFnsLocaleFor(locale)
 
@@ -161,22 +165,38 @@ export function ActivityTimeline({
             const repeated = (e.repeatCount ?? 1) > 1
             const lastAt = e.lastAt ? new Date(e.lastAt) : null
             return (
-              <li key={e.id} className="relative flex gap-3 pb-4 last:pb-0" data-entry={e.id}>
+              <li
+                key={e.id}
+                className={cn('relative flex last:pb-0', compact ? 'gap-2.5 pb-3' : 'gap-3 pb-4')}
+                data-entry={e.id}
+              >
                 {i < entries.length - 1 && (
-                  <span aria-hidden className="absolute start-4 top-9 bottom-1 w-px bg-border" />
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'absolute bottom-1 w-px bg-border',
+                      compact ? 'start-3 top-7' : 'start-4 top-9'
+                    )}
+                  />
                 )}
                 <span
                   aria-hidden
                   className={cn(
-                    'flex size-8 shrink-0 items-center justify-center rounded-full',
+                    'flex shrink-0 items-center justify-center rounded-full',
+                    compact ? 'size-6' : 'size-8',
                     TONE_CLASS[e.tone ?? 'muted']
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
                 </span>
-                <div className="min-w-0 flex-1 pt-1">
+                <div className={cn('min-w-0 flex-1', compact ? 'pt-0.5' : 'pt-1')}>
                   <div className="flex items-start justify-between gap-3">
-                    <p className="min-w-0 text-sm font-medium break-words">
+                    <p
+                      className={cn(
+                        'min-w-0 text-sm break-words',
+                        compact ? 'font-normal' : 'font-medium'
+                      )}
+                    >
                       {e.title}
                       {repeated && (
                         <span

@@ -1,14 +1,14 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { ArrowRight } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useTranslation } from '@/context/i18n-provider'
 import {
   ActivityTimeline,
-  RelativeTime,
-  dateFnsLocaleFor,
+  DetailSection,
   type ActivityTimelineEntry,
   type ActivityTimelineFilterOption,
 } from '@/features/shared'
@@ -105,62 +105,55 @@ export function SensorActivity({ sensorId }: { sensorId: string }) {
   )
 }
 
-/** The latest few events, on the drawer's Overview tab. */
+/**
+ * The latest few events, on the drawer's Overview tab: the shared timeline in
+ * its compact form (who did it for an administrator action, no other
+ * details), and "All activity" to the Activity tab.
+ */
 export function SensorRecentActivity({ sensorId, onAll }: { sensorId: string; onAll: () => void }) {
   const { t, locale } = useTranslation()
   const { items, isLoading, error } = useSensorActivity(sensorId, [], { limit: 5 })
-  const dfLocale = dateFnsLocaleFor(locale)
-  const shown = items.slice(0, 4)
+  const entries = useMemo(
+    () =>
+      items.slice(0, 5).map((it): ActivityTimelineEntry => {
+        const actor = it.type === 'audit' && it.actor && it.actor !== 'system' ? it.actor : null
+        return { ...toEntry(it, t, locale), detail: actor ? `by ${actor}` : undefined }
+      }),
+    [items, t, locale]
+  )
   return (
-    <section>
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">{t('sensors.activity.recent', 'Recent activity')}</h3>
+    <DetailSection
+      title={t('sensors.activity.recent', 'Recent activity')}
+      actions={
         <Button
           type="button"
-          variant="link"
+          variant="ghost"
           size="sm"
-          className="h-auto p-0 text-xs"
+          className="h-7 px-2 text-xs"
           onClick={onAll}
         >
           {t('sensors.activity.all', 'All activity')}
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden />
         </Button>
-      </div>
+      }
+    >
       {isLoading ? (
-        <Skeleton className="mt-2 h-16 w-full" />
+        <Skeleton className="h-24 w-full" />
       ) : error ? (
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {t('sensors.activity.recentError', 'Could not load the activity.')}
         </p>
-      ) : shown.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">
+      ) : entries.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
           {t('sensors.activity.nothingYet', 'Nothing recorded yet.')}
         </p>
       ) : (
-        <ul className="mt-2 space-y-1.5">
-          {shown.map((it) => {
-            const view = describeSensorActivity(it, t, locale)
-            const repeated = (it.repeat_count ?? 1) > 1
-            return (
-              <li key={it.id} className="flex items-baseline justify-between gap-3 text-sm">
-                <span className="min-w-0 truncate">
-                  {view.title}
-                  {repeated && (
-                    <span className="text-muted-foreground tabular-nums"> ×{it.repeat_count}</span>
-                  )}
-                  {it.type === 'audit' && it.actor && it.actor !== 'system' ? (
-                    <span className="text-muted-foreground"> · {it.actor}</span>
-                  ) : null}
-                </span>
-                <RelativeTime
-                  date={repeated && it.last_at ? it.last_at : it.at}
-                  locale={dfLocale}
-                  className="shrink-0 text-xs"
-                />
-              </li>
-            )
-          })}
-        </ul>
+        <ActivityTimeline
+          entries={entries}
+          density="compact"
+          emptyTitle={t('sensors.activity.nothingYet', 'Nothing recorded yet.')}
+        />
       )}
-    </section>
+    </DetailSection>
   )
 }
