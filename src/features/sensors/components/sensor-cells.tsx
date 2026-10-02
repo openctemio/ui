@@ -1,12 +1,18 @@
 'use client'
 
+import { useTranslation } from '@/context/i18n-provider'
 import { cn } from '@/lib/utils'
-import type { Sensor, SensorVersionStatus } from '@/lib/api/sensor-types'
+import type { Sensor, SensorSdkStatus, SensorVersionStatus } from '@/lib/api/sensor-types'
 
 import { capacityLabel, sensorCapacity, type SensorToolRow } from '../lib/capabilities'
 import { formatDurationShort, keyExpiry } from '../lib/format'
 import { isOneShotSensor } from '../lib/sensor-state'
-import { normalizeSensorVersion, sensorVersionStatus } from '../lib/sensor-version'
+import {
+  normalizeSensorVersion,
+  sensorSdkStatus,
+  sensorSdkVersion,
+  sensorVersionStatus,
+} from '../lib/sensor-version'
 
 /**
  * Cells shared by the sensor table, the phone cards and the drawer, so one
@@ -100,32 +106,143 @@ const VERSION_TAG: Record<
   unknown: null,
 }
 
-/** Version in one form, with how it compares to the release channel. */
+const SDK_TAG: Record<
+  SensorSdkStatus,
+  { key: string; label: string; tone: 'warning' | 'destructive' } | null
+> = {
+  current: null,
+  unknown: null,
+  outdated: { key: 'sensors.version.sdkOutdated', label: 'SDK outdated', tone: 'warning' },
+  unsupported: {
+    key: 'sensors.version.sdkUnsupported',
+    label: 'SDK unsupported',
+    tone: 'destructive',
+  },
+}
+
+export type SensorVersionFields = Pick<
+  Sensor,
+  | 'version'
+  | 'version_status'
+  | 'sdk_name'
+  | 'sdk_version'
+  | 'sdk_status'
+  | 'sensor_product'
+  | 'sensor_commit'
+  | 'sensor_build_time'
+>
+
+/** The build facts behind the version, for the tooltip (empty when none). */
+export function sensorBuildTooltip(
+  sensor: SensorVersionFields,
+  t: (key: string, fallback?: string, vars?: Record<string, string | number>) => string,
+  locale?: string
+): string {
+  const lines: string[] = []
+  if (sensor.sensor_product) {
+    lines.push(t('sensors.version.product', 'Product: {value}', { value: sensor.sensor_product }))
+  }
+  if (sensor.sensor_commit) {
+    lines.push(t('sensors.version.commit', 'Commit: {value}', { value: sensor.sensor_commit }))
+  }
+  if (sensor.sensor_build_time) {
+    const d = new Date(sensor.sensor_build_time)
+    if (!Number.isNaN(d.getTime())) {
+      lines.push(t('sensors.version.built', 'Built: {value}', { value: d.toLocaleString(locale) }))
+    }
+  }
+  const sdk = sensorSdkVersion(sensor)
+  if (sensor.sdk_name || sdk) {
+    lines.push(
+      t('sensors.version.sdkLine', 'SDK: {value}', {
+        value: [sensor.sdk_name, sdk].filter(Boolean).join(' '),
+      })
+    )
+  }
+  return lines.join('\n')
+}
+
+/**
+ * "Sensor v0.5.0 · SDK v0.9.0" (unknown parts left out), how the sensor
+ * version compares to the release channel, and a warning when its SDK is
+ * outdated or unsupported. The build facts are in the tooltip. The table,
+ * the phone cards and the drawer all show the version through this.
+ */
 export function SensorVersionCell({
   sensor,
   latest,
   min,
+  sdkLatest,
+  sdkMin,
+  showChannelTag = true,
 }: {
-  sensor: Pick<Sensor, 'version' | 'version_status'>
+  sensor: SensorVersionFields
   latest?: string | null
   min?: string | null
+  /** Supported SDK range from GET /sensors/stats, for the SDK tag's tooltip. */
+  sdkLatest?: string | null
+  sdkMin?: string | null
+  /** The latest / update / unsupported tag for the sensor release. */
+  showChannelTag?: boolean
 }) {
+  const { t, locale } = useTranslation()
   const v = normalizeSensorVersion(sensor.version)
-  if (!v) return <span className={cn('text-sm', muted)}>Not reported</span>
+  const sdk = sensorSdkVersion(sensor)
+  if (!v && !sdk) {
+    return (
+      <span className={cn('text-sm', muted)}>
+        {t('sensors.version.notReported', 'Not reported')}
+      </span>
+    )
+  }
   const status = sensorVersionStatus(sensor, latest, min)
-  const tag = VERSION_TAG[status]
+  const tag = v && showChannelTag ? VERSION_TAG[status] : null
   const title =
     status === 'update_available' && latest
       ? `${latest} is available`
       : status === 'unsupported' && min
         ? `Older than the minimum supported ${min}`
         : undefined
+  const sdkStatus = sensorSdkStatus(sensor)
+  const sdkTag = SDK_TAG[sdkStatus]
+  const sdkTitle =
+    sdkStatus === 'unsupported'
+      ? sdkMin
+        ? t('sensors.version.sdkUnsupportedMin', 'Older than the minimum supported SDK {min}', {
+            min: sdkMin,
+          })
+        : t('sensors.version.sdkUnsupportedHint', 'Below the minimum supported SDK')
+      : sdkStatus === 'outdated'
+        ? sdkLatest
+          ? t('sensors.version.sdkOutdatedLatest', 'SDK {latest} is available', {
+              latest: sdkLatest,
+            })
+          : t('sensors.version.sdkOutdatedHint', 'A newer SDK is available')
+        : undefined
+  const build = sensorBuildTooltip(sensor, t, locale)
   return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-      <span className="font-mono text-xs">{v}</span>
+    <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+      <span className="whitespace-nowrap text-sm" title={build || undefined}>
+        {v && (
+          <>
+            {t('sensors.version.sensor', 'Sensor')} <span className="font-mono text-xs">{v}</span>
+          </>
+        )}
+        {v && sdk && <span className={muted}> · </span>}
+        {sdk && (
+          <>
+            {t('sensors.version.sdk', 'SDK')} <span className="font-mono text-xs">{sdk}</span>
+          </>
+        )}
+      </span>
       {tag && (
         <SensorTag tone={tag.tone} title={title}>
           {tag.label}
+        </SensorTag>
+      )}
+      {sdkTag && (
+        <SensorTag tone={sdkTag.tone} title={sdkTitle}>
+          {t(sdkTag.key, sdkTag.label)}
         </SensorTag>
       )}
     </span>

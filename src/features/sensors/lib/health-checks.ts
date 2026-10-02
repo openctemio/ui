@@ -5,7 +5,12 @@ import { dispatchTools, hasReportedTools, toolsNotInstalled } from './capabiliti
 import { contentCheckSummary } from './content'
 import { formatDurationShort, keyExpiry } from './format'
 import { isOneShotSensor, sensorState, type FleetThresholds } from './sensor-state'
-import { normalizeSensorVersion, sensorVersionStatus } from './sensor-version'
+import {
+  normalizeSensorVersion,
+  sensorSdkStatus,
+  sensorSdkVersion,
+  sensorVersionStatus,
+} from './sensor-version'
 import type { ReleaseChannel } from './fleet'
 import { sensorProtocolOf } from './fleet'
 
@@ -18,7 +23,16 @@ export type HealthCheckAction = 'rotate_key' | 'install' | 'edit' | 'zones'
 
 export interface HealthCheck {
   key:
-    'heartbeat' | 'outbox' | 'key' | 'version' | 'tools' | 'content' | 'zone' | 'protocol' | 'error'
+    | 'heartbeat'
+    | 'outbox'
+    | 'key'
+    | 'version'
+    | 'sdk'
+    | 'tools'
+    | 'content'
+    | 'zone'
+    | 'protocol'
+    | 'error'
   label: string
   status: HealthCheckStatus
   text: string
@@ -197,6 +211,28 @@ export function sensorHealthChecks(sensor: Sensor, ctx: HealthCheckContext): Hea
             ? { key: 'version', label: 'Version', status: 'ok', text: `${v}, the latest release` }
             : { key: 'version', label: 'Version', status: 'info', text: v }
   )
+
+  // SDK, only when it needs attention (the version line covers the rest)
+  const sdk = sensorSdkVersion(sensor)
+  const sdkStatus = sensorSdkStatus(sensor)
+  const sdkReason = sensor.health_reasons?.find((r) => r.code === 'sdk_unsupported')
+  if (sdkStatus === 'unsupported' || sdkReason) {
+    checks.push({
+      key: 'sdk',
+      label: 'SDK',
+      status: 'warning',
+      text: `${sdk ?? 'The SDK'} is below the minimum supported${channel.sdkMin ? ` ${channel.sdkMin}` : ''}. Upgrade the sensor.`,
+      action: 'install',
+    })
+  } else if (sdkStatus === 'outdated') {
+    checks.push({
+      key: 'sdk',
+      label: 'SDK',
+      status: 'info',
+      text: `${sdk ?? 'The SDK'} is outdated${channel.sdkLatest ? `; ${channel.sdkLatest} is available` : ''}.`,
+      action: 'install',
+    })
+  }
 
   // Protocol (RFC-029), once the API reports it
   if (sensor.protocol) {

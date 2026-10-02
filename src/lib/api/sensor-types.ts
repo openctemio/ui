@@ -44,6 +44,12 @@ export type SensorState =
 /** How a sensor's version compares with the platform's release channel. */
 export type SensorVersionStatus = 'latest' | 'update_available' | 'unsupported' | 'unknown'
 
+/**
+ * How the SDK a sensor is built with compares with the platform's supported
+ * SDK range (GET /sensors/stats sdk_min_version / sdk_latest_version).
+ */
+export type SensorSdkStatus = 'current' | 'outdated' | 'unsupported' | 'unknown'
+
 /** One problem found on a sensor (stable `code`; `message` is a fallback). */
 export interface SensorHealthReason {
   code:
@@ -57,6 +63,7 @@ export interface SensorHealthReason {
     | 'error_reported'
     | 'content_stale'
     | 'content_refresh_failed'
+    | 'sdk_unsupported'
     | (string & {})
   severity: 'warning' | 'critical'
   message: string
@@ -273,6 +280,17 @@ export interface Sensor {
   effective?: SensorEffective
   /** Limits the report contradicts (a tool set here that is not installed). */
   capability_mismatch?: SensorCapabilityMismatch | null
+  /** The SDK the sensor binary is built with ("openctem-sdk-go"); "" when unknown. */
+  sdk_name?: string
+  /** Its version ("v0.9.0"); "" when unknown. */
+  sdk_version?: string
+  sdk_status?: SensorSdkStatus
+  /** The sensor binary's product name ("openctemio-sensor"); "" when unknown. */
+  sensor_product?: string
+  /** The commit the sensor binary was built from; "" when unknown. */
+  sensor_commit?: string
+  /** When the sensor binary was built. */
+  sensor_build_time?: string | null
 }
 
 /** One tool of a sensor's reported inventory. */
@@ -402,6 +420,8 @@ export interface SensorListFilters {
   page?: number
   /** The API reads per_page (max 100); page_size is ignored by it. */
   per_page?: number
+  /** An exact normalized SDK version ("v0.9.0") or "unknown". */
+  sdk_version?: string
 }
 
 /**
@@ -410,4 +430,116 @@ export interface SensorListFilters {
  */
 export interface AvailableCapabilitiesResponse {
   capabilities: string[]
+}
+
+// ============================================
+// SENSOR ACTIVITY (GET /api/v1/sensors/{id}/activity)
+// ============================================
+
+/** The filter chips of a sensor's activity timeline. */
+export type SensorActivityCategory = 'people' | 'status' | 'updates' | 'jobs'
+
+export const SENSOR_ACTIVITY_CATEGORIES: readonly SensorActivityCategory[] = [
+  'people',
+  'status',
+  'updates',
+  'jobs',
+]
+
+export type SensorActivityType =
+  // status
+  | 'online'
+  | 'offline'
+  | 'restarted'
+  // updates
+  | 'version_changed'
+  | 'sdk_version_changed'
+  | 'protocol_changed'
+  | 'tools_changed'
+  | 'capacity_changed'
+  | 'content_updated'
+  | 'content_refresh_failed'
+  // jobs
+  | 'job_claimed'
+  | 'job_completed'
+  | 'job_failed'
+  | 'job_canceled'
+  | 'job_expired'
+  // people (an audit-log row)
+  | 'audit'
+  | (string & {})
+
+export type VersionDirection = 'upgrade' | 'downgrade' | 'changed'
+
+/** Per-type details; every field is optional because older rows may lack them. */
+export interface SensorActivityDetails {
+  // restarted
+  started_at?: string
+  previous_started_at?: string
+  downtime_seconds?: number
+  // version_changed / sdk_version_changed / protocol_changed / capacity_changed
+  name?: string
+  from?: string | number
+  to?: string | number
+  direction?: VersionDirection | (string & {})
+  // tools_changed
+  added?: { name: string; version?: string }[]
+  removed?: { name: string; version?: string }[]
+  updated?: { name: string; from?: string; to?: string }[]
+  // content_updated / content_refresh_failed
+  items?: { tool?: string; name?: string; from?: string; to?: string; error?: string }[]
+  // online / offline
+  offline_seconds?: number
+  last_seen_at?: string
+  // job_*
+  command_id?: string
+  command_type?: string
+  status?: string
+  error?: string
+  duration_seconds?: number
+  // audit
+  action?: string
+  changes?: Record<string, { old?: unknown; new?: unknown }>
+  message?: string
+  [key: string]: unknown
+}
+
+export interface SensorActivityItem {
+  /** Unique and stable ("e:<uuid>", "a:<uuid>", "j:<uuid>:done"). */
+  id: string
+  /** RFC3339. */
+  at: string
+  category: SensorActivityCategory
+  type: SensorActivityType
+  source: 'sensor' | 'audit' | 'job' | (string & {})
+  /** Plain-English server text, the fallback for types this UI does not know. */
+  summary: string
+  details?: SensorActivityDetails | null
+  /** >1 when identical events were coalesced. */
+  repeat_count?: number
+  /** The last occurrence when repeat_count > 1. */
+  last_at?: string
+  /** Audit rows only: the canonical action id ("sensor.updated"). */
+  action?: string
+  /** Audit rows only: who did it ("admin@example.com" or "system"). */
+  actor?: string
+  /** Audit rows only. */
+  result?: 'success' | 'failure' | (string & {})
+}
+
+export interface SensorActivityResponse {
+  /** Newest first. */
+  items: SensorActivityItem[]
+  /** "" when there is no more. */
+  next_cursor: string
+  /** false without audit:read: administrator actions are then left out. */
+  audit_included: boolean
+}
+
+export interface SensorActivityQuery {
+  /** Empty = every category. */
+  types?: SensorActivityCategory[]
+  cursor?: string
+  /** 1..100, default 30. */
+  limit?: number
 }
