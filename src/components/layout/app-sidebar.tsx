@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { usePathname } from 'next/navigation'
 import { isSettingsShellPath } from '@/config/settings-nav'
 import { SettingsSidebarNav, useRememberAppPath } from './settings-sidebar-nav'
+import { SidebarFooterLinks } from './sidebar-footer-links'
 
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
@@ -27,13 +28,12 @@ export function AppSidebar() {
   useRememberAppPath()
 
   // Quick links (untitled group) first, then the CTEM stages in cycle order under
-  // their own label, then everything else (Insights) after a divider, and the
-  // pinned Settings link last.
+  // their own label, then everything else (Insights) after a divider. Settings
+  // and Help are pinned in the footer, below the scrolling nav.
   const groups = filteredSidebarData.navGroups
-  const quickLinks = groups.filter((g) => !g.title && g.cluster !== 'end')
+  const quickLinks = groups.filter((g) => !g.title)
   const cycle = groups.filter((g) => g.title && g.cluster === 'cycle')
   const rest = groups.filter((g) => g.title && !g.cluster)
-  const end = groups.filter((g) => g.cluster === 'end')
 
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
@@ -80,15 +80,13 @@ export function AppSidebar() {
             {rest.map((group) => (
               <NavGroup key={group.title} {...group} />
             ))}
-            {end.length > 0 && <NavClusterLabel />}
-            {end.map((group, i) => (
-              <NavGroup key={`end-${i}`} {...group} />
-            ))}
           </div>
         )}
       </SidebarContent>
 
-      {/* No footer user menu: the header avatar menu is the one user menu. */}
+      {/* Pinned under the nav, which scrolls on its own: Settings and Help.
+          Not a user menu: the header avatar menu is the one user menu. */}
+      <SidebarFooterLinks shell="app" showSettings />
       {/* Sidebar toggle rail */}
       <SidebarRail />
     </Sidebar>

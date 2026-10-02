@@ -63,7 +63,6 @@ import {
   FlaskConical,
   Rocket,
   BarChart3,
-  Settings,
   ShieldQuestion,
   Database,
 } from 'lucide-react'
@@ -561,21 +560,8 @@ export const sidebarData: SidebarData = {
       ],
     },
 
-    // ========================================
-    // SETTINGS - one link, pinned last. Every settings page lives in the
-    // settings shell (src/config/settings-nav.ts), which takes over this
-    // sidebar on /settings and /account and lists them in groups.
-    // ========================================
-    {
-      title: '',
-      cluster: 'end',
-      items: [
-        {
-          title: 'Settings',
-          url: '/settings',
-          icon: Settings,
-        },
-      ],
-    },
+    // Settings and Help are not nav groups: they are pinned in the sidebar
+    // footer (src/components/layout/sidebar-footer-links.tsx). Every settings
+    // page lives in the settings shell (src/config/settings-nav.ts).
   ],
 }

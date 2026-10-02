@@ -287,9 +287,19 @@ describe('nothing left the command palette', () => {
     expect(FORMER_SETTINGS_URLS.filter((u) => !indexed.has(current(u)))).toEqual([])
   })
 
-  it('the main sidebar keeps a single Settings link and no settings pages', () => {
+  it('the main sidebar has no settings pages; its one Settings link is pinned in the footer', () => {
     const urls = sidebarUrls()
-    expect(urls.filter((u) => u === '/settings')).toHaveLength(1)
+    // Settings left the scrolling nav for the footer (sidebar-footer-links.tsx),
+    // and the command palette indexes the /settings overview itself.
+    expect(urls.filter((u) => u === '/settings')).toEqual([])
+    const footer = readFileSync(
+      join(process.cwd(), 'src/components/layout/sidebar-footer-links.tsx'),
+      'utf8'
+    )
+    expect(footer).toContain('href="/settings"')
+    expect(readFileSync(join(process.cwd(), 'src/components/command-menu.tsx'), 'utf8')).toContain(
+      "router.push('/settings')"
+    )
     const settingsUrls = new Set(settingsNavItems.map((i) => i.url))
     expect(urls.filter((u) => settingsUrls.has(u))).toEqual([])
     expect(sidebarData.navGroups.some((g) => g.title === 'Settings')).toBe(false)
