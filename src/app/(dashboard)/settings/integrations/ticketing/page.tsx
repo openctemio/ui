@@ -755,7 +755,7 @@ function ConnectJiraDialog({ open, onOpenChange, onSuccess }: ConnectJiraDialogP
         provider: 'jira',
         auth_type: 'token',
         credentials,
-        base_url: baseUrl || undefined,
+        base_url: baseUrl,
         config: trimmedKey ? { ticketing: { project_key: trimmedKey } } : undefined,
       })
       // The API tests the credentials on create; only a connected integration

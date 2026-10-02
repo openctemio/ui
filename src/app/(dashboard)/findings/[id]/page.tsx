@@ -105,15 +105,6 @@ function transformApiToFindingDetail(api: ApiFinding): FindingDetail {
     })
   }
 
-  // Build location string for display (file:line:col)
-  let _locationDisplay = api.file_path || ''
-  if (api.start_line) {
-    _locationDisplay = `${_locationDisplay}:${api.start_line}`
-    if (api.start_column) {
-      _locationDisplay = `${_locationDisplay}:${api.start_column}`
-    }
-  }
-
   // Use asset name if provided, otherwise use a display-friendly version
   const displayAssetName = assetName || (hasValidAsset ? api.asset_id : '')
 
