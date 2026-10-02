@@ -4,7 +4,8 @@
  * Bulk actions for the All-Assets inventory, in the shared floating
  * BulkActionBar (it overlays the page, so selecting rows never moves the
  * table; Escape clears the selection). An operator can apply an action to the
- * whole selection: assign an owner, set criticality, or add a tag. Every mutation is tenant-scoped (it goes
+ * whole selection: assign an owner, set criticality, add a tag, or add the
+ * assets to a business unit or service. Every mutation is tenant-scoped (it goes
  * through the shared API client) and gated on `assets:write` by the caller.
  *
  * Writes run in small concurrent batches (mirrors bulkDeleteAssets) with
@@ -59,6 +60,7 @@ import { useDebounce } from '@/hooks/use-debounce'
 import { useTenant } from '@/context/tenant-provider'
 import { useGroups } from '@/features/access-control/api/use-groups'
 import { updateAsset } from '../../hooks/use-assets'
+import { InventoryBusinessContextActions } from './inventory-business-context-actions'
 import { addAssetOwner } from '../../hooks/use-asset-owners'
 import {
   CRITICALITY_LABELS,
@@ -295,6 +297,7 @@ export function InventoryBulkBar({ selected, canWrite, onClear, onDone }: BulkBa
               <TagIcon className="me-2 h-4 w-4" />
               Add tag
             </Button>
+            <InventoryBusinessContextActions selected={selected} onDone={onDone} />
           </>
         ) : (
           <span className="whitespace-nowrap px-2 text-xs text-muted-foreground">
