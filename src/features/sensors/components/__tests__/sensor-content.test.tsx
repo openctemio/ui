@@ -131,6 +131,29 @@ describe('SensorContentSection', () => {
     expect(screen.getByText('registry unreachable')).toBeInTheDocument()
   })
 
+  it('says the refresh failed in plain words; the error, without URL tokens, is under Details', () => {
+    render(
+      <SensorContentSection
+        sensor={sensorWith({
+          content: [
+            {
+              ...nuclei,
+              version: '',
+              error: 'resolve: Get "https://release-assets.example.com/asset/1?sig=SECRET&se=2026"',
+            },
+          ],
+        })}
+        now={NOW}
+        canManage={false}
+      />
+    )
+    const row = document.querySelector('[data-content="nuclei-templates"]') as HTMLElement
+    expect(row.querySelector('p.text-destructive')?.textContent).toBe('Last refresh failed')
+    const details = row.querySelector('details') as HTMLElement
+    expect(details.textContent).toContain('https://release-assets.example.com/asset/1?…')
+    expect(row.textContent).not.toContain('SECRET')
+  })
+
   it('renders nothing without reported content', () => {
     const { container } = render(
       <SensorContentSection sensor={sensorWith({ content: [] })} now={NOW} canManage />
