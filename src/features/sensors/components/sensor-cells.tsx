@@ -163,7 +163,7 @@ export function sensorBuildTooltip(
 }
 
 /**
- * "Sensor v0.5.0 · SDK v0.9.0" (unknown parts left out), how the sensor
+ * "v0.5.0" over "SDK v0.9.0" (unknown parts left out), how the sensor
  * version compares to the release channel, and a warning when its SDK is
  * outdated or unsupported. The build facts are in the tooltip. The table,
  * the phone cards and the drawer all show the version through this.
@@ -220,30 +220,36 @@ export function SensorVersionCell({
           : t('sensors.version.sdkOutdatedHint', 'A newer SDK is available')
         : undefined
   const build = sensorBuildTooltip(sensor, t, locale)
+  // Two short lines instead of one long one: the sensor release with its
+  // channel tag, then the SDK (smaller, muted) with its warning.
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-      <span className="whitespace-nowrap text-sm" title={build || undefined}>
-        {v && (
-          <>
-            {t('sensors.version.sensor', 'Sensor')} <span className="font-mono text-xs">{v}</span>
-          </>
-        )}
-        {v && sdk && <span className={muted}> · </span>}
-        {sdk && (
-          <>
-            {t('sensors.version.sdk', 'SDK')} <span className="font-mono text-xs">{sdk}</span>
-          </>
-        )}
-      </span>
-      {tag && (
-        <SensorTag tone={tag.tone} title={title}>
-          {tag.label}
-        </SensorTag>
+    <span className="inline-flex flex-col gap-0.5" title={build || undefined}>
+      {v && (
+        <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+          <span className="whitespace-nowrap text-sm tabular-nums" data-slot="sensor-version">
+            {v}
+          </span>
+          {tag && (
+            <SensorTag tone={tag.tone} title={title}>
+              {tag.label}
+            </SensorTag>
+          )}
+        </span>
       )}
-      {sdkTag && (
-        <SensorTag tone={sdkTag.tone} title={sdkTitle}>
-          {t(sdkTag.key, sdkTag.label)}
-        </SensorTag>
+      {sdk && (
+        <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+          <span
+            className={cn('whitespace-nowrap text-xs tabular-nums', muted)}
+            data-slot="sdk-version"
+          >
+            {t('sensors.version.sdk', 'SDK')} {sdk}
+          </span>
+          {sdkTag && (
+            <SensorTag tone={sdkTag.tone} title={sdkTitle}>
+              {t(sdkTag.key, sdkTag.label)}
+            </SensorTag>
+          )}
+        </span>
       )}
     </span>
   )
