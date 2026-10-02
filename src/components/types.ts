@@ -70,9 +70,24 @@ type BaseNavItem = {
   releaseStatus?: ReleaseStatus
 }
 
+/**
+ * A sub-page shown as an in-page route tab (`SectionTabs`) of a nav link rather
+ * than as a sidebar row. Same shape as `SectionTab`, minus what search needs.
+ */
+type NavSectionLink = {
+  label: string
+  href: string
+}
+
 // ✅ Nav item là 1 link trực tiếp (không có submenu)
 type NavLink = BaseNavItem & {
   url: LinkProps['href'] | string
+  /**
+   * The page's in-page section tabs. The sidebar shows one row for the whole
+   * section (active on every route under `url`); the command palette lists each
+   * section so they stay searchable. The page renders the same list as tabs.
+   */
+  sections?: readonly NavSectionLink[]
 }
 
 // ✅ Nav item dạng collapsible có danh sách con
@@ -108,4 +123,14 @@ type SidebarData = {
   navGroups: NavGroup[]
 }
 
-export type { SidebarData, NavGroup, NavItem, NavCollapsible, NavLink, Team, User, ReleaseStatus }
+export type {
+  SidebarData,
+  NavGroup,
+  NavItem,
+  NavCollapsible,
+  NavLink,
+  NavSectionLink,
+  Team,
+  User,
+  ReleaseStatus,
+}

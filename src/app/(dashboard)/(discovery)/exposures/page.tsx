@@ -81,6 +81,7 @@ import {
   ExposureActionDialog,
   ExposureBulkActions,
   ExposureSecurityContext,
+  ExposuresTabs,
 } from '@/features/exposures/components'
 import type {
   ExposureEvent,
@@ -495,6 +496,8 @@ export default function ExposuresPage() {
         title="Exposures"
         description="Changes to your attack surface that need a decision — resolve, accept or dismiss them."
       />
+
+      <ExposuresTabs />
 
       <Tabs value={tab} onValueChange={setTabParam} className="mt-4">
         <TabsList>

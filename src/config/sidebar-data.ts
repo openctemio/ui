@@ -21,7 +21,7 @@ import {
   Settings2,
   Radar,
   Container,
-  KeyRound,
+  UserRoundX,
   Building2,
   Crown,
   Swords,
@@ -34,7 +34,6 @@ import {
   Building,
   Crosshair,
   ClipboardList,
-  Bug,
   RotateCcw,
   History,
   Timer,
@@ -70,6 +69,7 @@ import {
 } from 'lucide-react'
 import { type SidebarData } from '@/components/types'
 import { Permission, Role } from '@/lib/permissions'
+import { EXPOSURES_SECTION_TABS, REMEDIATION_SECTION_TABS } from './section-tabs'
 
 // Re-export Permission and Role for convenience
 export { Permission, Role }
@@ -280,55 +280,34 @@ export const sidebarData: SidebarData = {
         // the API consistently. `exposures` ships active/default-on, so tenants
         // with no override keep the group — only an explicit disable hides it.
         {
-          title: 'Exposures',
-          icon: AlertTriangle,
-          // Group is visible if user has EITHER findings:read OR vulnerabilities:read.
-          permission: [Permission.FindingsRead, Permission.VulnerabilitiesRead],
-          module: 'exposures',
-          // A collapsible cannot also carry a `url` (NavCollapsible has no url in
-          // src/components/types.ts), so the parent page is reached through an
-          // Overview child — the same shape Integrations uses below.
-          //
-          // Only the four children scoped to their own finding type are listed.
+          // One row for the whole section, active on every /exposures/* route.
+          // Its five views (Overview, Vulnerabilities, Secrets, Code weaknesses,
+          // Misconfigurations) are in-page route tabs (EXPOSURES_SECTION_TABS),
+          // the same pattern as Remediation: the four type pages are one stats
+          // dashboard filtered by finding source, and the lists themselves live
+          // in /findings, so they do not earn a third nav level.
           // /exposures/credentials is deliberately absent: it reads
           // useDashboardStats and renders EVERY finding in the tenant under a
           // "Credential Exposures" heading. See docs/nav-coverage.md.
-          items: [
-            {
-              title: 'Overview',
-              url: '/exposures',
-              icon: AlertTriangle,
-            },
-            {
-              title: 'Vulnerabilities',
-              url: '/exposures/vulnerabilities',
-              icon: Bug,
-            },
-            {
-              title: 'Secrets',
-              url: '/exposures/secrets',
-              icon: KeyRound,
-            },
-            {
-              title: 'Code',
-              url: '/exposures/code',
-              icon: FileWarning,
-            },
-            {
-              title: 'Misconfigurations',
-              url: '/exposures/misconfigurations',
-              icon: Wrench,
-            },
-          ],
+          title: 'Exposures',
+          url: '/exposures',
+          icon: AlertTriangle,
+          // Visible if user has EITHER findings:read OR vulnerabilities:read.
+          permission: [Permission.FindingsRead, Permission.VulnerabilitiesRead],
+          module: 'exposures',
+          sections: EXPOSURES_SECTION_TABS,
         },
         // ----------------------------------------
         // CREDENTIAL LEAKS
         // Module: credentials (requires Team+ plan)
         // ----------------------------------------
         {
-          title: 'Credentials',
+          // "Credential leaks", not "Credentials": leaked accounts and tokens
+          // from breaches and the dark web — distinct from the Secrets tab of
+          // Exposures (secrets committed to code), so a distinct icon too.
+          title: 'Credential leaks',
           url: '/credentials',
-          icon: KeyRound,
+          icon: UserRoundX,
           // Badge is now dynamic - fetched from API via useDynamicBadges hook
           permission: Permission.CredentialsRead,
           module: 'credentials',
@@ -504,6 +483,7 @@ export const sidebarData: SidebarData = {
           icon: Wrench,
           permission: Permission.RemediationRead,
           module: 'remediation_tasks',
+          sections: REMEDIATION_SECTION_TABS,
         },
         {
           title: 'SLA Compliance',

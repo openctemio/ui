@@ -113,6 +113,7 @@ import { post, csrfFetch } from '@/lib/api/client'
 import { usePermissions } from '@/context/permission-provider'
 import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
 import { findingAssetType } from '@/features/findings/lib/finding-asset-type'
+import { FINDINGS_LIST_HIDDEN_STATUSES } from '@/features/findings/lib/list-defaults'
 
 // ============================================
 // Transform API Finding to UI Finding
@@ -528,7 +529,7 @@ function FindingsContent() {
   const integrationsEnabled = useModuleEnabled('integrations')
 
   // Statuses hidden from default dashboard view (pentest WIP, not ready for visibility)
-  const HIDDEN_STATUSES = useMemo(() => ['draft', 'in_review'], [])
+  const HIDDEN_STATUSES = useMemo(() => [...FINDINGS_LIST_HIDDEN_STATUSES], [])
 
   // Build API filters
   // The source catalog is data, not a hardcoded list. The previous inline list

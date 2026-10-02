@@ -53,18 +53,41 @@ export function CommandMenu() {
               {group.items.map((navItem, i) => {
                 if ('url' in navItem)
                   return (
-                    <CommandItem
-                      key={`${navItem.url}-${i}`}
-                      value={navItem.title}
-                      onSelect={() => {
-                        runCommand(() => router.push(navItem.url.toString()))
-                      }}
-                    >
-                      <div className="flex size-4 items-center justify-center">
-                        <ArrowRight className="text-muted-foreground/80 size-2" />
-                      </div>
-                      {navItem.title}
-                    </CommandItem>
+                    <React.Fragment key={`${navItem.url}-${i}`}>
+                      <CommandItem
+                        value={navItem.title}
+                        onSelect={() => {
+                          runCommand(() => router.push(navItem.url.toString()))
+                        }}
+                      >
+                        <div className="flex size-4 items-center justify-center">
+                          <ArrowRight className="text-muted-foreground/80 size-2" />
+                        </div>
+                        {navItem.title}
+                      </CommandItem>
+                      {/* In-page section tabs (e.g. Exposures > Secrets): not
+                          sidebar rows, but still reachable from search. The tab
+                          at the item's own url is the item itself. */}
+                      {navItem.sections
+                        ?.filter((section) => section.href !== navItem.url)
+                        .map((section) => (
+                          <CommandItem
+                            key={section.href}
+                            // Label first so "secrets" ranks it as a label
+                            // match; the section name is a keyword.
+                            value={`${section.label} (${navItem.title})`}
+                            keywords={[navItem.title]}
+                            onSelect={() => {
+                              runCommand(() => router.push(section.href))
+                            }}
+                          >
+                            <div className="flex size-4 items-center justify-center">
+                              <ArrowRight className="text-muted-foreground/80 size-2" />
+                            </div>
+                            {navItem.title} <ChevronRight /> {section.label}
+                          </CommandItem>
+                        ))}
+                    </React.Fragment>
                   )
 
                 return navItem.items?.map((subItem, i) => (

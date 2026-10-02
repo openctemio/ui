@@ -13,6 +13,8 @@ import {
   SeverityTrend,
   StatusBars,
   TypeBreakdownUnavailable,
+  ExposuresTabs,
+  ViewFindingsButton,
 } from '@/features/exposures/components'
 import { useTenant } from '@/context/tenant-provider'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -116,9 +118,15 @@ function OverviewTab() {
 }
 
 export default function VulnerabilitiesPage() {
+  const { currentTenant } = useTenant()
+  // Same SWR key as OverviewTab's call, so this is one request, not two.
+  const { stats: typeStats, isLoading: typeLoading } = useFindingTypeStats(
+    currentTenant?.id || null,
+    VULNERABILITY_SOURCES
+  )
   const { can } = usePermissions()
   const canReadCatalog = can(Permission.VulnerabilitiesRead)
-  // Overview is the dashboard landing — visible to everyone with findings:read.
+  // Summary (?tab=overview) is the dashboard landing — visible to everyone with findings:read.
   // Active CVEs and CVE catalog are deeper exploration tabs to its right. The
   // tab lives in the URL so a view can be linked to.
   const [tabParam, setTab] = useUrlFilter('tab', 'overview')
@@ -132,13 +140,23 @@ export default function VulnerabilitiesPage() {
       <PageHeader
         title="Vulnerabilities"
         description="Vulnerability findings across your assets, the CVEs behind them, and the CVE catalog."
-      />
+      >
+        <ViewFindingsButton
+          stats={typeStats}
+          sources={VULNERABILITY_SOURCES}
+          isLoading={typeLoading}
+        />
+      </PageHeader>
+
+      <ExposuresTabs />
 
       <Tabs value={tab} onValueChange={setTab} className="mt-4">
         <TabsList>
           <TabsTrigger value="overview" className="gap-2">
             <LayoutGrid className="h-4 w-4" />
-            Overview
+            {/* "Summary", not "Overview": the Exposures section tabs above
+                already have an Overview (/exposures). */}
+            Summary
           </TabsTrigger>
           {canReadCatalog && (
             <TabsTrigger value="active" className="gap-2">

@@ -13,6 +13,8 @@ import {
   SeverityShareList,
   StatusBars,
   TypeBreakdownUnavailable,
+  ExposuresTabs,
+  ViewFindingsButton,
 } from '@/features/exposures/components'
 import { useTenant } from '@/context/tenant-provider'
 import type { FindingSource } from '@/lib/api/finding-types'
@@ -36,8 +38,12 @@ export default function SecretsExposurePage() {
     <Main>
       <PageHeader
         title="Secrets"
-        description="Exposed secrets and credentials found in your code, by severity and remediation status."
-      />
+        description="Secrets committed to your code (API keys, tokens, passwords), by severity and remediation status."
+      >
+        <ViewFindingsButton stats={typeStats} sources={SECRET_SOURCES} isLoading={typeLoading} />
+      </PageHeader>
+
+      <ExposuresTabs />
 
       <div className="mt-5">
         {isLoading ? (
