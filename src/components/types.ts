@@ -122,6 +122,13 @@ type NavGroup = {
    * sidebar footer (sidebar-footer-links.tsx).
    */
   cluster?: 'cycle'
+  /**
+   * The section's overview page. When set, the header's label is a link to it
+   * (the chevron beside it still folds the section), so "Scoping" opens the
+   * Scoping overview. It must also be one of the section's rows; the filter
+   * drops it when that row is hidden from the user.
+   */
+  url?: string
   items: NavItem[]
 }
 

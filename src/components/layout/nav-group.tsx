@@ -1,11 +1,11 @@
 'use client'
 
 import { type ReactNode, type ElementType, useId, useMemo, useState, memo } from 'react'
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
 import {
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -42,6 +42,7 @@ import { useTranslation } from '@/context/i18n-provider'
 import { cn } from '@/lib/utils'
 import { subModuleStatus } from '@/lib/permissions/sub-modules'
 import { activeSubItemUrl, checkIsActive, sectionHasActiveRoute } from './nav-active'
+import { NavPendingHint, SidebarLink } from './sidebar-link'
 
 /** Maps a sidebar group title to its i18n key, e.g. "Scoping" → "nav.group.scoping". */
 function groupTitleKey(title: string): string {
@@ -86,7 +87,8 @@ export const MOBILE_ROW_CLASS = 'in-data-[mobile=true]:h-11 in-data-[mobile=true
 
 export const NAV_BUTTON_CLASS = cn(
   MOBILE_ROW_CLASS,
-  'px-1.5 group-data-[collapsible=icon]:p-1.5! [&>svg:first-child]:size-5 [&>svg]:stroke-[1.75]',
+  // relative: anchors the row's NavPendingHint.
+  'relative px-1.5 group-data-[collapsible=icon]:p-1.5! [&>svg:first-child]:size-5 [&>svg]:stroke-[1.75]',
   // Quiet at rest, full ink on hover and for the current page / the section
   // that owns it (`data-current`), so where you are reads at a glance even with
   // the section folded.
@@ -108,7 +110,7 @@ export const NAV_COLUMN_CLASS = 'flex flex-col gap-1 px-2 py-2'
 
 /** Second-level rows: smaller and lighter than their section header. */
 const SUB_BUTTON_CLASS = cn(
-  'h-auto min-h-7 w-full py-1 text-[13px] text-sidebar-foreground/80 [&>svg]:stroke-[1.75]',
+  'relative h-auto min-h-7 w-full py-1 text-[13px] text-sidebar-foreground/80 [&>svg]:stroke-[1.75]',
   'in-data-[mobile=true]:min-h-11 in-data-[mobile=true]:text-base',
   '[&>svg:first-child]:text-muted-foreground hover:[&>svg:first-child]:text-sidebar-accent-foreground',
   'data-[active=true]:font-medium data-[active=true]:[&>svg:first-child]:text-sidebar-accent-foreground',
@@ -203,7 +205,7 @@ export function NavClusterLabel({ label }: { label?: string }) {
  * through here, so the rows share one compact `gap-1` rhythm (no per-section
  * padding / labels that would open big vertical gaps).
  */
-function NavGroupComponent({ title, icon, items }: NavGroupProps) {
+function NavGroupComponent({ title, icon, url, items }: NavGroupProps) {
   const dynamicBadges = useDynamicBadges()
 
   // Ungrouped rows (Dashboard) — plain top-level links, no group heading.
@@ -231,7 +233,7 @@ function NavGroupComponent({ title, icon, items }: NavGroupProps) {
   // the whole tree is still reachable from the icon.
   return (
     <SidebarMenu>
-      <NavSection title={title} icon={icon} items={items} dynamicBadges={dynamicBadges} />
+      <NavSection title={title} icon={icon} url={url} items={items} dynamicBadges={dynamicBadges} />
     </SidebarMenu>
   )
 }
@@ -349,17 +351,18 @@ const SidebarMenuLink = memo(function SidebarMenuLink({
         tooltip={item.title}
         className={NAV_BUTTON_CLASS}
       >
-        <Link href={item.url} prefetch={false} onClick={() => setOpenMobile(false)}>
+        <SidebarLink href={item.url} onClick={() => setOpenMobile(false)}>
           {item.icon && <item.icon />}
           <span>
             <NavLabel title={item.title} />
+            <NavPendingHint />
           </span>
           {releaseStatusBadge ? (
             <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
           ) : (
             badge && <NavBadge>{badge}</NavBadge>
           )}
-        </Link>
+        </SidebarLink>
       </SidebarMenuButton>
     </SidebarMenuItem>
   )
@@ -376,14 +379,18 @@ SidebarMenuLink.displayName = 'SidebarMenuLink'
 const NavSection = memo(function NavSection({
   title,
   icon: SectionIcon,
+  url,
   items,
   dynamicBadges,
 }: {
   title: string
   icon?: ElementType
+  /** The section overview: the header label links to it (see NavGroup.url). */
+  url?: string
   items: NavItem[]
   dynamicBadges: DynamicBadges
 }) {
+  const { setOpenMobile } = useSidebarActions()
   const { state, isMobile } = useSidebar()
   const rail = state === 'collapsed' && !isMobile
   const pathname = usePathname()
@@ -416,10 +423,47 @@ const NavSection = memo(function NavSection({
         <NavSectionRailMenu
           label={label}
           icon={SectionIcon}
+          url={url}
           items={items}
           sectionActive={sectionActive}
           dynamicBadges={dynamicBadges}
         />
+      ) : url ? (
+        // Split header: the label opens the section overview (and unfolds the
+        // section), the chevron beside it folds and unfolds without navigating.
+        <>
+          <SidebarMenuButton
+            asChild
+            tooltip={label}
+            data-current={sectionActive}
+            className={cn(NAV_BUTTON_CLASS, 'pe-8')}
+          >
+            <SidebarLink
+              href={url}
+              onClick={() => {
+                setOpen(true)
+                setOpenMobile(false)
+              }}
+            >
+              {SectionIcon && <SectionIcon />}
+              <span>{label}</span>
+            </SidebarLink>
+          </SidebarMenuButton>
+          <SidebarMenuAction
+            aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
+            aria-expanded={open}
+            aria-controls={contentId}
+            onClick={() => setOpen((o) => !o)}
+            className="in-data-[mobile=true]:top-3!"
+          >
+            <ChevronRight
+              className={cn(
+                'text-muted-foreground transition-transform duration-200 motion-reduce:transition-none rtl:rotate-180',
+                open && 'rotate-90 rtl:rotate-90'
+              )}
+            />
+          </SidebarMenuAction>
+        </>
       ) : (
         <SidebarMenuButton
           tooltip={label}
@@ -516,17 +560,18 @@ const NavSubLeaf = memo(function NavSubLeaf({
         isActive={active ?? checkIsActive(pathname, item)}
         className={SUB_BUTTON_CLASS}
       >
-        <Link href={item.url} prefetch={false} onClick={() => setOpenMobile(false)}>
+        <SidebarLink href={item.url} onClick={() => setOpenMobile(false)}>
           {!nested && item.icon && <item.icon className="shrink-0" />}
           <span className={SUB_LABEL_CLASS}>
             <NavLabel title={item.title} />
+            <NavPendingHint />
           </span>
           {releaseStatusBadge ? (
             <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
           ) : (
             badge && <NavBadge>{badge}</NavBadge>
           )}
-        </Link>
+        </SidebarLink>
       </SidebarMenuSubButton>
     </SidebarMenuSubItem>
   )
@@ -619,12 +664,14 @@ NavSubCollapsible.displayName = 'NavSubCollapsible'
 const NavSectionRailMenu = memo(function NavSectionRailMenu({
   label,
   icon: SectionIcon,
+  url,
   items,
   sectionActive,
   dynamicBadges,
 }: {
   label: string
   icon?: ElementType
+  url?: string
   items: NavItem[]
   sectionActive: boolean
   dynamicBadges: DynamicBadges
@@ -648,9 +695,16 @@ const NavSectionRailMenu = memo(function NavSectionRailMenu({
         </SidebarMenuButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="right" align="start" sideOffset={8} className="min-w-52">
-        <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
-          {label}
-        </DropdownMenuLabel>
+        {url ? (
+          // The flyout's heading opens the section overview, like the header.
+          <DropdownMenuItem asChild className="text-xs font-medium text-muted-foreground">
+            <SidebarLink href={url}>{label}</SidebarLink>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
+            {label}
+          </DropdownMenuLabel>
+        )}
         <DropdownMenuSeparator />
         {items.map((item) =>
           'items' in item ? (
@@ -740,15 +794,18 @@ function CollapsedDropdownLeaf({
 
   return (
     <DropdownMenuItem asChild>
-      <Link href={item.url} prefetch={false} className={cn(active && 'bg-accent font-medium')}>
+      <SidebarLink href={item.url} className={cn(active && 'bg-accent font-medium')}>
         {item.icon && <item.icon />}
-        <span className="max-w-52 text-wrap">{item.title}</span>
+        <span className="max-w-52 text-wrap">
+          {item.title}
+          <NavPendingHint />
+        </span>
         {releaseStatusBadge ? (
           <span className="ms-auto text-xs">{releaseStatusBadge.text}</span>
         ) : (
           badge && <span className="ms-auto text-xs">{badge}</span>
         )}
-      </Link>
+      </SidebarLink>
     </DropdownMenuItem>
   )
 }
@@ -762,6 +819,7 @@ export const NavGroup = memo(NavGroupComponent, (prevProps, nextProps) => {
   // This prevents re-render when only pathname changes (which is handled internally)
   return (
     prevProps.title === nextProps.title &&
+    prevProps.url === nextProps.url &&
     prevProps.items === nextProps.items &&
     prevProps.icon === nextProps.icon
   )

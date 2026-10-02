@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "../styles/theme.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '../styles/theme.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -98,6 +98,86 @@
 }
 .CollapsibleContent[data-state='closed'] {
   animation: slideUp 300ms ease-out;
+}
+
+/*
+ * Navigation feedback (sidebar-link.tsx, nav-progress.tsx). A click on a nav
+ * link answers at once, even while the next route is still loading (a cold
+ * route in `next dev` compiles for seconds, and a production route still needs
+ * its server response): the clicked row gets a thin moving bar and the top of
+ * the window a progress bar. Both wait 120 ms before appearing, so fast
+ * navigations stay quiet.
+ */
+.nav-pending-hint {
+  position: absolute;
+  inset-inline: 0.5rem;
+  bottom: 0;
+  height: 2px;
+  border-radius: 9999px;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--primary) 50%, transparent 100%);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+}
+.nav-pending-hint[data-nav-pending] {
+  animation:
+    nav-fade-in 150ms ease-out 120ms both,
+    nav-pending-slide 900ms ease-in-out 120ms infinite;
+}
+.nav-progress {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 100;
+  height: 2px;
+  pointer-events: none;
+  background: var(--primary);
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+[dir='rtl'] .nav-progress {
+  transform-origin: right center;
+}
+.nav-progress[data-active] {
+  animation: nav-progress 10s cubic-bezier(0.08, 0.75, 0.2, 1) 120ms both;
+}
+@keyframes nav-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes nav-pending-slide {
+  from {
+    background-position: -100% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+@keyframes nav-progress {
+  from {
+    opacity: 1;
+    transform: scaleX(0.06);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(0.94);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-pending-hint[data-nav-pending] {
+    animation: nav-fade-in 150ms ease-out 120ms both;
+    background: var(--primary);
+  }
+  .nav-progress[data-active] {
+    animation: nav-fade-in 150ms ease-out 120ms both;
+    transform: scaleX(0.5);
+  }
 }
 
 @keyframes slideDown {

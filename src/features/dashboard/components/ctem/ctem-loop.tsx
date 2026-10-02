@@ -55,6 +55,13 @@ interface CtemLoopProps {
   scanCoverage?: ScanCoverage
   validationCoverage?: ValidationCoverage
   threatIntel?: ThreatIntelStats
+  /**
+   * Scoping readiness from GET /scoping/summary (ready of total checklist
+   * rows) and how many crown jewels are designated. Absent on an API without
+   * the summary: the tile then shows crown jewels at risk, without claiming
+   * none are designated.
+   */
+  scoping?: { ready: number; total: number; crownJewels: number }
   isLoading?: boolean
 }
 
@@ -67,6 +74,7 @@ export function CtemLoop({
   scanCoverage,
   validationCoverage,
   threatIntel,
+  scoping,
   isLoading,
 }: CtemLoopProps) {
   if (isLoading) {
@@ -79,7 +87,7 @@ export function CtemLoop({
     )
   }
 
-  const crownJewels = summary?.crown_jewels_at_risk ?? 0
+  const atRisk = summary?.crown_jewels_at_risk ?? 0
   const scanPct = scanCoverage?.coverage_percent ?? 0
   const p0 = summary?.p0_open ?? 0
   const valPct = validationCoverage?.overall_pct ?? 0
@@ -87,19 +95,36 @@ export function CtemLoop({
   const kevTotal = threatIntel?.kev?.total_entries ?? 0
 
   const stages: Stage[] = [
-    {
-      index: '01',
-      name: 'Scoping',
-      href: '/crown-jewels',
-      value: (
-        <>
-          {crownJewels} <Unit>crown jewels</Unit>
-        </>
-      ),
-      sub: 'at-risk high-value assets',
-      flag: crownJewels === 0 ? 'designate' : undefined,
-      state: crownJewels === 0 ? 'warn' : 'crit',
-    },
+    // Scoping opens the Scoping overview and shows its readiness. It used to
+    // show crown jewels AT RISK and say "designate" when that was 0, even
+    // with nine designated.
+    scoping
+      ? {
+          index: '01',
+          name: 'Scoping',
+          href: '/scoping',
+          value: (
+            <>
+              {scoping.ready}
+              <Unit>/{scoping.total} ready</Unit>
+            </>
+          ),
+          sub: `${scoping.crownJewels} crown jewel${scoping.crownJewels === 1 ? '' : 's'} · ${atRisk} at risk`,
+          flag: scoping.crownJewels === 0 ? 'designate crown jewels' : undefined,
+          state: scoping.ready >= scoping.total ? 'good' : 'warn',
+        }
+      : {
+          index: '01',
+          name: 'Scoping',
+          href: '/scoping',
+          value: (
+            <>
+              {atRisk} <Unit>at risk</Unit>
+            </>
+          ),
+          sub: 'crown jewels on an attack path',
+          state: atRisk > 0 ? 'crit' : 'good',
+        },
     {
       index: '02',
       name: 'Discovery',
