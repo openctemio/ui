@@ -18,6 +18,7 @@ import {
   UNMANAGED_TEXT,
   contentAgeText,
   contentByTool,
+  contentCheckedText,
   contentLabel,
   contentState,
   formatHours,
@@ -58,6 +59,7 @@ function ContentRow({ c, now }: { c: SensorContent; now: number }) {
   const age = contentAgeText(c, now)
   const digest = shortDigest(c.digest)
   const limit = formatHours(c.max_age_hours)
+  const checked = contentCheckedText(c, now)
   return (
     <li className="space-y-1 px-3 py-2.5 text-sm" data-content={c.name} data-state={state}>
       <div className="flex items-center justify-between gap-2">
@@ -73,6 +75,7 @@ function ContentRow({ c, now }: { c: SensorContent; now: number }) {
               {limit ? ` · limit ${limit}` : ''}
             </span>
           )}
+          {checked && <span className="tabular-nums">{checked}</span>}
           {c.pinned_version && (
             <span className={cn(c.pin_mismatch && 'text-warning')}>
               pinned <span className="font-mono">{c.pinned_version}</span>
