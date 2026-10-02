@@ -279,6 +279,11 @@ export interface Sensor {
   reported?: SensorReported | null
   /** What dispatch uses: the report narrowed by the limits. */
   effective?: SensorEffective
+  /**
+   * The load the sensor last reported on its heartbeat (api RFC-030 §5.8);
+   * null when it never reported one, absent on APIs without it.
+   */
+  load?: SensorLoad | null
   /** Limits the report contradicts (a tool set here that is not installed). */
   capability_mismatch?: SensorCapabilityMismatch | null
   /** The SDK the sensor binary is built with ("openctem-sdk-go"); "" when unknown. */
@@ -297,19 +302,45 @@ export interface Sensor {
 /** One tool of a sensor's reported inventory. */
 export interface SensorReportedTool {
   name: string
+  /** "scanner" or "collector"; absent when the sensor did not say. */
+  kind?: 'scanner' | 'collector' | ''
   version?: string
   installed: boolean
+  /**
+   * What this tool serves besides its own name ("dast", "validate:nuclei");
+   * absent from sensors on sdk-go before v0.13 (only the flat list).
+   */
+  capabilities?: string[] | null
 }
 
 /** A sensor's last capability report; a null list was never reported. */
 export interface SensorReported {
   tools: SensorReportedTool[] | null
   capabilities: string[] | null
-  /** The sensor's configured cap on concurrent jobs. */
+  /**
+   * The sensor operator's ceiling on concurrent jobs (SENSOR_MAX_JOBS); null
+   * when none. What it can run now is `load.capacity.slots_total`.
+   */
   max_concurrent_jobs: number | null
   os?: string
   arch?: string
   reported_at: string | null
+}
+
+/** A sensor's job slots as it last reported them. */
+export interface SensorLoadCapacity {
+  /** How many jobs it can run at once now, sized from its CPU and memory. */
+  slots_total: number
+  slots_free: number
+  active_jobs: number
+}
+
+/** A sensor's last load report; a part is null when never reported. */
+export interface SensorLoad {
+  capacity: SensorLoadCapacity | null
+  reported_at: string | null
+  /** False once the report is older than 3 minutes. */
+  fresh: boolean
 }
 
 /** The tools, capabilities and capacity dispatch uses for a sensor. */

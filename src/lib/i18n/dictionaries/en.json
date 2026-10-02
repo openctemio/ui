@@ -312,6 +312,7 @@
   "sensors.review.narrowedHint": "Only the checked tools get jobs. You can change this later in Edit sensor.",
   "sensors.review.reportedTools": "Reported tools",
   "sensors.review.notInstalled": "not installed",
+  "sensors.review.serves": "Serves {caps}",
   "sensors.review.pickOne": "Allow at least one tool.",
   "sensors.review.noTools": "It reported no scanning tools.",
   "sensors.review.noToolsHint": "That is normal for a collector or a custom sensor. There is nothing to choose.",

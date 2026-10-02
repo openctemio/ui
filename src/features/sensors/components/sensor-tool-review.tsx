@@ -245,6 +245,16 @@ export function SensorFirstReport({
                         {tool.version}
                       </span>
                     )}
+                    {tool.capabilities && tool.capabilities.length > 0 && (
+                      <span
+                        className="truncate text-xs text-muted-foreground"
+                        title={t('sensors.review.serves', 'Serves {caps}', {
+                          caps: tool.capabilities.join(', '),
+                        })}
+                      >
+                        {tool.capabilities.join(' · ')}
+                      </span>
+                    )}
                   </label>
                   {!tool.installed && (
                     <SensorTag>{t('sensors.review.notInstalled', 'not installed')}</SensorTag>

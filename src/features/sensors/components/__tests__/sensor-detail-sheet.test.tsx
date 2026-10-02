@@ -338,7 +338,7 @@ describe('SensorDetailSheet', () => {
     expect(within(tools).getByText('not installed')).toBeInTheDocument()
     expect(screen.getByText('linux/amd64')).toBeInTheDocument()
     expect(screen.getByText('3 at once')).toBeInTheDocument()
-    expect(screen.getByText('sensor reports 3 · limit 8')).toBeInTheDocument()
+    expect(screen.getByText('operator cap 3 · your limit 8')).toBeInTheDocument()
     const callout = screen.getByRole('region', { name: 'Health' })
     expect(within(callout).getByText('Tools not installed')).toBeInTheDocument()
   })
@@ -378,10 +378,54 @@ describe('SensorDetailSheet', () => {
     expect(screen.queryByText(/is installed but not allowed/)).toBeNull()
   })
 
+  it('shows what each tool serves and the slots it can run now (RFC-033)', () => {
+    open({
+      sensor: {
+        ...sensor,
+        tools: [],
+        max_concurrent_jobs: 5,
+        reported: {
+          tools: [
+            {
+              name: 'nuclei',
+              kind: 'scanner',
+              version: 'v3.11.1',
+              installed: true,
+              capabilities: ['dast', 'validate:nuclei'],
+            },
+            { name: 'semgrep', kind: 'scanner', version: '1.179.0', installed: true },
+          ],
+          capabilities: ['nuclei', 'dast', 'validate:nuclei', 'semgrep', 'sast'],
+          max_concurrent_jobs: 64,
+          reported_at: new Date(now).toISOString(),
+        },
+        effective: {
+          tools: ['nuclei', 'semgrep'],
+          capabilities: ['nuclei', 'dast', 'validate:nuclei', 'semgrep', 'sast'],
+          max_concurrent_jobs: 4,
+        },
+        load: {
+          capacity: { slots_total: 4, slots_free: 4, active_jobs: 0 },
+          reported_at: new Date(now).toISOString(),
+          fresh: true,
+        },
+      },
+    })
+    const tools = screen.getByRole('list', { name: 'Tools' })
+    expect(within(tools).getByLabelText('Serves dast, validate:nuclei')).toHaveTextContent(
+      'dast · validate:nuclei'
+    )
+    expect(within(tools).queryByLabelText(/^Serves .*sast/)).toBeNull()
+    expect(screen.getByText('4 at once')).toBeInTheDocument()
+    expect(
+      screen.getByText('Runs 4 at once now · operator cap 64 · your limit 5')
+    ).toBeInTheDocument()
+  })
+
   it('shows the set tools when the sensor reports none', () => {
     open()
     expect(screen.getByText(/it has not reported its tools yet/)).toBeInTheDocument()
-    expect(screen.getByText('limit 8; the sensor reports none')).toBeInTheDocument()
+    expect(screen.getByText('your limit 8; the sensor reports none')).toBeInTheDocument()
   })
 
   it('shows protocol v1 as deprecated with the upgrade deadline', () => {
