@@ -2,9 +2,15 @@
 
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { PanelLeftIcon } from 'lucide-react'
 import { Logo } from '@/assets/logo'
+import { ShortcutKeys } from '@/components/layout/keyboard-shortcuts-dialog'
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { KEYBOARD_SHORTCUTS } from '@/config/keyboard-shortcuts'
+
+/** The toggle-sidebar keys, from the one shortcut list (Help > Keyboard shortcuts). */
+const TOGGLE_SIDEBAR_KEYS = KEYBOARD_SHORTCUTS.find((s) => s.id === 'toggle-sidebar')?.keys
 
 /**
  * The header's context row (organization switcher, or the admin console's
@@ -37,7 +43,10 @@ interface SidebarBrandProps {
  * without a tenant never has to render a tenant control.
  *
  * Collapsed to the icon rail, only the mark shows; clicking it expands the
- * sidebar, so the rail never loses its way back open.
+ * sidebar, so the rail never loses its way back open. On hover or keyboard
+ * focus the mark turns into the same panel icon the expanded sidebar's toggle
+ * uses, so the button says what it does; the tooltip names the action and its
+ * shortcut.
  *
  * The mark is 28px in both states and sits in the same 32px box, on the same
  * axis, as the context chip below it and the nav icons (never smaller or
@@ -54,13 +63,25 @@ export function SidebarBrand({ href = '/', badge }: SidebarBrandProps) {
           <button
             type="button"
             onClick={toggleSidebar}
-            className="flex size-8 items-center justify-center rounded-md text-sidebar-foreground transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
+            className="group/brand relative flex size-8 items-center justify-center rounded-md text-sidebar-foreground transition-colors hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none"
             aria-label="Expand sidebar"
           >
-            <Logo className="size-7" />
+            <Logo
+              aria-hidden
+              data-slot="brand-mark"
+              className="size-7 transition-opacity duration-150 group-hover/brand:opacity-0 group-focus-visible/brand:opacity-0 motion-reduce:transition-none"
+            />
+            <PanelLeftIcon
+              aria-hidden
+              data-slot="brand-expand"
+              className="absolute size-4 opacity-0 transition-opacity duration-150 group-hover/brand:opacity-100 group-focus-visible/brand:opacity-100 motion-reduce:transition-none"
+            />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="right">Expand sidebar</TooltipContent>
+        <TooltipContent side="right" className="flex items-center gap-2">
+          Expand sidebar
+          {TOGGLE_SIDEBAR_KEYS && <ShortcutKeys keys={TOGGLE_SIDEBAR_KEYS} />}
+        </TooltipContent>
       </Tooltip>
     )
   }
