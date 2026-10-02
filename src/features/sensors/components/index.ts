@@ -1,5 +1,6 @@
 export * from './sensor-type-icon'
-export * from './add-sensor-dialog'
+export * from './install-sensor-dialog'
+export * from './sensor-install-flow'
 export * from './edit-sensor-dialog'
 export * from './regenerate-key-dialog'
 export * from './sensor-detail-sheet'
