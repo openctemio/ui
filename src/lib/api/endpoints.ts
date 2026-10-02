@@ -2082,25 +2082,14 @@ export const threatIntelEndpoints = {
 // PLATFORM SENSOR ENDPOINTS
 // ============================================
 
-import type { PlatformSensorListFilters } from './platform-types'
-
 /**
- * Platform sensor endpoints for tiered platform sensors
- * Supports three tiers: shared, dedicated, premium
+ * Platform sensor endpoints. The API serves only the tenant's view of the
+ * shared pool (GET /platform/stats); there is no tenant list of platform
+ * sensors or platform jobs.
  */
 export const platformEndpoints = {
-  /**
-   * Get platform stats (usage, limits, tier stats)
-   */
+  /** Aggregate pool health plus this organization's queued platform jobs. */
   stats: () => `${API_BASE.PLATFORM}/stats`,
-
-  /**
-   * List platform sensors with optional filters
-   */
-  sensors: (filters?: PlatformSensorListFilters) => {
-    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.PLATFORM}/sensors${queryString}`
-  },
 } as const
 
 // ============================================
