@@ -2,6 +2,7 @@
 
 import { formatDistanceStrict } from 'date-fns'
 
+import { useTranslation } from '@/context/i18n-provider'
 import { cn } from '@/lib/utils'
 import type { Sensor } from '@/lib/api/sensor-types'
 
@@ -11,7 +12,12 @@ import { sensorCapacity } from '../lib/capabilities'
 import { CONTENT_STATE_META, worstContentState } from '../lib/content'
 import { formatDurationShort, keyExpiry } from '../lib/format'
 import { isOneShotSensor, sensorState, type FleetThresholds } from '../lib/sensor-state'
-import { normalizeSensorVersion, sensorVersionStatus } from '../lib/sensor-version'
+import {
+  normalizeSensorVersion,
+  sensorSdkStatus,
+  sensorSdkVersion,
+  sensorVersionStatus,
+} from '../lib/sensor-version'
 import type { ReleaseChannel } from '../lib/fleet'
 
 /**
@@ -32,6 +38,7 @@ export function SensorMobileCard({
   channel: ReleaseChannel
   onOpen: (sensor: Sensor) => void
 }) {
+  const { t } = useTranslation()
   const state = sensorState(sensor, now, thresholds)
   const facts: { text: string; tone?: 'warning' | 'destructive' }[] = []
 
@@ -52,6 +59,25 @@ export function SensorMobileCard({
   const vs = sensorVersionStatus(sensor, channel.latest, channel.min)
   if (v && vs === 'update_available') facts.push({ text: `${v} · update` })
   if (v && vs === 'unsupported') facts.push({ text: `${v} unsupported`, tone: 'destructive' })
+  // The SDK only when it needs attention, worded like the table's tag.
+  const sdk = sensorSdkVersion(sensor)
+  const sdkStatus = sensorSdkStatus(sensor)
+  if (sdkStatus === 'outdated') {
+    facts.push({
+      text: sdk
+        ? t('sensors.version.sdkOutdatedFact', 'SDK {version} outdated', { version: sdk })
+        : t('sensors.version.sdkOutdated', 'SDK outdated'),
+      tone: 'warning',
+    })
+  }
+  if (sdkStatus === 'unsupported') {
+    facts.push({
+      text: sdk
+        ? t('sensors.version.sdkUnsupportedFact', 'SDK {version} unsupported', { version: sdk })
+        : t('sensors.version.sdkUnsupported', 'SDK unsupported'),
+      tone: 'destructive',
+    })
+  }
   const k = keyExpiry(sensor.key_expires_at, now)
   if (k.kind === 'soon') facts.push({ text: `key expires in ${k.days}d`, tone: 'warning' })
   if (k.kind === 'expired') facts.push({ text: 'key expired', tone: 'destructive' })

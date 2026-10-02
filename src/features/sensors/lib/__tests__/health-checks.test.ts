@@ -250,4 +250,31 @@ describe('sensorHealthChecks', () => {
     expect(nothing.tools.status).toBe('warning')
     expect(nothing.tools.text).toContain('reports no usable tool')
   })
+
+  it('SDK: a line only when it is outdated or unsupported', () => {
+    expect(byKey(sensorHealthChecks(sensor({ sdk_status: 'current' }), ctx)).sdk).toBeUndefined()
+    const sdkCtx = { ...ctx, channel: { ...ctx.channel, sdkMin: 'v0.8.0', sdkLatest: 'v0.9.0' } }
+    const outdated = byKey(
+      sensorHealthChecks(sensor({ sdk_version: '0.8.5', sdk_status: 'outdated' }), sdkCtx)
+    )
+    expect(outdated.sdk).toMatchObject({
+      status: 'info',
+      text: 'v0.8.5 is outdated; v0.9.0 is available.',
+      action: 'install',
+    })
+    const unsupported = byKey(
+      sensorHealthChecks(
+        sensor({
+          sdk_version: 'v0.7.0',
+          sdk_status: 'unsupported',
+          health_reasons: [{ code: 'sdk_unsupported', severity: 'warning', message: 'm' }],
+        }),
+        sdkCtx
+      )
+    )
+    expect(unsupported.sdk).toMatchObject({
+      status: 'warning',
+      text: 'v0.7.0 is below the minimum supported v0.8.0. Upgrade the sensor.',
+    })
+  })
 })

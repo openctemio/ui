@@ -22,11 +22,11 @@ vi.mock('@/lib/api/sensor-hooks', () => ({
   useSensor: () => ({ data: undefined }),
   useSensorCommands: () => ({ data: { data: [] }, isLoading: false }),
 }))
-vi.mock('@/lib/api/audit-hooks', () => ({
-  useResourceAuditHistory: () => ({ data: { items: [] }, isLoading: false }),
-}))
 vi.mock('@/features/scan-zones', () => ({ SensorZonesSection: () => null }))
-vi.mock('../sensor-audit-log', () => ({ SensorAuditLog: () => <p>audit log</p> }))
+vi.mock('../sensor-activity', () => ({
+  SensorActivity: ({ sensorId }: { sensorId: string }) => <p>activity of {sensorId}</p>,
+  SensorRecentActivity: () => <p>recent activity</p>,
+}))
 vi.mock('../sensor-install-snippets', () => ({
   SensorInstallSnippets: ({ sensorId }: { sensorId: string }) => <p>snippets for {sensorId}</p>,
 }))
@@ -95,7 +95,6 @@ describe('SensorDetailSheet', () => {
   beforeEach(() => perms.granted.clear())
 
   it('leads with the health checklist and four tabs (no Analytics)', () => {
-    perms.granted.add('audit:read')
     open()
     const dialog = screen.getByRole('dialog')
     expect(
@@ -158,10 +157,12 @@ describe('SensorDetailSheet', () => {
 
   it('a member sees a lock hint, no key or lifecycle actions, and never a plan message', () => {
     open()
-    // No audit permission: no Activity tab at all (the audit log is admin-only).
+    // The activity timeline is for every sensor reader (sensors:read); the
+    // API leaves administrator actions out for members.
     expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
       'Overview',
       'Jobs',
+      'Activity',
       'Config',
     ])
     expect(screen.getByText('Editing, keys and disabling need an admin')).toBeInTheDocument()
@@ -189,6 +190,28 @@ describe('SensorDetailSheet', () => {
     open()
     expect(screen.getByRole('dialog').className).toContain('rounded-t-2xl')
     phone.value = false
+  })
+
+  it('the runtime section shows the sensor and SDK versions with an SDK warning', () => {
+    open({
+      sensor: {
+        ...sensor,
+        sdk_name: 'openctem-sdk-go',
+        sdk_version: 'v0.8.0',
+        sdk_status: 'unsupported',
+        sensor_commit: 'abc1234',
+      },
+    })
+    const line = screen.getByTitle(/Commit: abc1234/)
+    expect(line.textContent).toBe('Sensor v0.4.2 · SDK v0.8.0')
+    expect(screen.getByText('SDK unsupported')).toBeInTheDocument()
+    expect(screen.getByText('recent activity')).toBeInTheDocument()
+  })
+
+  it('a member opens the Activity tab (the sensor activity endpoint, not the audit log)', async () => {
+    open()
+    await userEvent.click(screen.getByRole('tab', { name: 'Activity' }))
+    expect(screen.getByText('activity of s1')).toBeInTheDocument()
   })
 
   it('Install command opens the Config tab with the snippets', async () => {
