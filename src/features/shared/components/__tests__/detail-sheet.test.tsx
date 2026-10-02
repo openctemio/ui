@@ -7,6 +7,9 @@ import {
   DetailSection,
   DetailField,
   DetailFieldGrid,
+  DetailStatGrid,
+  DetailStat,
+  DetailCallout,
 } from '../detail-sheet'
 
 describe('DetailSheetHeader', () => {
@@ -70,6 +73,78 @@ describe('DetailSection', () => {
   it('renders a zero count', () => {
     render(<DetailSection title="Findings" count={0} />)
     expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('0')
+  })
+})
+
+describe('DetailSection landmark', () => {
+  it('is a region named by its heading', () => {
+    render(<DetailSection title="Scanner content">x</DetailSection>)
+    expect(screen.getByRole('region', { name: 'Scanner content' })).toBeInTheDocument()
+  })
+})
+
+describe('DetailStatGrid / DetailStat', () => {
+  it('renders label, tabular value, unit, caption and a meter', () => {
+    render(
+      <DetailStatGrid aria-label="Numbers">
+        <DetailStat
+          label="Jobs running"
+          value={2}
+          unit="/ 5"
+          caption="3 slots free"
+          meter={{ value: 2, max: 5, label: 'Slots in use' }}
+        />
+      </DetailStatGrid>
+    )
+    expect(screen.getByText('Jobs running').tagName).toBe('DT')
+    expect(screen.getByText('2')).toHaveClass('tabular-nums')
+    expect(screen.getByText('/ 5')).toBeInTheDocument()
+    expect(screen.getByText('3 slots free')).toBeInTheDocument()
+    expect(screen.getByRole('meter', { name: 'Slots in use' })).toHaveAttribute(
+      'aria-valuenow',
+      '2'
+    )
+  })
+
+  it('is two per row on phones and one row of N from sm', () => {
+    const { container } = render(
+      <DetailStatGrid>
+        <DetailStat label="A" value={1} />
+        <DetailStat label="B" value={2} />
+        <DetailStat label="C" value={3} />
+        {null}
+      </DetailStatGrid>
+    )
+    const grid = container.firstChild as HTMLElement
+    expect(grid).toHaveClass('grid-cols-2')
+    expect(grid.style.getPropertyValue('--detail-stat-cols')).toBe('3')
+  })
+
+  it('renders nothing without stats', () => {
+    const { container } = render(<DetailStatGrid>{null}</DetailStatGrid>)
+    expect(container).toBeEmptyDOMElement()
+  })
+})
+
+describe('DetailCallout', () => {
+  it('is a named region with a tone, the problem, the explanation and actions', () => {
+    render(
+      <DetailCallout
+        label="Health"
+        tone="warning"
+        icon={Server}
+        title="Templates: refresh failed"
+        actions={<button>Refresh</button>}
+      >
+        Scans keep using the installed version.
+      </DetailCallout>
+    )
+    const region = screen.getByRole('region', { name: 'Health' })
+    expect(region).toHaveAttribute('data-tone', 'warning')
+    expect(region.className).toMatch(/bg-warning\/10/)
+    expect(screen.getByText('Templates: refresh failed')).toBeInTheDocument()
+    expect(screen.getByText('Scans keep using the installed version.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument()
   })
 })
 
