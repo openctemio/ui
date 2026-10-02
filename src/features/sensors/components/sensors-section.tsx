@@ -27,6 +27,7 @@ import {
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { RefreshButton, TableSkeleton } from '@/components/list-page-parts'
 import { useUrlFilter } from '@/hooks/use-url-param'
+import { useNow } from '@/hooks/use-now'
 import { Can, Permission, useHasPermission } from '@/lib/permissions'
 
 import { AddSensorDialog } from './add-sensor-dialog'
@@ -36,7 +37,7 @@ import { SensorConfigDialog } from './sensor-config-dialog'
 import { SensorDetailSheet } from './sensor-detail-sheet'
 import { SensorTable } from './sensor-table'
 import {
-  useSensors,
+  useAllSensors,
   useTenantSensorStats,
   useDeleteSensor,
   useBulkDeleteSensors,
@@ -45,8 +46,16 @@ import {
   useRevokeSensor,
   invalidateSensorsCache,
 } from '@/lib/api/sensor-hooks'
-import type { SensorListFilters, Sensor, SensorRole } from '@/lib/api/sensor-types'
+import type { Sensor, SensorRole, SensorState } from '@/lib/api/sensor-types'
 import { sensorRoleOf } from '@/lib/api/sensor-types'
+import {
+  canTakeJobs,
+  DEFAULT_FLEET_THRESHOLDS,
+  SENSOR_STATE_META,
+  SENSOR_STATES,
+  sensorState,
+  type FleetThresholds,
+} from '../lib/sensor-state'
 import { Tabs, TabsCount, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PlatformStatsCard } from '@/features/platform'
 import {
@@ -82,67 +91,41 @@ interface SensorStats {
   total: number
   online: number
   offline: number
-  error: number
+  idle: number
   activeJobs: number
   byMode: {
     daemon: number
     standalone: number
   }
-  byType: {
-    collector: number
-  }
 }
 
-// Check if sensor is online using the health field from backend
-function isSensorOnline(sensor: Sensor): boolean {
-  // Only active sensors can be online
-  if (sensor.status !== 'active') return false
-  // Use the health field from backend (heartbeat-based)
-  return sensor.health === 'online'
-}
-
-// Get metrics for a sensor - uses real data from backend
-function getSensorMetrics(sensor: Sensor) {
-  if (sensor.status !== 'active' || sensor.health !== 'online') {
-    return { cpu: 0, memory: 0, activeJobs: 0 }
+/**
+ * Online counts what can take work (online or degraded); offline what should
+ * be connected and is not (stale, offline, never connected). CI runners
+ * between runs are idle, not offline. Counted over the whole fleet the table
+ * shows, so the numbers and the rows agree.
+ */
+function calculateStats(sensors: Sensor[], thresholds: FleetThresholds, now: number): SensorStats {
+  let online = 0
+  let offline = 0
+  let idle = 0
+  let activeJobs = 0
+  for (const s of sensors) {
+    const state = sensorState(s, now, thresholds)
+    if (state === 'online' || state === 'degraded') online++
+    else if (state === 'stale' || state === 'offline' || state === 'never_connected') offline++
+    else if (state === 'idle') idle++
+    if (canTakeJobs(s, now, thresholds)) activeJobs += s.current_jobs ?? 0
   }
-  // Use real metrics from backend
   return {
-    cpu: sensor.cpu_percent || 0,
-    memory: sensor.memory_percent || 0,
-    activeJobs: sensor.active_jobs || 0,
-  }
-}
-
-function calculateStats(sensors: Sensor[]): SensorStats {
-  const daemonSensors = sensors.filter((w) => w.execution_mode === 'daemon')
-  const onlineSensors = sensors.filter(isSensorOnline)
-
-  // Calculate total active jobs from online daemon sensors
-  const totalActiveJobs = daemonSensors
-    .filter(isSensorOnline)
-    .reduce((sum, a) => sum + getSensorMetrics(a).activeJobs, 0)
-
-  const total = sensors.length
-  const online = onlineSensors.length
-  const error = sensors.filter((w) => w.health === 'error').length
-
-  return {
-    total,
+    total: sensors.length,
     online,
-    // Offline is everything that is neither online nor errored (offline/unknown
-    // health, disabled/revoked status, ...). Deriving it as the remainder keeps
-    // the KPI buckets reconciling to Total (online + offline + error === total)
-    // instead of double-counting e.g. a disabled sensor whose health is offline.
-    offline: Math.max(total - online - error, 0),
-    error,
-    activeJobs: totalActiveJobs,
+    offline,
+    idle,
+    activeJobs,
     byMode: {
-      daemon: daemonSensors.length,
+      daemon: sensors.filter((w) => w.execution_mode === 'daemon').length,
       standalone: sensors.filter((w) => w.execution_mode === 'standalone').length,
-    },
-    byType: {
-      collector: sensors.filter((w) => w.type === 'collector').length,
     },
   }
 }
@@ -162,8 +145,9 @@ export function SensorsSection({
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false)
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
 
-  // Selected sensor for dialogs
-  const [selectedSensor, setSelectedSensor] = useState<Sensor | null>(null)
+  // Selected sensor for dialogs. The drawer follows the live list (and re-reads
+  // GET /sensors/{id}), so it never shows a snapshot from when it was opened.
+  const [selectedSensorSnapshot, setSelectedSensor] = useState<Sensor | null>(null)
 
   // View and filter states
   // Filters and search live in the URL so a filtered view can be shared.
@@ -191,20 +175,37 @@ export function SensorsSection({
     },
     [legacyCollectorMode, setModeFilter, setTabParam]
   )
-  const [_filters] = useState<SensorListFilters>({})
 
   // Row selection (owned by the table; mirrored here for the bulk-action bar)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [selectionEpoch, setSelectionEpoch] = useState(0)
   const clearSelection = useCallback(() => setSelectionEpoch((n) => n + 1), [])
 
-  // API data
-  const { data: sensorsData, error, isLoading, mutate } = useSensors(_filters)
-  const sensors: Sensor[] = useMemo(() => sensorsData?.items ?? [], [sensorsData?.items])
+  // The clock the state ladder and "4s ago" read (ticks every 5s).
+  const now = useNow()
 
-  // Tenant-wide aggregated stats — independent of pagination/filters so the
-  // top stat cards always reflect the FULL dataset, not just the current page.
+  // API data: the whole fleet (every page), refreshed every 15s.
+  const { data: sensorsData, error, isLoading, mutate } = useAllSensors()
+  const sensors: Sensor[] = useMemo(() => sensorsData?.items ?? [], [sensorsData?.items])
+  const selectedSensor = useMemo(
+    () =>
+      selectedSensorSnapshot
+        ? (sensors.find((s) => s.id === selectedSensorSnapshot.id) ?? selectedSensorSnapshot)
+        : null,
+    [sensors, selectedSensorSnapshot]
+  )
+
+  // The state ladder thresholds the API uses (defaults until stats arrive).
   const { data: tenantSensorStats } = useTenantSensorStats()
+  const thresholds = useMemo<FleetThresholds>(
+    () => ({
+      onlineWindowSeconds:
+        tenantSensorStats?.online_window_seconds ?? DEFAULT_FLEET_THRESHOLDS.onlineWindowSeconds,
+      offlineAfterSeconds:
+        tenantSensorStats?.offline_after_seconds ?? DEFAULT_FLEET_THRESHOLDS.offlineAfterSeconds,
+    }),
+    [tenantSensorStats?.online_window_seconds, tenantSensorStats?.offline_after_seconds]
+  )
 
   // Mutations. Each takes the target sensor's id when triggered: the row
   // handlers below select a sensor and trigger in the same call, so a hook
@@ -227,36 +228,10 @@ export function SensorsSection({
     return counts
   }, [typeFilteredSensors])
 
-  // Stats — prefer the API-aggregated tenant stats (accurate across all
-  // pages); fall back to per-page calculation if the stats request hasn't
-  // resolved yet (or for the type-filtered case where we filter client-side).
-  const stats = useMemo(() => {
-    if (tenantSensorStats && !typeFilter) {
-      // Single source of truth: derive every status bucket from the tenant
-      // total so Total === Online + Offline + Error. `online_active` counts
-      // sensors that are both active AND health='online'; Offline is the
-      // remainder (offline/unknown health + disabled/revoked status), which
-      // avoids double-counting a sensor across by_health and by_status.
-      const total = tenantSensorStats.total
-      const online = tenantSensorStats.online_active ?? tenantSensorStats.by_health?.online ?? 0
-      const error = tenantSensorStats.by_health?.error ?? 0
-      return {
-        total,
-        online,
-        offline: Math.max(total - online - error, 0),
-        error,
-        activeJobs: tenantSensorStats.active_jobs,
-        byMode: {
-          daemon: tenantSensorStats.by_execution_mode?.daemon ?? 0,
-          standalone: tenantSensorStats.by_execution_mode?.standalone ?? 0,
-        },
-        byType: {
-          collector: tenantSensorStats.by_type?.collector ?? 0,
-        },
-      }
-    }
-    return calculateStats(typeFilteredSensors)
-  }, [tenantSensorStats, typeFilter, typeFilteredSensors])
+  const stats = useMemo(
+    () => calculateStats(typeFilteredSensors, thresholds, now),
+    [typeFilteredSensors, thresholds, now]
+  )
 
   // Filter sensors based on tab, status, and search
   const filteredSensors = useMemo(() => {
@@ -273,27 +248,17 @@ export function SensorsSection({
       result = result.filter((a) => a.execution_mode === 'standalone')
     }
 
-    // Filter by status/health
+    // Filter by state (the same ladder the Status column shows)
     if (statusFilter !== 'all') {
-      switch (statusFilter) {
-        case 'online':
-          result = result.filter((a) => a.status === 'active' && a.health === 'online')
-          break
-        case 'offline':
-          result = result.filter(
-            (a) => a.status === 'active' && (a.health === 'offline' || a.health === 'unknown')
-          )
-          break
-        case 'error':
-          result = result.filter((a) => a.health === 'error')
-          break
-        case 'disabled':
-          result = result.filter((a) => a.status === 'disabled')
-          break
-        case 'revoked':
-          result = result.filter((a) => a.status === 'revoked')
-          break
-      }
+      const wanted: SensorState[] =
+        statusFilter === 'online'
+          ? ['online', 'degraded']
+          : statusFilter === 'error' // links from before the state ladder
+            ? ['degraded']
+            : statusFilter === 'offline'
+              ? ['stale', 'offline', 'never_connected']
+              : [statusFilter as SensorState]
+      result = result.filter((a) => wanted.includes(sensorState(a, now, thresholds)))
     }
 
     // Filter by search
@@ -309,7 +274,7 @@ export function SensorsSection({
     }
 
     return result
-  }, [typeFilteredSensors, activeRoleTab, activeMode, statusFilter, searchQuery])
+  }, [typeFilteredSensors, activeRoleTab, activeMode, statusFilter, searchQuery, thresholds, now])
 
   // Handlers
   const handleRefresh = useCallback(async () => {
@@ -495,12 +460,11 @@ export function SensorsSection({
       active: statusFilter === 'offline',
     },
     {
-      key: 'error',
-      label: 'Error',
-      value: stats.error,
-      tone: 'danger',
-      onClick: () => toggleStatus('error'),
-      active: statusFilter === 'error',
+      key: 'idle',
+      label: 'Idle (CI)',
+      value: stats.idle,
+      onClick: () => toggleStatus('idle'),
+      active: statusFilter === 'idle',
     },
     { key: 'jobs', label: 'Active jobs', value: stats.activeJobs },
   ]
@@ -533,11 +497,11 @@ export function SensorsSection({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All statuses</SelectItem>
-          <SelectItem value="online">Online</SelectItem>
-          <SelectItem value="offline">Offline</SelectItem>
-          <SelectItem value="error">Error</SelectItem>
-          <SelectItem value="disabled">Disabled</SelectItem>
-          <SelectItem value="revoked">Revoked</SelectItem>
+          {SENSOR_STATES.map((state) => (
+            <SelectItem key={state} value={state}>
+              {SENSOR_STATE_META[state].label}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </>
@@ -579,6 +543,8 @@ export function SensorsSection({
         onRegenerateKey={handleRegenerateKey}
         onSelectionChange={(rows) => setSelectedIds(rows.map((a) => a.id))}
         resetSelectionKey={selectionEpoch}
+        thresholds={thresholds}
+        now={now}
         toolbarStart={toolbarStart}
         toolbarEnd={<RefreshButton onClick={handleRefresh} loading={isLoading} />}
       />
@@ -687,6 +653,7 @@ export function SensorsSection({
 
           <SensorDetailSheet
             sensor={selectedSensor}
+            thresholds={thresholds}
             open={detailSheetOpen}
             onOpenChange={setDetailSheetOpen}
             onEdit={handleEditSensor}

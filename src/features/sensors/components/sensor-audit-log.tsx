@@ -26,6 +26,7 @@ import {
 import { EmptyState } from '@/features/shared'
 import { useResourceAuditHistory } from '@/lib/api/audit-hooks'
 import { useHasModule } from '@/features/integrations/api/use-tenant-modules'
+import { Permission, useHasPermission } from '@/lib/permissions'
 import type { AuditLog, AuditAction, AuditResult } from '@/lib/api/audit-types'
 import {
   canonicalAuditAction,
@@ -201,32 +202,46 @@ function AuditLogSkeleton() {
  */
 export function SensorAuditLog({ sensorId }: SensorAuditLogProps) {
   const { hasModule: hasAuditModule, isLoading: moduleLoading } = useHasModule('audit')
-  const { data, isLoading, error } = useResourceAuditHistory('sensor', sensorId, {
-    refreshInterval: 30000, // Refresh every 30 seconds
-  })
+  // Reading the audit log is its own permission (admins and owners by
+  // default). Without it the request would only fail; say why instead.
+  const canReadAudit = useHasPermission(Permission.AuditRead)
+  const { data, isLoading, error } = useResourceAuditHistory(
+    canReadAudit ? 'sensor' : null,
+    sensorId,
+    { refreshInterval: 30000 }
+  )
 
-  // Show loading skeleton while checking module availability
-  if (moduleLoading || isLoading) {
+  if (moduleLoading || (canReadAudit && isLoading)) {
     return <AuditLogSkeleton />
   }
 
-  // Show upgrade prompt if audit module is not available
+  // A missing permission is never a plan question.
+  if (!canReadAudit || (error as { statusCode?: number } | undefined)?.statusCode === 403) {
+    return (
+      <EmptyState
+        icon={Lock}
+        title="You can't see this sensor's activity"
+        description="Viewing the audit log needs the audit permission. Ask an organization admin."
+        card={false}
+      />
+    )
+  }
+
   if (!hasAuditModule) {
     return (
-      <div className="flex flex-col items-center justify-center py-8 text-center">
-        <Lock className="h-8 w-8 text-muted-foreground/50 mb-2" />
-        <p className="text-sm font-medium text-muted-foreground">Audit Log Not Available</p>
-        <p className="text-xs text-muted-foreground/70 mt-1">
-          Upgrade your plan to access activity logs
-        </p>
-      </div>
+      <EmptyState
+        icon={Lock}
+        title="The audit log is turned off"
+        description="An organization admin can turn on the audit log module to record sensor activity."
+        card={false}
+      />
     )
   }
 
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
-        <AlertTriangle className="h-8 w-8 text-amber-500 mb-2" />
+        <AlertTriangle className="mb-2 h-8 w-8 text-warning" />
         <p className="text-sm text-muted-foreground">Failed to load audit logs</p>
       </div>
     )
