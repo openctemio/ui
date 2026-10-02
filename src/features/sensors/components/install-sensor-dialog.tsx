@@ -42,13 +42,18 @@ export function InstallSensorDialog({
           <DialogTitle>Install a sensor</DialogTitle>
           <DialogDescription>
             <span className="sr-only">
-              Name the sensor, run the command on the host and wait for its first heartbeat.{' '}
+              Name the sensor, run the command on the host, then review the tools it reports.{' '}
             </span>
             <span aria-live="polite">{installStepLabel(step)}</span>
           </DialogDescription>
         </DialogHeaderBar>
         <div ref={bodyRef} tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto outline-none">
-          <SensorInstallFlow variant="dialog" onOpen={onOpen} onStepChange={setStep} />
+          <SensorInstallFlow
+            variant="dialog"
+            onOpen={onOpen}
+            onDone={() => onOpenChange(false)}
+            onStepChange={setStep}
+          />
         </div>
       </DialogContent>
     </Dialog>

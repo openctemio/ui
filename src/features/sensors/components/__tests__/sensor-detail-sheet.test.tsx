@@ -17,9 +17,12 @@ vi.mock('@/lib/permissions', () => ({
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 const phone = vi.hoisted(() => ({ value: false }))
 vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => phone.value }))
+const update = vi.hoisted(() => ({ trigger: vi.fn(async () => ({})) }))
 vi.mock('@/lib/api/sensor-hooks', () => ({
   SENSOR_REFRESH_MS: 15000,
   useSensor: () => ({ data: undefined }),
+  useUpdateSensor: () => ({ trigger: update.trigger, isMutating: false }),
+  invalidateSensorsCache: vi.fn(async () => undefined),
   useSensorCommands: () => ({ data: { data: [] }, isLoading: false }),
 }))
 const content = vi.hoisted(() => ({ refreshSensorContent: vi.fn(), refreshFleetContent: vi.fn() }))
@@ -30,11 +33,15 @@ vi.mock('../sensor-activity', () => ({
   SensorActivity: ({ sensorId }: { sensorId: string }) => <p>activity of {sensorId}</p>,
   SensorRecentActivity: () => <p>recent activity</p>,
 }))
+vi.mock('../../hooks', () => ({
+  useSensorFormOptions: () => ({ getCapabilitiesForTools: () => [] }),
+}))
 vi.mock('../sensor-install-snippets', () => ({
   SensorInstallSnippets: ({ sensorId }: { sensorId: string }) => <p>snippets for {sensorId}</p>,
 }))
 
 import { SensorDetailSheet } from '../sensor-detail-sheet'
+import { TEST_SENSOR_KEY_PREFIX } from '@/test/sensor-keys'
 
 const now = Date.now()
 const sensor: Sensor = {
@@ -47,7 +54,7 @@ const sensor: Sensor = {
   execution_mode: 'daemon',
   status: 'active',
   health: 'online',
-  api_key_prefix: 'rda_9f3c',
+  api_key_prefix: TEST_SENSOR_KEY_PREFIX,
   cpu_percent: 0,
   memory_percent: 0,
   max_concurrent_jobs: 8,
@@ -334,6 +341,41 @@ describe('SensorDetailSheet', () => {
     expect(screen.getByText('sensor reports 3 · limit 8')).toBeInTheDocument()
     const callout = screen.getByRole('region', { name: 'Health' })
     expect(within(callout).getByText('Tools not installed')).toBeInTheDocument()
+  })
+
+  const narrowed: Sensor = {
+    ...sensor,
+    tools: ['nuclei'],
+    reported: {
+      tools: [
+        { name: 'nuclei', version: '3.4.2', installed: true },
+        { name: 'trivy', version: '0.58.1', installed: true },
+      ],
+      capabilities: ['dast', 'sca'],
+      max_concurrent_jobs: 4,
+      reported_at: new Date(now).toISOString(),
+    },
+    effective: { tools: ['nuclei'], capabilities: ['dast', 'sca'], max_concurrent_jobs: 4 },
+  }
+
+  it('a tool installed after the list was narrowed: "installed but not allowed" + Allow', async () => {
+    perms.granted.add('sensors:write')
+    open({ sensor: narrowed })
+    expect(screen.getByText('trivy is installed but not allowed')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Allow trivy' }))
+    expect(update.trigger).toHaveBeenCalledWith({ tools: ['nuclei', 'trivy'], capabilities: [] })
+  })
+
+  it('no Allow button without sensors:write, and no notice without a narrowed list', () => {
+    open({ sensor: narrowed })
+    expect(screen.getByText('trivy is installed but not allowed')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Allow trivy' })).toBeNull()
+  })
+
+  it('no notice when every reported tool is allowed', () => {
+    perms.granted.add('sensors:write')
+    open({ sensor: { ...narrowed, tools: [] } })
+    expect(screen.queryByText(/is installed but not allowed/)).toBeNull()
   })
 
   it('shows the set tools when the sensor reports none', () => {

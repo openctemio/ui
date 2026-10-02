@@ -370,24 +370,40 @@ export function SensorKeyCell({
 }
 
 /**
- * The first tools, then "+N" (all of them on hover), and a "not installed"
- * tag for tools set on the sensor that it reports missing.
+ * The first tools, then "+N" (all of them on hover), a "not installed" tag
+ * for tools set on the sensor that it reports missing, and a quiet "not
+ * allowed" tag for installed tools its narrowed tool list leaves out.
  */
 export function SensorToolsCell({
   tools,
   missing,
+  notAllowed,
   max = 2,
 }: {
   tools: string[] | null | undefined
   /** Set on the sensor but reported as not installed. */
   missing?: string[]
+  /** Installed, but the sensor's tool list leaves them out (installed later). */
+  notAllowed?: string[]
   max?: number
 }) {
+  const { t } = useTranslation()
   const list = tools ?? []
   const gone = missing ?? []
+  const left = notAllowed ?? []
   const tag = gone.length > 0 && (
     <SensorTag tone="warning" title={`Set on the sensor but not installed: ${gone.join(', ')}`}>
       {gone.length} not installed
+    </SensorTag>
+  )
+  const leftTag = left.length > 0 && (
+    <SensorTag
+      tone="info"
+      title={t('sensors.tools.notAllowedTitle', 'Installed but not allowed: {list}', {
+        list: left.join(', '),
+      })}
+    >
+      {t('sensors.tools.notAllowedTag', '{count} not allowed', { count: left.length })}
     </SensorTag>
   )
   if (list.length === 0) {
@@ -395,6 +411,7 @@ export function SensorToolsCell({
       <span className="inline-flex items-center gap-1.5">
         <span className={cn('text-sm', muted)}>none</span>
         {tag}
+        {leftTag}
       </span>
     )
   }
@@ -407,6 +424,7 @@ export function SensorToolsCell({
         {more > 0 ? ` +${more}` : ''}
       </span>
       {tag}
+      {leftTag}
     </span>
   )
 }
