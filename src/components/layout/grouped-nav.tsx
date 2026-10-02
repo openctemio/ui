@@ -1,7 +1,6 @@
 'use client'
 
 import type { ElementType, ReactNode } from 'react'
-import Link from 'next/link'
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -9,6 +8,7 @@ import {
   useSidebarActions,
 } from '@/components/ui/sidebar'
 import { NAV_BUTTON_CLASS, NavBadge, NavClusterLabel } from './nav-group'
+import { NavPendingHint, SidebarLink } from './sidebar-link'
 
 export interface GroupedNavLink {
   key: string
@@ -65,16 +65,18 @@ export function GroupedNav({ sections, activeUrl }: GroupedNavProps) {
                     tooltip={item.title}
                     className={NAV_BUTTON_CLASS}
                   >
-                    <Link
+                    <SidebarLink
                       href={item.url}
-                      prefetch={false}
                       aria-current={item.url === activeUrl ? 'page' : undefined}
                       onClick={() => setOpenMobile(false)}
                     >
                       <item.icon />
-                      <span>{item.title}</span>
+                      <span>
+                        {item.title}
+                        <NavPendingHint />
+                      </span>
                       {item.badge && <NavBadge variant="soon">{item.badge}</NavBadge>}
-                    </Link>
+                    </SidebarLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

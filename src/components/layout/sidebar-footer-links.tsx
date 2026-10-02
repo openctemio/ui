@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, type ReactNode } from 'react'
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Bug, BookOpen, CircleHelp, ExternalLink, Info, Keyboard, Settings } from 'lucide-react'
 import {
@@ -25,6 +24,7 @@ import { isSettingsShellPath } from '@/config/settings-nav'
 import { DOCS_URL, REPORT_ISSUE_URL } from '@/config/help-links'
 import type { ShortcutShell } from '@/config/keyboard-shortcuts'
 import { NAV_BUTTON_CLASS } from './nav-group'
+import { NavPendingHint, SidebarLink } from './sidebar-link'
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog'
 import { AboutDialog } from './about-dialog'
 
@@ -68,15 +68,17 @@ export function SidebarFooterLinks({
               tooltip={settingsLabel}
               className={NAV_BUTTON_CLASS}
             >
-              <Link
+              <SidebarLink
                 href="/settings"
-                prefetch={false}
                 aria-current={pathname === '/settings' ? 'page' : undefined}
                 onClick={() => setOpenMobile(false)}
               >
                 <Settings />
-                <span>{settingsLabel}</span>
-              </Link>
+                <span>
+                  {settingsLabel}
+                  <NavPendingHint />
+                </span>
+              </SidebarLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
         )}
