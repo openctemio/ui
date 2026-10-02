@@ -5,6 +5,19 @@ Basis: ui `origin/develop` @ `2e155cbf`, api `origin/develop` @ `bf003bb9`. Live
 
 The owner asked about the sidebar's **Scoping** section: is it the best, most optimal shape? This document answers that and proposes a target. Nothing in it is implemented until the owner signs off on the decisions in section 8.
 
+> **Status (2026-10-02): approved and implemented.** The owner took every recommendation in section 8 (D8, rule-based crown jewels, stays on the roadmap).
+>
+> | Phase | PR                       | What shipped                                                                                                                                                                                          |
+> | ----- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+> | 1     | ui#590                   | Scoping rows Cycles, Business context, Boundaries, Threat model; per-module route tabs; Attack surface to Discovery, Compliance to Insights; Boundaries without the Overview and Schedules tabs (D10) |
+> | 2     | ui#591                   | Assets tabs Inventory, Groups, What changed, Suggestions; `/attack-surface/internal` and `/cloud` deleted and redirected to the filtered inventory (D5)                                               |
+> | 3     | ui#592                   | Link assets to business units and services (unit sheet, service sheet, inventory bulk actions); shared asset picker (C11)                                                                             |
+> | 3     | ui#594, api#716, api#721 | Cycle detail page; cycle attacker-profile list and unlink; scope snapshot with asset names; charter exclusions and attacker profiles as pickers (C12, D6)                                             |
+> | 4     | this PR, api#716         | Scoping overview `/scoping` from `GET /scoping/summary` (D9); the section header and the dashboard Scoping tile open it (D7)                                                                          |
+> | API   | api#715                  | `ctem_cycles` in every bundle with scoping modules (D2); activation skips non-UUID services instead of freezing nothing                                                                               |
+>
+> Still open: C13 (quick-scan machine groups), C14 (asset-group business unit as a foreign key), validating `in_scope_services` on cycle create and update, and rule-based crown jewels (D8).
+
 ## TL;DR
 
 - **No, the current shape is not the best.** Scoping has **11 items in a flat list**, more than the _whole_ left nav of Tenable Exposure Management (8) or Microsoft Exposure Management (about 5). Every page in it is real (no scaffolds), but the list mixes three kinds of thing:

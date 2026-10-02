@@ -100,6 +100,16 @@ describe('sidebar row with gated tabs', () => {
     expect(scopingRow('Cycles')).toBeDefined()
   })
 
+  it('the Scoping header links to the Overview only while that row is visible', () => {
+    const scopingGroup = () =>
+      renderHook(() => useFilteredSidebarData(sidebarData)).result.current.data.navGroups.find(
+        (g) => g.title === 'Scoping'
+      )
+    expect(scopingGroup()?.url).toBe('/scoping')
+    perms = ['ctem:cycles:read']
+    expect(scopingGroup()?.url).toBeUndefined()
+  })
+
   it('the Cycles row follows the ctem_cycles module', () => {
     moduleIds = ['crown_jewels']
     expect(scopingRow('Cycles')).toBeUndefined()
