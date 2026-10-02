@@ -202,8 +202,9 @@ describe('SensorDetailSheet', () => {
         sensor_commit: 'abc1234',
       },
     })
-    const line = screen.getByTitle(/Commit: abc1234/)
-    expect(line.textContent).toBe('Sensor v0.4.2 · SDK v0.8.0')
+    const cell = screen.getByTitle(/Commit: abc1234/)
+    expect(cell.querySelector('[data-slot="sensor-version"]')?.textContent).toBe('v0.4.2')
+    expect(cell.querySelector('[data-slot="sdk-version"]')?.textContent).toBe('SDK v0.8.0')
     expect(screen.getByText('SDK unsupported')).toBeInTheDocument()
     expect(screen.getByText('recent activity')).toBeInTheDocument()
   })
