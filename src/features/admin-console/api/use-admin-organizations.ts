@@ -44,8 +44,9 @@ export function useOrganizationUsers(id: string | null) {
 }
 
 /**
- * Create an account in an organization (ops_admin+). A plain call, not SWR: the
- * response may carry a one-time setup token that must not be cached.
+ * Create the first owner of an organization that has none (ops_admin+). The
+ * API refuses (409) once the organization has an owner. A plain call, not
+ * SWR: the response may carry a one-time setup token that must not be cached.
  */
 export function createOrganizationUser(id: string, input: AdminCreateOrganizationUserInput) {
   return adminFetch<AdminCreatedOrganizationUser>(`/tenants/${id}/users`, {

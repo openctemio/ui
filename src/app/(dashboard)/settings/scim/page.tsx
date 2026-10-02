@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -196,7 +197,18 @@ function ScimEndpointCard() {
 // Token actions cell (inline revoke button + confirm dialog)
 // ─────────────────────────────────────────────────────────
 
-function TokenActionsCell({ t, onChanged }: { t: ScimToken; onChanged: () => void }) {
+const SCIM_OWNER_ONLY_REASON =
+  'Only the organization owner can generate or revoke SCIM tokens: a token can create, suspend and re-role every member.'
+
+function TokenActionsCell({
+  t,
+  onChanged,
+  canRevoke,
+}: {
+  t: ScimToken
+  onChanged: () => void
+  canRevoke: boolean
+}) {
   const [revokeOpen, setRevokeOpen] = useState(false)
   const { trigger: revoke, isMutating: revoking } = useRevokeScimToken()
 
@@ -213,7 +225,7 @@ function TokenActionsCell({ t, onChanged }: { t: ScimToken; onChanged: () => voi
 
   return (
     <div className="text-right">
-      {isActive(t) && (
+      {isActive(t) && canRevoke && (
         <Button
           variant="ghost"
           size="icon"
@@ -224,6 +236,24 @@ function TokenActionsCell({ t, onChanged }: { t: ScimToken; onChanged: () => voi
         >
           <Ban className="h-4 w-4" />
         </Button>
+      )}
+      {isActive(t) && !canRevoke && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span tabIndex={0} className="inline-flex" aria-label={SCIM_OWNER_ONLY_REASON}>
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled
+                aria-label={`Revoke ${t.name}`}
+                className="text-destructive"
+              >
+                <Ban className="h-4 w-4" />
+              </Button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>{SCIM_OWNER_ONLY_REASON}</TooltipContent>
+        </Tooltip>
       )}
       <ConfirmDialog
         open={revokeOpen}
@@ -236,6 +266,31 @@ function TokenActionsCell({ t, onChanged }: { t: ScimToken; onChanged: () => voi
         handleConfirm={() => void handleRevoke()}
       />
     </div>
+  )
+}
+
+/** "Generate token" — enabled for the owner, disabled with the reason for administrators. */
+function GenerateTokenButton({ canMint, onClick }: { canMint: boolean; onClick: () => void }) {
+  if (canMint) {
+    return (
+      <Button size="sm" onClick={onClick}>
+        <Plus className="me-2 h-4 w-4" />
+        Generate token
+      </Button>
+    )
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={0} className="inline-flex" aria-label={SCIM_OWNER_ONLY_REASON}>
+          <Button size="sm" disabled>
+            <Plus className="me-2 h-4 w-4" />
+            Generate token
+          </Button>
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{SCIM_OWNER_ONLY_REASON}</TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -257,8 +312,10 @@ export default function ScimTokensPage() {
   // SCIM tokens are an owner/admin operation: the API refuses every
   // /scim-tokens call from anyone else. Members and viewers used to get an
   // enabled "Generate token" button (and an error where the list should be).
-  const { isAdmin, isLoading: roleLoading } = usePermissions()
+  const { isAdmin, isOwner, isLoading: roleLoading } = usePermissions()
   const canManage = isAdmin()
+  // Minting and revoking a token is the owner's (the API refuses admins).
+  const canMint = isOwner()
   const { data, error, isLoading, mutate } = useScimTokens({ enabled: canManage })
   const [genOpen, setGenOpen] = useState(false)
   const [newToken, setNewToken] = useState('')
@@ -309,10 +366,12 @@ export default function ScimTokensPage() {
         header: '',
         enableSorting: false,
         enableHiding: false,
-        cell: ({ row }) => <TokenActionsCell t={row.original} onChanged={() => mutate()} />,
+        cell: ({ row }) => (
+          <TokenActionsCell t={row.original} onChanged={() => mutate()} canRevoke={canMint} />
+        ),
       },
     ],
-    [mutate]
+    [mutate, canMint]
   )
 
   const metrics: MetricStripItem[] = [
@@ -327,12 +386,7 @@ export default function ScimTokensPage() {
         title="Directory sync (SCIM)"
         description="Automate user provisioning and deprovisioning from your identity provider."
       >
-        {canManage && (
-          <Button size="sm" onClick={() => setGenOpen(true)}>
-            <Plus className="me-2 h-4 w-4" />
-            Generate token
-          </Button>
-        )}
+        {canManage && <GenerateTokenButton canMint={canMint} onClick={() => setGenOpen(true)} />}
       </PageHeader>
 
       {roleLoading ? (
@@ -364,12 +418,7 @@ export default function ScimTokensPage() {
                 icon={KeyRound}
                 title="No SCIM tokens yet"
                 description="Generate a token to connect your identity provider for automated user provisioning."
-                action={
-                  <Button size="sm" onClick={() => setGenOpen(true)}>
-                    <Plus className="me-2 h-4 w-4" />
-                    Generate token
-                  </Button>
-                }
+                action={<GenerateTokenButton canMint={canMint} onClick={() => setGenOpen(true)} />}
               />
             ) : (
               <DataTable

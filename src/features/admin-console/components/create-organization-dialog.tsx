@@ -80,8 +80,9 @@ export function CreateOrganizationDialog({
         description: description.trim() || undefined,
       })
       toast.success(`${org.name} created`)
-      if (org.owner_setup?.setup_token) {
-        // No email could be sent: show the owner's one-time link before leaving.
+      if (org.owner_setup?.setup_token || org.owner_setup?.email_failed) {
+        // No email could be sent: show the owner's one-time link before
+        // leaving. A failed send (SMTP configured) returns no link; say so.
         setCreated(org)
         return
       }
