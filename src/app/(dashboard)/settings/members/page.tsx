@@ -1079,7 +1079,7 @@ export default function UsersPage() {
           {selectedMember && (
             <div className="flex flex-col h-full">
               {/* Header */}
-              <div className="px-6 pt-14 pb-6 bg-gradient-to-b from-muted/50 to-background">
+              <div className="px-6 pt-14 pb-6">
                 {/* Avatar & Basic Info */}
                 <div className="flex flex-col items-center text-center">
                   <Avatar className="h-20 w-20 ring-4 ring-background shadow-lg">
