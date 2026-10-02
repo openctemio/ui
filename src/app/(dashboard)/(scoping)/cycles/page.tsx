@@ -396,8 +396,8 @@ export default function CtemCyclesPage() {
     <>
       <Main>
         <PageHeader
-          title="CTEM cycles"
-          description="Plan and run continuous threat exposure management cycles."
+          title="Cycles"
+          description="Plan and run CTEM cycles: the charter, the scope it freezes and the outcome it is judged by."
         >
           <Button size="sm" onClick={() => setIsCreateOpen(true)}>
             <Plus className="me-2 h-4 w-4" />

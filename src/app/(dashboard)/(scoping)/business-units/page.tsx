@@ -4,15 +4,17 @@ import { useState, useMemo, useEffect } from 'react'
 import { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
 import {
-  PageHeader,
   DataTable,
   DataTableColumnHeader,
   DataTableRowActions,
-  RiskScoreBadge,
+  GatedSectionTabs,
   MetricStrip,
-  type MetricStripItem,
+  PageHeader,
+  RiskScoreBadge,
   SheetBody,
+  type MetricStripItem,
 } from '@/features/shared'
+import { BUSINESS_CONTEXT_SECTION_TABS } from '@/config/section-tabs'
 import { Can, Permission } from '@/lib/permissions'
 import { useCsvExport, type ExportFieldConfig } from '@/hooks/use-csv-export'
 import { useUrlFilter } from '@/hooks/use-url-param'
@@ -670,6 +672,11 @@ export default function BusinessUnitsPage() {
             </Button>
           </Can>
         </PageHeader>
+        <GatedSectionTabs
+          tabs={BUSINESS_CONTEXT_SECTION_TABS}
+          label="Business context sections"
+          className="mt-4 mb-0"
+        />
 
         <MetricStrip className="mt-5" loading={!apiData} items={metrics} />
 

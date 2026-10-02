@@ -1,5 +1,6 @@
 'use client'
 
+import { AssetsSectionTabs } from '@/features/assets/components/assets-section-tabs'
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { ColumnDef } from '@tanstack/react-table'
@@ -772,6 +773,7 @@ export default function AssetGroupsPage() {
             </Button>
           </Can>
         </PageHeader>
+        <AssetsSectionTabs />
 
         <MetricStrip className="mt-5" loading={statsLoading} items={metrics} />
 

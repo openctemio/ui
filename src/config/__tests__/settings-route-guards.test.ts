@@ -61,6 +61,17 @@ describe('sidebar entries ask for the permission their route enforces', () => {
             permission: child.permission ?? item.permission,
           })
         }
+      } else if (item.sections?.some((s) => s.permission !== undefined)) {
+        // A row whose tabs carry their own gates (Business context, Threat
+        // model) is shown when ANY tab is: each tab must ask for its route's
+        // permission instead of the row.
+        for (const section of item.sections) {
+          leaves.push({
+            title: `${item.title} > ${section.label}`,
+            url: section.href,
+            permission: section.permission,
+          })
+        }
       } else {
         leaves.push({ title: item.title, url: String(item.url), permission: item.permission })
       }

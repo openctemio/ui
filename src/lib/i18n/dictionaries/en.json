@@ -24,7 +24,7 @@
   "nav.item.attacker-profiles": "Attacker Profiles",
   "nav.item.attack-paths": "Attack Paths",
   "nav.item.attack-simulation": "Attack simulation",
-  "nav.item.attack-surface": "Attack Surface",
+  "nav.item.attack-surface": "Attack surface",
   "nav.item.audit-log": "Audit Log",
   "nav.item.business-impact": "Business Impact",
   "nav.item.business-services": "Business Services",
@@ -350,5 +350,9 @@
   "org.switched": "Switched to {name}",
   "org.switchFailed": "Could not switch organization",
   "org.create": "Create organization",
-  "org.signedInAs": "Signed in as"
+  "org.signedInAs": "Signed in as",
+  "nav.item.cycles": "Cycles",
+  "nav.item.business-context": "Business context",
+  "nav.item.boundaries": "Boundaries",
+  "nav.item.threat-model": "Threat model"
 }

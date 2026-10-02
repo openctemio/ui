@@ -14,7 +14,7 @@
  *
  * Module Mapping:
  * - dashboard: Dashboard
- * - assets: Attack Surface, Asset Groups, Scope Config, Asset Inventory
+ * - assets: Asset Inventory, Asset Groups
  * - findings: Exposures, Findings, Threat Intel, Risk Analysis, Business Impact
  * - scans: Scans, Scan Profiles, Tools, Sensors
  * - reports: Reports
@@ -178,11 +178,56 @@ function filterNavItem(item: NavItem, checks: AccessCheckFunctions): NavItem | n
     } as NavCollapsible
   }
 
+  // A row whose section tabs carry their own gates (Business context: Crown
+  // jewels | Services | Units are three modules) shows the tabs the user may
+  // open, links to the first of them when its own page is gated off, and hides
+  // when none is left.
+  if (item.sections?.some(isGatedSection)) {
+    const sections = visibleSections(item.sections, (s) => hasItemAccess(s, checks))
+    if (sections.length === 0) return null
+    return {
+      ...item,
+      releaseStatus,
+      url: rowUrlForSections(item.url, item.sections, sections),
+      sections,
+    } as NavLink
+  }
+
   // It's a regular link item
   return {
     ...item,
     releaseStatus,
   } as NavLink
+}
+
+type GatedSection = { href: string; module?: string; permission?: string | string[] }
+
+function isGatedSection(section: GatedSection): boolean {
+  return section.module !== undefined || section.permission !== undefined
+}
+
+/** The section tabs `allowed` lets through, in order. Pure, for the tests. */
+export function visibleSections<T extends GatedSection>(
+  sections: readonly T[],
+  allowed: (section: T) => boolean
+): T[] {
+  return sections.filter((s) => !isGatedSection(s) || allowed(s))
+}
+
+/**
+ * Where a sectioned row links once some of its tabs are hidden: its own url
+ * while that tab is visible (or the url is not one of the tabs), else the first
+ * visible tab, so the row never opens a "Feature not available" page.
+ */
+export function rowUrlForSections(
+  url: NavLink['url'],
+  all: readonly GatedSection[],
+  visible: readonly GatedSection[]
+): NavLink['url'] {
+  if (typeof url !== 'string') return url
+  const ownTab = all.some((s) => s.href === url)
+  if (!ownTab || visible.some((s) => s.href === url)) return url
+  return visible[0]?.href ?? url
 }
 
 /**
@@ -300,6 +345,15 @@ export function useNavItemAccess(): (item: {
 }) => boolean {
   const checks = useAccessChecks()
   return useCallback((item) => hasItemAccess(item, checks), [checks])
+}
+
+/**
+ * The section tabs the current user may open: the same module + permission
+ * decision as the sidebar row that carries them. Ungated tabs always pass.
+ */
+export function useVisibleSectionTabs<T extends GatedSection>(tabs: readonly T[]): T[] {
+  const checks = useAccessChecks()
+  return useMemo(() => visibleSections(tabs, (s) => hasItemAccess(s, checks)), [tabs, checks])
 }
 
 export function useFilteredSidebarData(sidebarData: SidebarData): FilteredSidebarResult {
