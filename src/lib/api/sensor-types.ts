@@ -170,6 +170,37 @@ export interface Sensor {
   protocol?: SensorProtocol | null
 }
 
+/** A job dispatched to a sensor (GET /api/v1/commands). */
+export interface SensorCommand {
+  id: string
+  sensor_id?: string
+  type: 'scan' | 'collect' | 'health_check' | 'config_update' | 'cancel' | (string & {})
+  priority: string
+  status:
+    | 'pending'
+    | 'acknowledged'
+    | 'running'
+    | 'completed'
+    | 'failed'
+    | 'canceled'
+    | 'expired'
+    | (string & {})
+  payload?: Record<string, unknown> | null
+  error_message?: string
+  created_at: string
+  acknowledged_at?: string | null
+  started_at?: string | null
+  completed_at?: string | null
+}
+
+export interface SensorCommandListResponse {
+  data: SensorCommand[]
+  total: number
+  page: number
+  per_page: number
+  total_pages: number
+}
+
 /**
  * Create sensor request
  */
