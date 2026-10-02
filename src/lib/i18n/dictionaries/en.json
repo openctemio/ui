@@ -143,7 +143,7 @@
   "settings.item.roles": "Roles",
   "settings.desc.roles": "Custom roles and the permissions they grant.",
   "settings.item.authentication": "Authentication",
-  "settings.desc.authentication": "Two-factor, session length, sign-in restrictions and data scope.",
+  "settings.desc.authentication": "Two-factor, session length and sign-in restrictions.",
   "settings.item.scim": "Directory sync (SCIM)",
   "settings.desc.scim": "Provision members from your identity provider.",
   "settings.item.api-keys": "API keys",
