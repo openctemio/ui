@@ -8,6 +8,7 @@ import {
   DataTable,
   DataTableColumnHeader,
   DataTableRowActions,
+  DisabledMenuItem,
   MetricStrip,
 } from '@/features/shared'
 import { Button } from '@/components/ui/button'
@@ -108,27 +109,12 @@ import { MemberMfaBadge } from '@/features/organization/components/member-mfa-ba
  * is not the owner, each explaining why on hover or focus.
  */
 function PeerAdminLockedItems() {
-  const items: { label: string; icon: typeof Pencil }[] = [
-    { label: 'Change roles', icon: Pencil },
-    { label: 'Suspend', icon: Ban },
-    { label: 'Remove member', icon: Trash2 },
-  ]
   return (
     <>
       <DropdownMenuSeparator />
-      {items.map(({ label, icon: Icon }) => (
-        <Tooltip key={label}>
-          <TooltipTrigger asChild>
-            <div tabIndex={0} aria-label={`${label}: ${PEER_ADMIN_LOCK_REASON}`}>
-              <DropdownMenuItem disabled>
-                <Icon className="me-2 h-4 w-4" />
-                {label}
-              </DropdownMenuItem>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="left">{PEER_ADMIN_LOCK_REASON}</TooltipContent>
-        </Tooltip>
-      ))}
+      <DisabledMenuItem label="Change roles" icon={Pencil} reason={PEER_ADMIN_LOCK_REASON} />
+      <DisabledMenuItem label="Suspend" icon={Ban} reason={PEER_ADMIN_LOCK_REASON} />
+      <DisabledMenuItem label="Remove member" icon={Trash2} reason={PEER_ADMIN_LOCK_REASON} />
     </>
   )
 }
