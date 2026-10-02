@@ -97,3 +97,16 @@ describe('CreateTeamForm — bundle selection', () => {
     await waitFor(() => expect(window.location.href).toBe('/'))
   })
 })
+
+// The organization name is the organization's, never derived from the person
+// creating it: a "<Name>'s Team" default produced personal organizations.
+describe('CreateTeamForm — no personal default name', () => {
+  it.each([true, false])('starts with an empty name and slug (first team: %s)', (isFirstTeam) => {
+    render(<CreateTeamForm isFirstTeam={isFirstTeam} showCancel={false} />)
+    const name = screen.getByLabelText(/team name/i) as HTMLInputElement
+    expect(name.value).toBe('')
+    expect(name.placeholder).not.toBe('')
+    expect((screen.getByPlaceholderText('acme-corp') as HTMLInputElement).value).toBe('')
+    expect(screen.queryByDisplayValue(/'s Team$/)).not.toBeInTheDocument()
+  })
+})
