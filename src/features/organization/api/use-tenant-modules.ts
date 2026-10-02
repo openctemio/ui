@@ -315,13 +315,23 @@ export function useModulePresets(tenantIdOrSlug: string | undefined) {
  * Same as useModulePresets but hits the tenantless endpoint. Used by
  * the create-team form — the team doesn't exist yet so we can't use
  * the tenant-scoped variant. The payload is identical.
+ *
+ * The endpoint needs an access token, which a user creating their first
+ * team does not have yet (only a refresh token). A 401 here must not run
+ * the client's refresh-then-sign-out path: that signed first-time users
+ * out of onboarding. The picker is optional, so it just stays hidden.
  */
+function fetchPresetsPublic(url: string) {
+  return fetcherWithOptions<{ presets: ModulePreset[] }>(url, { method: 'GET', skipAuth: true })
+}
+
 export function useModulePresetsPublic() {
   const { data, error, isLoading } = useSWR<{ presets: ModulePreset[] }>(
     tenantEndpoints.modulesPresetsPublic(),
-    fetcher,
+    fetchPresetsPublic,
     {
       revalidateOnFocus: false,
+      shouldRetryOnError: false,
       dedupingInterval: 60 * 60 * 1000,
     }
   )

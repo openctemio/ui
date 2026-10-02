@@ -203,8 +203,10 @@ export function LoginForm({
           hardNavigate(safeRedirectTo)
           return
         }
-        // Otherwise, redirect to onboarding to create first team
-        toast.success('Please create your first team to get started')
+        // Otherwise, onboarding: the create-team form, or (when only the
+        // platform administrator creates organizations) a notice to ask for
+        // access. The page decides, so this toast stays neutral.
+        toast.success('Logged in successfully')
         hardNavigate('/onboarding/create-team')
         return
       }

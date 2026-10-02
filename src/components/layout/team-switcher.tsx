@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils'
 import { SIDEBAR_CHIP_CLASS, SIDEBAR_CONTEXT_ROW_CLASS } from './sidebar-brand'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { useCanCreateOrganization } from '@/features/auth/hooks/use-can-create-organization'
 
 /** Up to two initials, e.g. "ORG tenant" -> "OT", "acme" -> "AC". */
 function orgInitials(name: string): string {
@@ -67,6 +68,7 @@ function OrgAvatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' }) 
 
 export function TeamSwitcher() {
   const router = useRouter()
+  const { canCreate: canCreateTeam } = useCanCreateOrganization()
   const { isMobile } = useSidebar()
   const { currentTenant, tenants, isLoading, isSwitching, switchTeam, error, loadTenants } =
     useTenant()
@@ -169,8 +171,10 @@ export function TeamSwitcher() {
     )
   }
 
-  // No teams state
+  // No teams state. Nothing to offer when only the platform administrator
+  // creates organizations.
   if (!isLoading && displayTenants.length === 0 && !currentTenant) {
+    if (!canCreateTeam) return null
     return (
       <SidebarMenu>
         <SidebarMenuItem>
@@ -274,20 +278,24 @@ export function TeamSwitcher() {
               </>
             )}
 
-            <DropdownMenuSeparator />
+            {canCreateTeam && (
+              <>
+                <DropdownMenuSeparator />
 
-            <DropdownMenuItem
-              className="gap-2 p-2"
-              onClick={() => {
-                setIsOpen(false)
-                router.push('/settings/tenant/create')
-              }}
-            >
-              <div className="bg-background flex size-6 items-center justify-center rounded-md border">
-                <Plus className="size-4" />
-              </div>
-              <div className="text-muted-foreground font-medium">Add team</div>
-            </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="gap-2 p-2"
+                  onClick={() => {
+                    setIsOpen(false)
+                    router.push('/settings/tenant/create')
+                  }}
+                >
+                  <div className="bg-background flex size-6 items-center justify-center rounded-md border">
+                    <Plus className="size-4" />
+                  </div>
+                  <div className="text-muted-foreground font-medium">Add team</div>
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
