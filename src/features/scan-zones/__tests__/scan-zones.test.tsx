@@ -39,6 +39,7 @@ vi.mock('@/lib/api/scan-zone-hooks', () => ({
 }))
 vi.mock('@/lib/api/sensor-hooks', () => ({
   useSensors: () => ({ data: { items: [] }, isLoading: false }),
+  useAllSensors: () => ({ data: { items: [] }, isLoading: false }),
 }))
 
 import { ScanZoneTable } from '../components/scan-zone-table'

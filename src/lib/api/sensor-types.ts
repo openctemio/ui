@@ -33,6 +33,55 @@ export type SensorHealth = 'unknown' | 'online' | 'offline' | 'error'
 
 export type ExecutionMode = 'standalone' | 'daemon'
 
+/**
+ * Operational state computed by the API (GET /sensors): the admin status, the
+ * heartbeat age and the problems a heartbeating sensor reports, as one value.
+ * Older APIs do not send it; `sensorState()` computes the same ladder then.
+ */
+export type SensorState =
+  'online' | 'degraded' | 'stale' | 'offline' | 'idle' | 'never_connected' | 'disabled' | 'revoked'
+
+/** How a sensor's version compares with the platform's release channel. */
+export type SensorVersionStatus = 'latest' | 'update_available' | 'unsupported' | 'unknown'
+
+/** One problem found on a sensor (stable `code`; `message` is a fallback). */
+export interface SensorHealthReason {
+  code:
+    | 'outbox_backlog'
+    | 'outbox_dead_letters'
+    | 'outbox_evicted'
+    | 'key_expired'
+    | 'key_expiring'
+    | 'version_unsupported'
+    | 'no_tools'
+    | 'error_reported'
+    | (string & {})
+  severity: 'warning' | 'critical'
+  message: string
+}
+
+/** The sensor's last reported outbox (results waiting to be delivered). */
+export interface SensorOutbox {
+  pending_count: number
+  pending_bytes: number
+  oldest_age_seconds: number
+  dead_letter_count: number
+  evicted_count: number
+  /** Server time the snapshot was stored. */
+  reported_at: string
+}
+
+/**
+ * What the platform last saw of the sensor's protocol (RFC-029): null before
+ * the first heartbeat that recorded it; `deprecated` for protocol v1.
+ */
+export interface SensorProtocol {
+  version: number
+  user_agent: string
+  seen_at: string
+  deprecated: boolean
+}
+
 // Sensor capabilities
 export const SENSOR_CAPABILITIES = [
   'sast',
@@ -82,25 +131,43 @@ export interface Sensor {
   version?: string
   hostname?: string
   ip_address?: string
-  // System metrics
+  // System metrics (0 when the sensor does not report them)
   cpu_percent: number
   memory_percent: number
-  active_jobs: number
   region?: string
-  // Load balancing
+  // Load balancing: current_jobs is what the sensor is running now
   max_concurrent_jobs: number
   current_jobs: number
+  available_slots?: number
+  load_factor?: number
   // Other fields
   labels: Record<string, string>
   config: Record<string, unknown>
   metadata: Record<string, unknown>
   last_seen_at?: string
-  last_error_at?: string
+  last_error_at?: string | null
+  last_offline_at?: string | null
+  /** When the current API key stops working; null = never. */
+  key_expires_at?: string | null
+  /** Process start, from the uptime the heartbeat reports. */
+  started_at?: string | null
+  uptime_seconds?: number | null
   total_findings: number
   total_scans: number
   error_count: number
   created_at: string
   updated_at: string
+  /** Last reported outbox; null when the sensor never reported one. */
+  outbox?: SensorOutbox | null
+  /** Lost or stuck results in the last outbox snapshot. */
+  outbox_warning?: boolean
+  // Computed fleet health (newer APIs; see sensorState()).
+  state?: SensorState
+  health_reasons?: SensorHealthReason[]
+  version_status?: SensorVersionStatus
+  is_platform_sensor?: boolean
+  /** Protocol telemetry (RFC-029); absent on APIs without it. */
+  protocol?: SensorProtocol | null
 }
 
 /**
@@ -156,7 +223,7 @@ export interface SensorListResponse {
   items: Sensor[]
   total: number
   page: number
-  page_size: number
+  per_page: number
 }
 
 /**
@@ -167,7 +234,8 @@ export interface SensorListFilters {
   status?: SensorStatus
   search?: string
   page?: number
-  page_size?: number
+  /** The API reads per_page (max 100); page_size is ignored by it. */
+  per_page?: number
 }
 
 /**
@@ -176,102 +244,4 @@ export interface SensorListFilters {
  */
 export interface AvailableCapabilitiesResponse {
   capabilities: string[]
-}
-
-// =============================================================================
-// Sensor Analytics Types
-// =============================================================================
-
-/**
- * Sensor Session - tracks each online session with stats
- */
-export interface SensorSession {
-  id: string
-  sensor_id: string
-  started_at: string
-  ended_at?: string
-  duration_seconds?: number
-  findings_count: number
-  scans_count: number
-  errors_count: number
-  jobs_completed: number
-  version?: string
-  hostname?: string
-  ip_address?: string
-  region?: string
-  created_at: string
-}
-
-/**
- * Sensor Daily Stats - aggregated daily statistics
- */
-export interface SensorDailyStats {
-  id: string
-  sensor_id: string
-  date: string
-  total_findings: number
-  total_scans: number
-  total_errors: number
-  total_jobs: number
-  online_seconds: number
-  offline_seconds: number
-  session_count: number
-  created_at: string
-  updated_at: string
-}
-
-/**
- * Sensor Session Stats - aggregate stats for a sensor over a time range
- */
-export interface SensorSessionStats {
-  total_sessions: number
-  total_findings: number
-  total_scans: number
-  total_errors: number
-  total_jobs: number
-  total_online_seconds: number
-  average_session_time_seconds: number
-}
-
-/**
- * Sensor Session List Response
- */
-export interface SensorSessionListResponse {
-  data: SensorSession[]
-  total: number
-  page: number
-  per_page: number
-  total_pages: number
-}
-
-/**
- * Sensor Daily Stats List Response
- */
-export interface SensorDailyStatsListResponse {
-  data: SensorDailyStats[]
-  total: number
-  page: number
-  per_page: number
-  total_pages: number
-}
-
-/**
- * Sensor Session List Filters
- */
-export interface SensorSessionListFilters {
-  is_active?: boolean
-  started_at?: string
-  ended_at?: string
-  page?: number
-  per_page?: number
-}
-
-/**
- * Sensor Daily Stats List Filters
- */
-export interface SensorDailyStatsListFilters {
-  from?: string
-  to?: string
-  page?: number
-  per_page?: number
 }

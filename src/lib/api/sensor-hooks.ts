@@ -21,13 +21,6 @@ import type {
   UpdateSensorRequest,
   RegenerateAPIKeyResponse,
   AvailableCapabilitiesResponse,
-  SensorSession,
-  SensorSessionListResponse,
-  SensorSessionStats,
-  SensorDailyStats,
-  SensorDailyStatsListResponse,
-  SensorSessionListFilters,
-  SensorDailyStatsListFilters,
 } from './sensor-types'
 
 // ============================================
@@ -57,15 +50,6 @@ const defaultConfig: SWRConfiguration = {
   },
 }
 
-// For endpoints where a 404 means "no data yet" (a fresh or idle sensor has no
-// sessions/stats/analytics). Surfacing that as a "Not Found" toast is wrong —
-// it's a normal empty state the UI already renders. Toast only non-404 errors.
-const suppress404OnError: SWRConfiguration['onError'] = (error) => {
-  if (error?.statusCode !== 404) {
-    handleApiError(error, { showToast: true, logError: true })
-  }
-}
-
 // ============================================
 // CACHE KEYS
 // ============================================
@@ -78,17 +62,6 @@ export const sensorKeys = {
   detail: (id: string) => [...sensorKeys.details(), id] as const,
   availableCapabilities: (includePlatform: boolean = true) =>
     [...sensorKeys.all, 'available-capabilities', includePlatform] as const,
-  // Analytics keys
-  sessions: (id: string) => [...sensorKeys.detail(id), 'sessions'] as const,
-  sessionsList: (id: string, filters?: SensorSessionListFilters) =>
-    [...sensorKeys.sessions(id), 'list', filters] as const,
-  activeSession: (id: string) => [...sensorKeys.sessions(id), 'active'] as const,
-  sessionStats: (id: string, filters?: { started_at?: string; ended_at?: string }) =>
-    [...sensorKeys.sessions(id), 'stats', filters] as const,
-  dailyStats: (id: string, filters?: SensorDailyStatsListFilters) =>
-    [...sensorKeys.detail(id), 'daily-stats', filters] as const,
-  timeSeries: (id: string, filters?: { from?: string; to?: string }) =>
-    [...sensorKeys.detail(id), 'timeseries', filters] as const,
 }
 
 // ============================================
@@ -107,32 +80,63 @@ async function fetchAvailableCapabilities(url: string): Promise<AvailableCapabil
   return get<AvailableCapabilitiesResponse>(url)
 }
 
-async function fetchSensorSessions(url: string): Promise<SensorSessionListResponse> {
-  return get<SensorSessionListResponse>(url)
-}
-
-async function fetchActiveSession(url: string): Promise<SensorSession> {
-  return get<SensorSession>(url)
-}
-
-async function fetchSessionStats(url: string): Promise<SensorSessionStats> {
-  return get<SensorSessionStats>(url)
-}
-
-async function fetchDailyStats(url: string): Promise<SensorDailyStatsListResponse> {
-  return get<SensorDailyStatsListResponse>(url)
-}
-
-async function fetchTimeSeries(url: string): Promise<SensorDailyStats[]> {
-  return get<SensorDailyStats[]>(url)
-}
-
 // ============================================
-// WORKER HOOKS
+// SENSOR HOOKS
 // ============================================
+
+/** The API's largest page (MaxPerPage). */
+export const SENSOR_PAGE_SIZE = 100
+/** Safety stop for fetchAllSensorPages: 5,000 sensors. */
+const MAX_SENSOR_PAGES = 50
 
 /**
- * Fetch sensors list
+ * Reads every page of GET /sensors. The sensors page groups, filters and
+ * counts the whole fleet on the client (the state ladder depends on the
+ * current time), and a fleet is small, so it loads all of it rather than
+ * showing page 1 of a list the toolbar then filters. The page used to send
+ * page_size, which the API ignores, so it only ever saw the first 20.
+ */
+export async function fetchAllSensorPages(
+  getPage: (page: number) => Promise<SensorListResponse>
+): Promise<SensorListResponse> {
+  const items: Sensor[] = []
+  let total = 0
+  for (let page = 1; page <= MAX_SENSOR_PAGES; page++) {
+    const res = await getPage(page)
+    const batch = res.items ?? []
+    items.push(...batch)
+    total = res.total ?? items.length
+    if (batch.length < SENSOR_PAGE_SIZE || items.length >= total) break
+  }
+  return { items, total: Math.max(total, items.length), page: 1, per_page: items.length }
+}
+
+/** Refresh interval for the live sensors view (list, stats and the open sensor). */
+export const SENSOR_REFRESH_MS = 15_000
+
+/**
+ * The tenant's whole fleet (every page), refreshed every 15s while the tab
+ * is visible.
+ */
+export function useAllSensors(config?: SWRConfiguration, enabled = true) {
+  const { currentTenant } = useTenant()
+  const key = currentTenant && enabled ? sensorEndpoints.list({ per_page: SENSOR_PAGE_SIZE }) : null
+  return useSWR<SensorListResponse>(
+    key,
+    () =>
+      fetchAllSensorPages((page) =>
+        get<SensorListResponse>(sensorEndpoints.list({ per_page: SENSOR_PAGE_SIZE, page }))
+      ),
+    {
+      ...defaultConfig,
+      refreshInterval: SENSOR_REFRESH_MS,
+      ...config,
+    }
+  )
+}
+
+/**
+ * Fetch one page of sensors
  */
 export function useSensors(filters?: SensorListFilters, config?: SWRConfiguration) {
   const { currentTenant } = useTenant()
@@ -163,6 +167,19 @@ export interface TenantSensorStats {
   by_execution_mode: Record<string, number>
   active_jobs: number
   online_active: number
+  // Fleet summary (newer APIs): the same population GET /sensors lists.
+  by_state?: Record<string, number>
+  by_version_status?: Record<string, number>
+  needs_attention?: number
+  can_take_jobs?: number
+  jobs_running?: number
+  job_slots?: number
+  /** Release channel: "" when not configured. */
+  latest_version?: string
+  min_version?: string
+  /** State ladder thresholds. */
+  online_window_seconds?: number
+  offline_after_seconds?: number
 }
 
 export function useTenantSensorStats(config?: SWRConfiguration) {
@@ -170,7 +187,8 @@ export function useTenantSensorStats(config?: SWRConfiguration) {
   const key = currentTenant ? sensorEndpoints.tenantStats() : null
   return useSWR<TenantSensorStats>(key, (url: string) => get<TenantSensorStats>(url), {
     ...defaultConfig,
-    dedupingInterval: 30000,
+    dedupingInterval: 5000,
+    refreshInterval: SENSOR_REFRESH_MS,
     ...config,
   })
 }
@@ -211,99 +229,6 @@ export function useAvailableCapabilities(
   const key = currentTenant ? sensorEndpoints.availableCapabilities(includePlatform) : null
 
   return useSWR<AvailableCapabilitiesResponse>(key, fetchAvailableCapabilities, {
-    ...defaultConfig,
-    ...config,
-  })
-}
-
-// ============================================
-// ANALYTICS HOOKS
-// ============================================
-
-/**
- * Fetch sensor sessions list
- */
-export function useSensorSessions(
-  sensorId: string | null,
-  filters?: SensorSessionListFilters,
-  config?: SWRConfiguration
-) {
-  const { currentTenant } = useTenant()
-
-  const key = currentTenant && sensorId ? sensorEndpoints.listSessions(sensorId, filters) : null
-
-  return useSWR<SensorSessionListResponse>(key, fetchSensorSessions, {
-    ...defaultConfig,
-    ...config,
-  })
-}
-
-/**
- * Fetch active session for a sensor
- */
-export function useActiveSensorSession(sensorId: string | null, config?: SWRConfiguration) {
-  const { currentTenant } = useTenant()
-
-  const key = currentTenant && sensorId ? sensorEndpoints.getActiveSession(sensorId) : null
-
-  return useSWR<SensorSession | null>(key, fetchActiveSession, {
-    ...defaultConfig,
-    onError: suppress404OnError, // no active session (404) is a normal state
-    ...config,
-  })
-}
-
-/**
- * Fetch session stats for a sensor
- */
-export function useSensorSessionStats(
-  sensorId: string | null,
-  filters?: { started_at?: string; ended_at?: string },
-  config?: SWRConfiguration
-) {
-  const { currentTenant } = useTenant()
-
-  const key = currentTenant && sensorId ? sensorEndpoints.getSessionStats(sensorId, filters) : null
-
-  return useSWR<SensorSessionStats>(key, fetchSessionStats, {
-    ...defaultConfig,
-    onError: suppress404OnError, // a fresh/idle sensor has no stats yet (404)
-    ...config,
-  })
-}
-
-/**
- * Fetch daily stats for a sensor
- */
-export function useSensorDailyStats(
-  sensorId: string | null,
-  filters?: SensorDailyStatsListFilters,
-  config?: SWRConfiguration
-) {
-  const { currentTenant } = useTenant()
-
-  const key = currentTenant && sensorId ? sensorEndpoints.listDailyStats(sensorId, filters) : null
-
-  return useSWR<SensorDailyStatsListResponse>(key, fetchDailyStats, {
-    ...defaultConfig,
-    onError: suppress404OnError, // a fresh/idle sensor has no daily stats yet (404)
-    ...config,
-  })
-}
-
-/**
- * Fetch time series data for a sensor
- */
-export function useSensorTimeSeries(
-  sensorId: string | null,
-  filters?: { from?: string; to?: string },
-  config?: SWRConfiguration
-) {
-  const { currentTenant } = useTenant()
-
-  const key = currentTenant && sensorId ? sensorEndpoints.getTimeSeries(sensorId, filters) : null
-
-  return useSWR<SensorDailyStats[]>(key, fetchTimeSeries, {
     ...defaultConfig,
     ...config,
   })

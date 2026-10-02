@@ -145,6 +145,11 @@ interface DataTableProps<TData, TValue> {
    * Rows already on screen stay visible; skeletons only replace an empty body.
    */
   isLoading?: boolean
+  /**
+   * Columns hidden until the user turns them on under Columns, e.g. metrics
+   * that most rows do not report. Keyed by column id.
+   */
+  initialColumnVisibility?: VisibilityState
 }
 
 /** Skeleton rows shown in an empty body while `isLoading`. */
@@ -311,6 +316,7 @@ export function DataTable<TData, TValue>({
   mobileRow,
   mobileCards = true,
   isLoading = false,
+  initialColumnVisibility,
 }: DataTableProps<TData, TValue>) {
   // Cards replace the table on phones. Decided in JS rather than by hiding one
   // with CSS, so only one of the two is ever rendered.
@@ -331,7 +337,9 @@ export function DataTable<TData, TValue>({
   const serverSorting = manualPagination && !!onSortingChange
   const sorting = serverSorting ? (sortingProp ?? []) : internalSorting
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(
+    () => initialColumnVisibility ?? {}
+  )
   const [rowSelection, setRowSelection] = React.useState({})
   const [globalFilter, setGlobalFilter] = React.useState('')
 
@@ -549,7 +557,8 @@ export function DataTable<TData, TValue>({
                         checked={column.getIsVisible()}
                         onCheckedChange={(value) => column.toggleVisibility(!!value)}
                       >
-                        {column.id.replace(/_/g, ' ')}
+                        {(column.columnDef.meta as { label?: string } | undefined)?.label ??
+                          column.id.replace(/_/g, ' ')}
                       </DropdownMenuCheckboxItem>
                     )
                   })}
