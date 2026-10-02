@@ -89,6 +89,34 @@ describe('SensorContentSection', () => {
     expect(screen.getByText(/not controlled/)).toBeInTheDocument()
   })
 
+  it('shows when the sensor last checked for a newer version', () => {
+    render(
+      <SensorContentSection
+        sensor={sensorWith({
+          content: [{ ...nuclei, checked_at: new Date(NOW - 2 * 3600 * 1000).toISOString() }],
+        })}
+        now={NOW}
+        canManage={false}
+      />
+    )
+    expect(screen.getByText('checked 2h ago')).toBeInTheDocument()
+  })
+
+  it('keeps the API stale flag even when a recent check is reported', () => {
+    render(
+      <SensorContentSection
+        sensor={sensorWith({ content: [{ ...trivy, checked_at: new Date(NOW).toISOString() }] })}
+        now={NOW}
+        canManage={false}
+      />
+    )
+    expect(document.querySelector('[data-content="trivy-db"]')).toHaveAttribute(
+      'data-state',
+      'stale'
+    )
+    expect(screen.getByText('checked just now')).toBeInTheDocument()
+  })
+
   it('shows the last refresh error', () => {
     render(
       <SensorContentSection
