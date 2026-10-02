@@ -10,6 +10,7 @@ const mockCreate = vi.fn()
 const mockRevoke = vi.fn()
 let listData: { tokens: unknown[] } | undefined = { tokens: [] }
 let tenantAdmin = true
+let tenantOwner = true
 let listEnabled: boolean | undefined
 
 vi.mock('@/features/scim-tokens/api/use-scim-tokens', () => ({
@@ -23,7 +24,11 @@ vi.mock('@/features/scim-tokens/api/use-scim-tokens', () => ({
 
 vi.mock('@/lib/permissions', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/permissions')>()),
-  usePermissions: () => ({ isAdmin: () => tenantAdmin, isLoading: false }),
+  usePermissions: () => ({
+    isAdmin: () => tenantAdmin,
+    isOwner: () => tenantOwner,
+    isLoading: false,
+  }),
 }))
 
 vi.mock('sonner', () => ({
@@ -39,6 +44,7 @@ describe('ScimTokensPage', () => {
     vi.clearAllMocks()
     listData = { tokens: [] }
     tenantAdmin = true
+    tenantOwner = true
     listEnabled = undefined
   })
 
@@ -51,6 +57,31 @@ describe('ScimTokensPage', () => {
     expect(screen.getByText("Managed by your team's owners and admins")).toBeInTheDocument()
     expect(screen.queryByText('SCIM endpoint')).toBeNull()
     expect(listEnabled).toBe(false)
+  })
+
+  it('an administrator who is not the owner sees tokens but cannot generate or revoke', () => {
+    // Minting and revoking a SCIM token is owner-only (the API answers 403).
+    tenantOwner = false
+    listData = {
+      tokens: [
+        {
+          id: 't1',
+          name: 'Okta prod',
+          prefix: 'oct_scim_ab',
+          status: 'active',
+          created_at: '2026-06-01T00:00:00Z',
+        },
+      ],
+    }
+    render(<ScimTokensPage />)
+    expect(listEnabled).toBe(true)
+    expect(screen.getByText('Okta prod')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /generate token/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /revoke okta prod/i })).toBeDisabled()
+    expect(
+      screen.getAllByLabelText(/only the organization owner can generate or revoke scim tokens/i)
+        .length
+    ).toBeGreaterThan(0)
   })
 
   it('is available to tenant admins who are not application administrators', () => {

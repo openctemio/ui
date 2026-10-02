@@ -50,6 +50,15 @@ describe('SetupLinkResult', () => {
     expect(screen.getByTestId('setup-link')).toHaveTextContent('/set-password?token=tok-2')
   })
 
+  it('says the email failed, without a link, when the API reports email_failed', () => {
+    // The platform admin's first-owner bootstrap never falls back to returning
+    // the link when the organization can send email.
+    render(<SetupLinkResult outcome={{ email_sent: false, email_failed: true }} email="a@co.com" />)
+    expect(screen.getByText('Setup email not sent')).toBeInTheDocument()
+    expect(screen.getByText(/forgot password/i)).toBeInTheDocument()
+    expect(screen.queryByTestId('setup-link')).toBeNull()
+  })
+
   it('says the email was sent when there is no token', () => {
     render(<SetupLinkResult outcome={{ email_sent: true }} email="a@co.com" />)
     expect(screen.getByText('Setup email sent')).toBeInTheDocument()

@@ -248,10 +248,13 @@ export function SensorDetailSheet({
               Analytics
             </TabsTrigger>
             <TabsTrigger value="capabilities">Capabilities</TabsTrigger>
-            <TabsTrigger value="activity">
-              <History className="me-1 h-3 w-3" />
-              Activity
-            </TabsTrigger>
+            {/* The activity log reads the organization audit log (owner/admin only). */}
+            <Can permission={Permission.AuditRead}>
+              <TabsTrigger value="activity">
+                <History className="me-1 h-3 w-3" />
+                Activity
+              </TabsTrigger>
+            </Can>
             <TabsTrigger value="details">Details</TabsTrigger>
           </TabsList>
 
@@ -368,15 +371,17 @@ export function SensorDetailSheet({
             </div>
           </TabsContent>
 
-          <TabsContent value="activity" className="mt-0">
-            <div className="rounded-xl border bg-card p-4">
-              <h4 className="mb-3 flex items-center gap-2 text-sm font-medium">
-                <History className="h-4 w-4" />
-                Activity Log
-              </h4>
-              <SensorAuditLog sensorId={sensor.id} />
-            </div>
-          </TabsContent>
+          <Can permission={Permission.AuditRead}>
+            <TabsContent value="activity" className="mt-0">
+              <div className="rounded-xl border bg-card p-4">
+                <h4 className="mb-3 flex items-center gap-2 text-sm font-medium">
+                  <History className="h-4 w-4" />
+                  Activity Log
+                </h4>
+                <SensorAuditLog sensorId={sensor.id} />
+              </div>
+            </TabsContent>
+          </Can>
 
           <TabsContent value="details" className="mt-0 space-y-4">
             {/* Sensor Information */}
