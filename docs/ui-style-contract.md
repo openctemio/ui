@@ -178,7 +178,9 @@ load.
 - A dialog laid out edge to edge (split panes, a tinted aside, a scrolling
   body with a sticky footer): `<DialogContent showCloseButton={false}
 className="flex flex-col gap-0 p-0 sm:p-0 …">` with a `<DialogHeaderBar>`
-  (title, description, close) first, then the body. The close button stays on
+  (title, description, close) first, then the body. Pass
+  `onOpenAutoFocus={(e) => focusDialogBody(e, bodyRef.current)}` (body has
+  `tabIndex={-1}`) so it opens on the first field, not on the close button. The close button stays on
   the dialog surface, never on a tinted region; a secondary panel is inset
   (margin + radius), not bled to the edge. Install sensor and Edit sensor are
   the reference. Ordinary dialogs keep the default corner close button.

@@ -81,6 +81,50 @@ function DialogContent({
   )
 }
 
+const FIRST_FIELD =
+  'input:not([type=hidden]):not([disabled]), textarea:not([disabled]), select:not([disabled])'
+
+/**
+ * Initial focus for a DialogHeaderBar dialog, as its `onOpenAutoFocus`
+ * handler. Radix would focus the first focusable element, which is the
+ * header's close button. This focuses the body's first form field instead,
+ * or the body itself (give it `tabIndex={-1}`) when it has none. With a
+ * coarse pointer (a phone) it always focuses the body, so the on-screen
+ * keyboard does not open by itself. Escape and focus return are unchanged.
+ *
+ *   <DialogContent onOpenAutoFocus={(e) => focusDialogBody(e, bodyRef.current)}>
+ */
+function focusDialogBody(event: Event, body: HTMLElement | null) {
+  if (!body) return
+  event.preventDefault()
+  const coarse =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(pointer: coarse)').matches
+  const field = coarse ? null : body.querySelector<HTMLElement>(FIRST_FIELD)
+  ;(field ?? body).focus({ preventScroll: true })
+  // Caret at the end, not the whole value selected: one keystroke must not
+  // replace an existing name. When a dropdown item opened the dialog, the
+  // menu hands focus back to its trigger as it finishes closing and the
+  // dialog's focus trap refocuses the field with everything selected, so for
+  // a moment after opening every refocus puts the caret back at the end.
+  if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
+    const caretToEnd = () => {
+      if (document.activeElement !== field) return
+      try {
+        const end = field.value.length
+        field.setSelectionRange(end, end)
+      } catch {
+        // number / email inputs have no selection API
+      }
+    }
+    caretToEnd()
+    const onRefocus = () => setTimeout(caretToEnd, 0)
+    field.addEventListener('focus', onRefocus)
+    setTimeout(() => field.removeEventListener('focus', onRefocus), 1000)
+  }
+}
+
 /**
  * The chrome row of a dialog whose body is laid out edge to edge (split
  * panes, a tinted aside, a scrolling body with a sticky footer): title and
@@ -90,7 +134,8 @@ function DialogContent({
  *
  * Use with `<DialogContent showCloseButton={false} className="flex flex-col gap-0 p-0 sm:p-0 …">`
  * (`sm:p-0` too: DialogContent pads `sm:p-6`)
- * and put DialogTitle / DialogDescription inside.
+ * and put DialogTitle / DialogDescription inside. Pass `focusDialogBody` as
+ * the content's `onOpenAutoFocus` so the dialog does not open on the close button.
  */
 function DialogHeaderBar({
   className,
@@ -174,4 +219,5 @@ export {
   DialogPortal,
   DialogTitle,
   DialogTrigger,
+  focusDialogBody,
 }

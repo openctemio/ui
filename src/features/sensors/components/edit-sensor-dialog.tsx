@@ -14,6 +14,7 @@ import {
   DialogDescription,
   DialogHeaderBar,
   DialogTitle,
+  focusDialogBody,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -215,6 +216,7 @@ export function EditSensorDialog({
   // Reset when the dialog opens or another sensor is edited, but not when the
   // same sensor is refetched while open (that would wipe the user's edits).
   const latest = useRef(sensor)
+  const bodyRef = useRef<HTMLFormElement>(null)
   useEffect(() => {
     latest.current = sensor
   })
@@ -310,6 +312,7 @@ export function EditSensorDialog({
       <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : requestClose())}>
         <DialogContent
           showCloseButton={false}
+          onOpenAutoFocus={(e) => focusDialogBody(e, bodyRef.current)}
           className="flex max-h-[90svh] flex-col gap-0 overflow-hidden p-0 sm:p-0 sm:max-w-2xl"
         >
           <DialogHeaderBar>
@@ -319,7 +322,9 @@ export function EditSensorDialog({
 
           <form
             id={ids.form}
-            className="min-h-0 flex-1 space-y-8 overflow-y-auto px-4 py-5 sm:px-6"
+            ref={bodyRef}
+            tabIndex={-1}
+            className="min-h-0 flex-1 space-y-8 overflow-y-auto px-4 py-5 outline-none sm:px-6"
             onSubmit={(e) => {
               e.preventDefault()
               void handleSave()
