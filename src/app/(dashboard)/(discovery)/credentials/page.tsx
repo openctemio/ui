@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, type ReactNode } from 'react'
+import { useState, useMemo, useEffect, type ReactNode } from 'react'
 import { csrfFetch } from '@/lib/api/client'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Main } from '@/components/layout'
@@ -12,7 +12,6 @@ import {
   DataTable,
   DataTableColumnHeader,
   DataTableRowActions,
-  EmptyState,
   MetricStrip,
   type MetricStripItem,
 } from '@/features/shared'
@@ -63,10 +62,7 @@ import {
   User,
   Calendar,
   X,
-  Users,
-  List,
-  ChevronDown,
-  Mail,
+  Layers,
 } from 'lucide-react'
 import { type Asset } from '@/features/assets'
 import { AssetGroupSelect } from '@/features/asset-groups'
@@ -75,23 +71,18 @@ import {
   useCredentialsApi,
   useCredentialIdentitiesApi,
   useRelatedCredentialsApi,
-  useIdentityExposuresApi,
   mapCredentialsToAssets,
+  CredentialIdentityGroups,
   invalidateCredentialsCache,
   LeakedSecretField,
 } from '@/features/credentials'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import type {
-  ApiIdentityExposure,
-  ApiCredential,
-} from '@/features/credentials/api/credential-api.types'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import type { ApiCredential } from '@/features/credentials/api/credential-api.types'
 import { copyToClipboard } from '@/lib/clipboard'
 import { exportToCsv } from '@/hooks/use-csv-export'
 import { useUrlFilter } from '@/hooks/use-url-param'
 import { useDebounce } from '@/hooks/use-debounce'
 import { Permission } from '@/lib/permissions'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
@@ -157,9 +148,15 @@ export default function CredentialsPage() {
   // lives in the URL like the other filters and is debounced per keystroke.
   const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
   const debouncedSearch = useDebounce(searchQuery, 300)
-  // List / By identity are two views of the same leaks: tabs, active one in the URL.
-  const [viewParam, setViewParam] = useUrlFilter('tab', 'list')
-  const viewMode: 'list' | 'identity' = viewParam === 'identity' ? 'identity' : 'list'
+  // Group by identity is a view of the same leaks ("Group by", in the URL). The
+  // old List / By identity tabs map over: ?tab=identity → ?group=identity.
+  const [groupParam, setGroupParam] = useUrlFilter('group', '')
+  const [tabParam, setTabParam] = useUrlFilter('tab', '')
+  useEffect(() => {
+    if (tabParam === 'identity') setGroupParam('identity')
+    if (tabParam) setTabParam('')
+  }, [tabParam, setTabParam, setGroupParam])
+  const viewMode: 'list' | 'identity' = groupParam === 'identity' ? 'identity' : 'list'
 
   // Map status filter to API state filter
   const apiStateFilter = useMemo(() => {
@@ -253,7 +250,6 @@ export default function CredentialsPage() {
   }, [allCredentialsResponse])
 
   const [selectedCredential, setSelectedCredential] = useState<Asset | null>(null)
-  const [expandedIdentities, setExpandedIdentities] = useState<Set<string>>(new Set())
 
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -578,6 +574,23 @@ export default function CredentialsPage() {
       </SelectContent>
     </Select>
   )
+  const groupSelect = (
+    <Select
+      value={viewMode === 'identity' ? 'identity' : 'none'}
+      onValueChange={(v) => setGroupParam(v === 'none' ? '' : v)}
+    >
+      <SelectTrigger className="h-9 w-auto gap-2 sm:min-w-36" aria-label="Group credential leaks">
+        <Layers className="h-4 w-4 text-muted-foreground" />
+        <span className="hidden sm:inline">
+          <SelectValue />
+        </span>
+      </SelectTrigger>
+      <SelectContent align="end">
+        <SelectItem value="none">No grouping</SelectItem>
+        <SelectItem value="identity">Identity</SelectItem>
+      </SelectContent>
+    </Select>
+  )
 
   return (
     <>
@@ -601,83 +614,29 @@ export default function CredentialsPage() {
           </Button>
         </PageHeader>
 
-        <Tabs value={viewMode} onValueChange={(v) => setViewParam(v)} className="mt-4">
-          <TabsList>
-            <TabsTrigger value="list" className="gap-1.5">
-              <List className="h-4 w-4" />
-              List
-            </TabsTrigger>
-            <TabsTrigger value="identity" className="gap-1.5">
-              <Users className="h-4 w-4" />
-              By identity
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-
         <MetricStrip className="mt-5" loading={statsLoading} items={metrics} />
 
         <div className="mt-5">
           {viewMode === 'identity' ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                {searchInput}
-                {statusSelect}
-              </div>
-              {identitiesLoading ? (
-                <div className="divide-y rounded-md border">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="flex items-center justify-between p-4">
-                      <div className="space-y-2">
-                        <Skeleton className="h-5 w-48" />
-                        <Skeleton className="h-4 w-64" />
-                      </div>
-                      <Skeleton className="h-6 w-20" />
-                    </div>
-                  ))}
-                </div>
-              ) : identitiesResponse?.items?.length ? (
-                <div className="divide-y rounded-md border">
-                  {identitiesResponse.items.map((identity) => {
-                    // The contract declares `identity` optional; it is the row
-                    // key and the expansion-set member, so fall back rather
-                    // than keying on undefined.
-                    const identityKey = identity.identity ?? ''
-                    return (
-                      <IdentityRow
-                        key={identityKey}
-                        identity={identity}
-                        isExpanded={expandedIdentities.has(identityKey)}
-                        onToggle={() => {
-                          setExpandedIdentities((prev) => {
-                            const next = new Set(prev)
-                            if (next.has(identityKey)) {
-                              next.delete(identityKey)
-                            } else {
-                              next.add(identityKey)
-                            }
-                            return next
-                          })
-                        }}
-                        onSelectCredential={(cred) => {
-                          const asset = mapCredentialsToAssets([cred])[0]
-                          setSelectedCredential(asset)
-                        }}
-                      />
-                    )
-                  })}
-                </div>
-              ) : (
-                <EmptyState
-                  icon={Users}
-                  title="No identities found"
-                  description={
-                    searchQuery || statusFilter !== 'all'
-                      ? 'Try removing a filter or clearing the search.'
-                      : 'Identities appear here once leaked credentials are imported.'
-                  }
-                />
-              )}
-            </div>
+            <CredentialIdentityGroups
+              identities={identitiesResponse?.items ?? []}
+              isLoading={identitiesLoading && !identitiesResponse}
+              columns={columns}
+              onRowClick={(c) => setSelectedCredential(c)}
+              resetKey={`${debouncedSearch}|${statusFilter}`}
+              toolbarStart={
+                <>
+                  {searchInput}
+                  {statusSelect}
+                </>
+              }
+              toolbarEnd={groupSelect}
+              emptyDescription={
+                searchQuery || statusFilter !== 'all'
+                  ? 'Try removing a filter or clearing the search.'
+                  : 'Identities appear here once leaked credentials are imported.'
+              }
+            />
           ) : isLoading ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -703,6 +662,7 @@ export default function CredentialsPage() {
                   {sourceSelect}
                 </>
               }
+              toolbarEnd={groupSelect}
               getRowId={(c) => c.id}
               onRowClick={(c) => setSelectedCredential(c)}
               emptyMessage="No credential leaks found"
@@ -1012,13 +972,6 @@ export default function CredentialsPage() {
 // IDENTITY ROW COMPONENT
 // ============================================
 
-interface IdentityRowProps {
-  identity: ApiIdentityExposure
-  isExpanded: boolean
-  onToggle: () => void
-  onSelectCredential: (cred: ApiCredential) => void
-}
-
 /** API severities are free strings; the shared badge falls back for unknown ones. */
 function asSeverity(value: string | undefined): Severity {
   return (value ?? 'none') as Severity
@@ -1103,102 +1056,5 @@ function RelatedExposuresSection({
         ))}
       </div>
     </div>
-  )
-}
-
-function IdentityRow({ identity, isExpanded, onToggle, onSelectCredential }: IdentityRowProps) {
-  // Fetch exposures only when the row is expanded
-  const { data: exposuresResponse, isLoading: exposuresLoading } = useIdentityExposuresApi(
-    isExpanded ? (identity.identity ?? null) : null,
-    { page_size: 50 }
-  )
-
-  const activeCount = identity.states?.active || 0
-  const resolvedCount = identity.states?.resolved || 0
-
-  return (
-    <Collapsible open={isExpanded} onOpenChange={onToggle}>
-      <CollapsibleTrigger asChild>
-        <button
-          type="button"
-          className="w-full px-4 py-3 text-start transition-colors hover:bg-muted/50"
-        >
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-3">
-              {identity.identity_type === 'email' ? (
-                <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
-              ) : (
-                <User className="h-4 w-4 shrink-0 text-muted-foreground" />
-              )}
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="truncate font-medium">{identity.identity}</span>
-                  <Badge variant="secondary" className="text-xs tabular-nums">
-                    {identity.exposure_count}{' '}
-                    {identity.exposure_count === 1 ? 'exposure' : 'exposures'}
-                  </Badge>
-                </div>
-                <div className="mt-0.5 truncate text-sm text-muted-foreground">
-                  Sources: {(identity.sources ?? []).join(', ')} · Types:{' '}
-                  {(identity.credential_types ?? []).join(', ')}
-                </div>
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {activeCount > 0 && (
-                <Badge variant="destructive" className="text-xs tabular-nums">
-                  {activeCount} active
-                </Badge>
-              )}
-              {resolvedCount > 0 && (
-                <Badge variant="secondary" className="text-xs tabular-nums">
-                  {resolvedCount} resolved
-                </Badge>
-              )}
-              <SeverityBadge severity={asSeverity(identity.highest_severity)} />
-              <ChevronDown
-                className={cn(
-                  'h-4 w-4 text-muted-foreground transition-transform',
-                  isExpanded && 'rotate-180'
-                )}
-              />
-            </div>
-          </div>
-        </button>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="border-t bg-muted/30 px-4 py-3">
-          <div className="mb-2 text-xs font-medium text-muted-foreground">
-            Exposures for this identity
-          </div>
-          {exposuresLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-14 w-full" />
-              <Skeleton className="h-14 w-full" />
-            </div>
-          ) : exposuresResponse?.items && exposuresResponse.items.length > 0 ? (
-            <div className="divide-y rounded-md border bg-background">
-              {exposuresResponse.items.map((exposure) => (
-                <CredentialLine key={exposure.id} cred={exposure} onSelect={onSelectCredential}>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    First seen:{' '}
-                    {exposure.first_seen_at
-                      ? new Date(exposure.first_seen_at).toLocaleDateString()
-                      : '—'}
-                    {exposure.last_seen_at && exposure.last_seen_at !== exposure.first_seen_at && (
-                      <> · Last seen: {new Date(exposure.last_seen_at).toLocaleDateString()}</>
-                    )}
-                  </div>
-                </CredentialLine>
-              ))}
-            </div>
-          ) : (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              No exposures found for this identity
-            </p>
-          )}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
   )
 }
