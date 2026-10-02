@@ -125,12 +125,45 @@ export function contentByTool(content: SensorContent[] | null | undefined) {
   return groups
 }
 
+/**
+ * A refresh error short enough for a sentence: URLs (often long signed
+ * download links) become their host, whitespace collapses, and the rest is
+ * cut at `max` characters. The full error stays available behind a
+ * disclosure.
+ */
+export function shortContentError(error: string | null | undefined, max = 120): string {
+  if (!error) return ''
+  const s = error
+    .replace(/"?(https?:\/\/[^\s"]+)"?/g, (_m, url: string) => {
+      try {
+        return new URL(url).host
+      } catch {
+        return 'a URL'
+      }
+    })
+    .replace(/\s+/g, ' ')
+    .trim()
+  return s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s
+}
+
+/**
+ * A content version that is a timestamp (trivy-db's build time) as a Date,
+ * so it can read "built 2h ago"; null for a release tag such as "v10.4.9".
+ */
+export function contentVersionDate(version: string | null | undefined): Date | null {
+  if (!version || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(version)) return null
+  const d = new Date(version)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
 /** One line about a content item's problem, or null when it has none. */
 export function contentProblemText(c: SensorContent, now: number): string | null {
   const label = contentLabel(c.name)
   switch (contentState(c)) {
     case 'failed':
-      return `${label}: the last refresh failed (${c.error}). Scans keep using ${c.version || 'what is installed'}.`
+      return c.version
+        ? `${label}: the last refresh failed (${shortContentError(c.error)}). Scans keep using ${c.version}.`
+        : `${label}: the last refresh failed (${shortContentError(c.error)}) and none is installed yet.`
     case 'stale': {
       const age = contentAgeText(c, now)
       const limit = formatHours(c.max_age_hours)
