@@ -153,19 +153,19 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     module: Module.Assets,
   },
   '/business-units': {
-    permission: Permission.ScopeRead,
+    permission: Permission.AssetsRead,
     module: Module.BusinessUnits,
   },
   '/business-units/**': {
-    permission: Permission.ScopeRead,
+    permission: Permission.AssetsRead,
     module: Module.BusinessUnits,
   },
   '/crown-jewels': {
-    permission: Permission.ScopeRead,
+    permission: Permission.AssetsRead,
     module: Module.CrownJewels,
   },
   '/crown-jewels/**': {
-    permission: Permission.ScopeRead,
+    permission: Permission.AssetsRead,
     module: Module.CrownJewels,
   },
   '/scope-config': {

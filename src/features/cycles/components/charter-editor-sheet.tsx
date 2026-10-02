@@ -27,6 +27,7 @@ import { getErrorMessage } from '@/lib/api/error-handler'
 
 import type { CtemCycle } from '../types'
 import { CharterOutcome } from './charter-outcome'
+import { InScopeServicesField } from './in-scope-services-field'
 import {
   charterFormSchema,
   charterToForm,
@@ -201,14 +202,16 @@ export function CharterEditorSheet({
                   addLabel="Add business priority"
                   editable={editable}
                 />
-                <ListField
+                <Controller
                   control={control}
                   name="in_scope_services"
-                  label="In-scope services"
-                  description="Business services in scope. Drives the activation scope snapshot."
-                  placeholder="e.g. Checkout API"
-                  addLabel="Add in-scope service"
-                  editable={editable}
+                  render={({ field }) => (
+                    <InScopeServicesField
+                      value={field.value}
+                      onChange={field.onChange}
+                      editable={editable}
+                    />
+                  )}
                 />
               </CardContent>
             </Card>
@@ -517,7 +520,7 @@ function ListField({
   numbered,
 }: {
   control: ReturnType<typeof useForm<CharterFormData>>['control']
-  name: 'threat_scenarios' | 'objectives' | 'business_priorities' | 'in_scope_services'
+  name: 'threat_scenarios' | 'objectives' | 'business_priorities'
   label: string
   description?: string
   placeholder: string
