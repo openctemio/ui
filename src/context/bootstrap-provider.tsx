@@ -298,6 +298,14 @@ const defaultContextValue: BootstrapContextValue = {
 }
 
 /**
+ * The bootstrap context, or null outside a BootstrapProvider (admin console,
+ * auth pages). Lets a hook tell "no provider" apart from "not loaded yet".
+ */
+export function useBootstrapContextOptional(): BootstrapContextValue | null {
+  return React.useContext(BootstrapContext)
+}
+
+/**
  * Safe hook that returns default value when outside provider
  */
 export function useBootstrapContextSafe(): BootstrapContextValue {
