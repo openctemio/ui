@@ -27,6 +27,7 @@ import type {
   SensorActivityCategory,
   SensorActivityItem,
   SensorActivityResponse,
+  SensorManifestListResponse,
 } from './sensor-types'
 
 // ============================================
@@ -216,6 +217,25 @@ export function useSensorCommands(sensorId: string | null, enabled = true) {
     key,
     (url: string) => get<SensorCommandListResponse>(url),
     { ...defaultConfig, refreshInterval: SENSOR_REFRESH_MS }
+  )
+}
+
+/**
+ * A sensor's manifest versions, most recently current first (RFC-033). The
+ * first item with `current` is the current manifest. Errors are shown in
+ * place (no toast).
+ */
+export function useSensorManifests(sensorId: string | null, enabled = true) {
+  const { currentTenant } = useTenant()
+  const key = currentTenant && sensorId && enabled ? sensorEndpoints.manifests(sensorId) : null
+  return useSWR<SensorManifestListResponse>(
+    key,
+    (url: string) => get<SensorManifestListResponse>(url),
+    {
+      ...defaultConfig,
+      onError: undefined,
+      refreshInterval: SENSOR_REFRESH_MS * 2,
+    }
   )
 }
 

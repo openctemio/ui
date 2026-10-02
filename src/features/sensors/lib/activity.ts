@@ -36,6 +36,7 @@ import type {
 import type { TranslateVars } from '@/lib/i18n'
 
 import { formatDurationShort } from './format'
+import { manifestDiffLines } from './manifest'
 import { normalizeSensorVersion } from './sensor-version'
 
 /** The app's `t()` (useTranslation). */
@@ -288,6 +289,13 @@ export function describeSensorActivity(
           to: str(d.to),
         }),
         details: d.from !== undefined ? [fromTo(str(d.from), str(d.to))] : [],
+      }
+    case 'manifest_changed':
+      return {
+        icon: FileText,
+        tone: 'info',
+        title: t('sensors.activity.manifestChanged', 'Manifest changed'),
+        details: d.diff ? manifestDiffLines(d.diff, t) : [],
       }
     case 'content_updated':
       return {
