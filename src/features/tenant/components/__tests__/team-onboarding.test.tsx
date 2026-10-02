@@ -21,7 +21,7 @@ describe('TeamOnboarding', () => {
   })
 
   it('shows neither the form nor the notice while the policy loads', () => {
-    render(<TeamOnboarding hasOtherTeams={false} suggestedName="" />)
+    render(<TeamOnboarding hasOtherTeams={false} />)
     expect(screen.getByRole('status')).toBeInTheDocument()
     expect(screen.queryByRole('form', { name: /create team form/i })).not.toBeInTheDocument()
     expect(screen.queryByText(/not a member of any organization/i)).not.toBeInTheDocument()
@@ -29,14 +29,14 @@ describe('TeamOnboarding', () => {
 
   it('offers the create-team form under self-service', () => {
     providers = { data: { tenant_creation_mode: 'self_service' }, isLoading: false }
-    render(<TeamOnboarding hasOtherTeams={false} suggestedName="Ann" />)
+    render(<TeamOnboarding hasOtherTeams={false} />)
     expect(screen.getByRole('form', { name: /create team form/i })).toBeInTheDocument()
     expect(screen.getByText('Set up your first team')).toBeInTheDocument()
   })
 
   it('tells a user with no organization to ask their administrator under admin_only', () => {
     providers = { data: { tenant_creation_mode: 'admin_only' }, isLoading: false }
-    render(<TeamOnboarding hasOtherTeams={false} suggestedName="" />)
+    render(<TeamOnboarding hasOtherTeams={false} />)
     expect(screen.getByText('You are not a member of any organization yet')).toBeInTheDocument()
     expect(screen.getByText(/ask your administrator/i)).toBeInTheDocument()
     expect(screen.queryByRole('form', { name: /create team form/i })).not.toBeInTheDocument()
@@ -44,14 +44,14 @@ describe('TeamOnboarding', () => {
 
   it('says only the administrator creates organizations for a user who has other teams', () => {
     providers = { data: { tenant_creation_mode: 'admin_only' }, isLoading: false }
-    render(<TeamOnboarding hasOtherTeams suggestedName="" />)
+    render(<TeamOnboarding hasOtherTeams />)
     expect(screen.getByText('Organizations are created by your administrator')).toBeInTheDocument()
     expect(screen.queryByRole('form', { name: /create team form/i })).not.toBeInTheDocument()
   })
 
   it('falls back to the form when the policy cannot be fetched (the server still enforces it)', () => {
     providers = { error: new Error('429'), isLoading: false }
-    render(<TeamOnboarding hasOtherTeams={false} suggestedName="" />)
+    render(<TeamOnboarding hasOtherTeams={false} />)
     expect(screen.getByRole('form', { name: /create team form/i })).toBeInTheDocument()
   })
 })

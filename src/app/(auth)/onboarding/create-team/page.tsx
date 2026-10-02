@@ -24,22 +24,6 @@ import { ArrowLeft } from 'lucide-react'
 import { env } from '@/lib/env'
 import { OnboardingLogout, TeamOnboarding } from '@/features/tenant'
 
-// Helper to get suggested name from cookie
-async function getSuggestedName(): Promise<string> {
-  const cookieStore = await cookies()
-  const userInfoCookie = cookieStore.get(env.cookies.userInfo)
-
-  if (userInfoCookie?.value) {
-    try {
-      const userInfo = JSON.parse(userInfoCookie.value)
-      return userInfo.name || ''
-    } catch {
-      return ''
-    }
-  }
-  return ''
-}
-
 export default async function CreateFirstTeamPage() {
   // Check if user is authenticated (has refresh token)
   const cookieStore = await cookies()
@@ -61,8 +45,6 @@ export default async function CreateFirstTeamPage() {
   // meaning they came from /select-tenant rather than from a fresh login
   // with zero tenants.
   const hasPendingTenants = !!cookieStore.get(env.cookies.pendingTenants)?.value
-
-  const suggestedName = await getSuggestedName()
 
   return (
     <div className="mx-auto w-full max-w-md">
@@ -86,7 +68,7 @@ export default async function CreateFirstTeamPage() {
         </div>
       )}
 
-      <TeamOnboarding hasOtherTeams={hasPendingTenants} suggestedName={suggestedName} />
+      <TeamOnboarding hasOtherTeams={hasPendingTenants} />
     </div>
   )
 }
