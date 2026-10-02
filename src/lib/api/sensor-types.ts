@@ -103,6 +103,8 @@ export interface SensorContent {
   updated_at?: string | null
   /** When this sensor installed it. */
   fetched_at?: string | null
+  /** When the sensor last confirmed this is the newest (or pinned) version. */
+  checked_at?: string | null
   source?: string
   /** "sha256:..." */
   digest?: string
