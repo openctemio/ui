@@ -159,6 +159,9 @@ describe('SensorDetailSheet', () => {
       expect(within(callout).getByText(/None is installed yet/)).toBeInTheDocument()
       // The signed download URL is not in the sentence; the raw error is folded away.
       expect(within(callout).getByText('Show the error')).toBeInTheDocument()
+      // The raw error keeps scheme, host and path; the signed query string is dropped.
+      expect(callout.textContent).toContain('/35da6c58?…')
+      expect(callout.textContent).not.toContain('sv=2018')
       content.refreshSensorContent.mockResolvedValueOnce({
         command_id: 'c',
         already_pending: false,
@@ -206,11 +209,22 @@ describe('SensorDetailSheet', () => {
       expect(sub.textContent).toBe('Scanner · long-running · 10.40.3.17')
     })
 
-    it('shows a host name that differs from the name', () => {
+    it('compares host and name trimmed and case-insensitively, everywhere', () => {
+      open({ sensor: { ...healthy, name: 'Sensor-Docker-01', hostname: ' sensor-docker-01 ' } })
+      expect(screen.getByText(/^Scanner · long-running/).textContent).toBe(
+        'Scanner · long-running · 10.40.3.17'
+      )
+      expect(screen.queryByText('Host name')).toBeNull()
+    })
+
+    it('shows a host name that differs from the name, in the body without mono', () => {
       open({ sensor: healthy })
       expect(screen.getByText(/^Scanner · long-running/).textContent).toBe(
         'Scanner · long-running · sensor-7d9f-a · 10.40.3.17'
       )
+      const host = screen.getByText('Host name').nextElementSibling as HTMLElement
+      expect(host.textContent).toBe('sensor-7d9f-a')
+      expect(host.innerHTML).not.toContain('font-mono')
     })
 
     it('an admin gets Edit and Install command; Rotate key and the rest are in the menu', async () => {
