@@ -7,6 +7,20 @@ import { SidebarFooterLinks } from '../sidebar-footer-links'
 import { DOCS_URL, REPORT_ISSUE_URL } from '@/config/help-links'
 import { KEYBOARD_SHORTCUTS, shortcutsForShell } from '@/config/keyboard-shortcuts'
 
+// About reads the builds over the network; the dialog's own test covers that.
+vi.mock('@/hooks/use-build-versions', () => ({
+  useBuildVersions: (shell: string, open: boolean) =>
+    open
+      ? {
+          web: { version: 'v0.8.0-dev', commit: '4d2f4b02', channel: 'development' },
+          api:
+            shell === 'app'
+              ? { version: 'v0.8.0-dev', commit: 'a0a14db0', channel: 'development' }
+              : null,
+        }
+      : { web: undefined, api: undefined },
+}))
+
 // Radix menus measure their trigger; jsdom has no ResizeObserver.
 globalThis.ResizeObserver ??= class {
   observe() {}
@@ -129,12 +143,25 @@ describe('SidebarFooterLinks', () => {
     expect(listed).toEqual(['toggle-sidebar'])
   })
 
-  it('About shows the build version, or says it is a development build', async () => {
+  it('About shows the web app and API builds', async () => {
     const user = userEvent.setup()
     renderFooter({ shell: 'app', showSettings: true })
     await user.click(screen.getByRole('button', { name: 'Help' }))
     await user.click(await screen.findByRole('menuitem', { name: 'About OpenCTEM' }))
     const dialog = await screen.findByRole('dialog', { name: 'About OpenCTEM' })
+    expect(within(dialog).getByTestId('about-ui-version')).toHaveTextContent('v0.8.0-dev(4d2f4b02)')
     expect(within(dialog).getByTestId('about-ui-version')).toHaveTextContent('Development build')
+    expect(within(dialog).getByTestId('about-api-version')).toHaveTextContent(
+      'v0.8.0-dev(a0a14db0)'
+    )
+  })
+
+  it('About in the admin console reads the API with its shell', async () => {
+    const user = userEvent.setup()
+    renderFooter({ shell: 'admin' })
+    await user.click(screen.getByRole('button', { name: 'Help' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'About OpenCTEM' }))
+    const dialog = await screen.findByRole('dialog', { name: 'About OpenCTEM' })
+    expect(within(dialog).getByTestId('about-api-version')).toHaveTextContent('unavailable')
   })
 })

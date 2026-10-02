@@ -143,7 +143,7 @@ function HelpMenu({ shell }: { shell: ShortcutShell }) {
         </DropdownMenuContent>
       </DropdownMenu>
       <KeyboardShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} shell={shell} />
-      <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
+      <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} shell={shell} />
     </>
   )
 }
