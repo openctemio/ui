@@ -1,7 +1,6 @@
 'use client'
 
 import { type ReactNode, type ElementType, useId, useMemo, useState, memo } from 'react'
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
 import {
@@ -42,6 +41,7 @@ import { useTranslation } from '@/context/i18n-provider'
 import { cn } from '@/lib/utils'
 import { subModuleStatus } from '@/lib/permissions/sub-modules'
 import { activeSubItemUrl, checkIsActive, sectionHasActiveRoute } from './nav-active'
+import { NavPendingHint, SidebarLink } from './sidebar-link'
 
 /** Maps a sidebar group title to its i18n key, e.g. "Scoping" → "nav.group.scoping". */
 function groupTitleKey(title: string): string {
@@ -86,7 +86,8 @@ export const MOBILE_ROW_CLASS = 'in-data-[mobile=true]:h-11 in-data-[mobile=true
 
 export const NAV_BUTTON_CLASS = cn(
   MOBILE_ROW_CLASS,
-  'px-1.5 group-data-[collapsible=icon]:p-1.5! [&>svg:first-child]:size-5 [&>svg]:stroke-[1.75]',
+  // relative: anchors the row's NavPendingHint.
+  'relative px-1.5 group-data-[collapsible=icon]:p-1.5! [&>svg:first-child]:size-5 [&>svg]:stroke-[1.75]',
   // Quiet at rest, full ink on hover and for the current page / the section
   // that owns it (`data-current`), so where you are reads at a glance even with
   // the section folded.
@@ -108,7 +109,7 @@ export const NAV_COLUMN_CLASS = 'flex flex-col gap-1 px-2 py-2'
 
 /** Second-level rows: smaller and lighter than their section header. */
 const SUB_BUTTON_CLASS = cn(
-  'h-auto min-h-7 w-full py-1 text-[13px] text-sidebar-foreground/80 [&>svg]:stroke-[1.75]',
+  'relative h-auto min-h-7 w-full py-1 text-[13px] text-sidebar-foreground/80 [&>svg]:stroke-[1.75]',
   'in-data-[mobile=true]:min-h-11 in-data-[mobile=true]:text-base',
   '[&>svg:first-child]:text-muted-foreground hover:[&>svg:first-child]:text-sidebar-accent-foreground',
   'data-[active=true]:font-medium data-[active=true]:[&>svg:first-child]:text-sidebar-accent-foreground',
@@ -349,17 +350,18 @@ const SidebarMenuLink = memo(function SidebarMenuLink({
         tooltip={item.title}
         className={NAV_BUTTON_CLASS}
       >
-        <Link href={item.url} prefetch={false} onClick={() => setOpenMobile(false)}>
+        <SidebarLink href={item.url} onClick={() => setOpenMobile(false)}>
           {item.icon && <item.icon />}
           <span>
             <NavLabel title={item.title} />
+            <NavPendingHint />
           </span>
           {releaseStatusBadge ? (
             <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
           ) : (
             badge && <NavBadge>{badge}</NavBadge>
           )}
-        </Link>
+        </SidebarLink>
       </SidebarMenuButton>
     </SidebarMenuItem>
   )
@@ -516,17 +518,18 @@ const NavSubLeaf = memo(function NavSubLeaf({
         isActive={active ?? checkIsActive(pathname, item)}
         className={SUB_BUTTON_CLASS}
       >
-        <Link href={item.url} prefetch={false} onClick={() => setOpenMobile(false)}>
+        <SidebarLink href={item.url} onClick={() => setOpenMobile(false)}>
           {!nested && item.icon && <item.icon className="shrink-0" />}
           <span className={SUB_LABEL_CLASS}>
             <NavLabel title={item.title} />
+            <NavPendingHint />
           </span>
           {releaseStatusBadge ? (
             <NavBadge variant={releaseStatusBadge.variant}>{releaseStatusBadge.text}</NavBadge>
           ) : (
             badge && <NavBadge>{badge}</NavBadge>
           )}
-        </Link>
+        </SidebarLink>
       </SidebarMenuSubButton>
     </SidebarMenuSubItem>
   )
@@ -740,15 +743,18 @@ function CollapsedDropdownLeaf({
 
   return (
     <DropdownMenuItem asChild>
-      <Link href={item.url} prefetch={false} className={cn(active && 'bg-accent font-medium')}>
+      <SidebarLink href={item.url} className={cn(active && 'bg-accent font-medium')}>
         {item.icon && <item.icon />}
-        <span className="max-w-52 text-wrap">{item.title}</span>
+        <span className="max-w-52 text-wrap">
+          {item.title}
+          <NavPendingHint />
+        </span>
         {releaseStatusBadge ? (
           <span className="ms-auto text-xs">{releaseStatusBadge.text}</span>
         ) : (
           badge && <span className="ms-auto text-xs">{badge}</span>
         )}
-      </Link>
+      </SidebarLink>
     </DropdownMenuItem>
   )
 }
