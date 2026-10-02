@@ -200,4 +200,54 @@ describe('sensorHealthChecks', () => {
       text: 'Trivy vulnerability DB is 3d old (limit 2d).',
     })
   })
+
+  it('tools follow the sensor report: declared but not installed is a warning', () => {
+    const reported = (tools: { name: string; installed: boolean }[]) => ({
+      tools,
+      capabilities: null,
+      max_concurrent_jobs: null,
+      reported_at: ago(4),
+    })
+    const missing = byKey(
+      sensorHealthChecks(
+        sensor({
+          tools: ['nuclei', 'trivy'],
+          reported: reported([
+            { name: 'trivy', installed: true },
+            { name: 'nuclei', installed: false },
+          ]),
+          effective: { tools: ['trivy'], capabilities: [], max_concurrent_jobs: 5 },
+          capability_mismatch: { tools_not_installed: ['nuclei'] },
+        }),
+        ctx
+      )
+    )
+    expect(missing.tools).toMatchObject({ status: 'warning', action: 'edit' })
+    expect(missing.tools.text).toContain('Set but not installed: nuclei')
+
+    const unlimited = byKey(
+      sensorHealthChecks(
+        sensor({
+          tools: [],
+          reported: reported([{ name: 'semgrep', installed: true }]),
+          effective: { tools: ['semgrep'], capabilities: [], max_concurrent_jobs: 5 },
+        }),
+        ctx
+      )
+    )
+    expect(unlimited.tools).toMatchObject({ status: 'ok', text: 'semgrep' })
+
+    const nothing = byKey(
+      sensorHealthChecks(
+        sensor({
+          tools: [],
+          reported: reported([]),
+          effective: { tools: [], capabilities: [], max_concurrent_jobs: 5 },
+        }),
+        ctx
+      )
+    )
+    expect(nothing.tools.status).toBe('warning')
+    expect(nothing.tools.text).toContain('reports no usable tool')
+  })
 })

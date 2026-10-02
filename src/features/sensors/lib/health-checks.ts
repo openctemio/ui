@@ -1,6 +1,7 @@
 import type { Sensor } from '@/lib/api/sensor-types'
 import type { ScanZone } from '@/lib/api/scan-zone-types'
 
+import { dispatchTools, hasReportedTools, toolsNotInstalled } from './capabilities'
 import { contentCheckSummary } from './content'
 import { formatDurationShort, keyExpiry } from './format'
 import { isOneShotSensor, sensorState, type FleetThresholds } from './sensor-state'
@@ -213,17 +214,30 @@ export function sensorHealthChecks(sensor: Sensor, ctx: HealthCheckContext): Hea
     )
   }
 
-  // Tools
-  const tools = sensor.tools ?? []
+  // Tools: what dispatch uses (the sensor's report narrowed by its limit,
+  // or the tools set on it when it reports nothing)
+  const tools = dispatchTools(sensor)
+  const missing = toolsNotInstalled(sensor)
+  const reported = hasReportedTools(sensor)
   const scans = sensor.type !== 'collector'
-  if (tools.length > 0) {
+  if (missing.length > 0 && scans && !oneShot) {
+    checks.push({
+      key: 'tools',
+      label: 'Tools',
+      status: 'warning',
+      text: `${tools.length > 0 ? `${tools.join(', ')}. ` : ''}Set but not installed: ${missing.join(', ')}; scans for ${missing.length === 1 ? 'it are' : 'them are'} not sent here.`,
+      action: 'edit',
+    })
+  } else if (tools.length > 0) {
     checks.push({ key: 'tools', label: 'Tools', status: 'ok', text: tools.join(', ') })
   } else if (scans && !oneShot) {
     checks.push({
       key: 'tools',
       label: 'Tools',
       status: 'warning',
-      text: 'None configured, so no scan can be dispatched to it.',
+      text: reported
+        ? 'The sensor reports no usable tool (none installed, or none its tool limit allows), so no scan can be dispatched to it.'
+        : 'None configured, so no scan can be dispatched to it.',
       action: 'edit',
     })
   }

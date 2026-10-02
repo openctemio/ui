@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger, TabsCount } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
@@ -36,6 +37,7 @@ import {
   SENSOR_EXECUTION_MODE_OPTIONS,
 } from '../schemas/sensor-schema'
 import { useSensorFormOptions } from '../hooks'
+import { capacityLabel, sensorToolRows } from '../lib/capabilities'
 import { useUpdateSensor, invalidateSensorsCache } from '@/lib/api/sensor-hooks'
 import type { Sensor } from '@/lib/api/sensor-types'
 
@@ -48,6 +50,8 @@ interface EditSensorDialogProps {
 
 export function EditSensorDialog({ open, onOpenChange, sensor, onSuccess }: EditSensorDialogProps) {
   const [selectedTools, setSelectedTools] = useState<string[]>([])
+  // The concurrency limit, as typed ('' = leave it as it is).
+  const [maxJobs, setMaxJobs] = useState<string>('')
 
   const {
     toolOptions,
@@ -91,6 +95,7 @@ export function EditSensorDialog({ open, onOpenChange, sensor, onSuccess }: Edit
     if (!open) return
     const { sensor: s, form: f } = latest.current
     setSelectedTools(s.tools || [])
+    setMaxJobs(s.max_concurrent_jobs ? String(s.max_concurrent_jobs) : '')
     f.reset({
       name: s.name,
       description: s.description || '',
@@ -103,7 +108,12 @@ export function EditSensorDialog({ open, onOpenChange, sensor, onSuccess }: Edit
 
   const onSubmit = async (data: UpdateSensorFormData) => {
     try {
-      const capabilities = getCapabilitiesForTools(selectedTools)
+      // A sensor that reports its capabilities is limited by its tools only
+      // (no capability limit): the report says what it serves. A sensor that
+      // reports nothing keeps the capabilities of its tools, as before.
+      const capabilities =
+        sensor.reported?.capabilities != null ? [] : getCapabilitiesForTools(selectedTools)
+      const jobs = Number.parseInt(maxJobs, 10)
 
       await updateSensor({
         name: data.name,
@@ -112,6 +122,9 @@ export function EditSensorDialog({ open, onOpenChange, sensor, onSuccess }: Edit
         tools: selectedTools as never[],
         execution_mode: data.execution_mode,
         status: data.status,
+        ...(Number.isInteger(jobs) && jobs >= 1 && jobs <= 100
+          ? { max_concurrent_jobs: jobs }
+          : {}),
       })
 
       toast.success(`Sensor "${data.name || sensor.name}" updated successfully`)
@@ -218,6 +231,27 @@ export function EditSensorDialog({ open, onOpenChange, sensor, onSuccess }: Edit
                   )}
                 />
 
+                <div className="space-y-2">
+                  <Label htmlFor="edit-sensor-max-jobs">
+                    Limit concurrent jobs{' '}
+                    <span className="text-muted-foreground font-normal">(optional)</span>
+                  </Label>
+                  <Input
+                    id="edit-sensor-max-jobs"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={100}
+                    value={maxJobs}
+                    onChange={(e) => setMaxJobs(e.target.value)}
+                    className="w-32"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The sensor reports how many jobs it runs at once; the platform never sends more
+                    than the smaller of that and this limit. Now: {capacityLabel(sensor)}.
+                  </p>
+                </div>
+
                 <FormField
                   control={form.control}
                   name="execution_mode"
@@ -254,7 +288,23 @@ export function EditSensorDialog({ open, onOpenChange, sensor, onSuccess }: Edit
           </TabsContent>
 
           {/* Tools Tab - Isolated component */}
-          <TabsContent value="tools" className="mt-4">
+          <TabsContent value="tools" className="mt-4 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Limit to these tools (optional).</span>{' '}
+              The sensor reports which tools it has installed, and scans go only to those. Select
+              tools here to narrow that list; leave all off to allow every tool it reports.
+              {sensor.reported?.tools != null && (
+                <>
+                  {' '}
+                  It reports:{' '}
+                  {sensorToolRows(sensor)
+                    .filter((r) => r.status !== 'not_installed')
+                    .map((r) => r.name)
+                    .join(', ') || 'none installed'}
+                  .
+                </>
+              )}
+            </p>
             <ToolSelection
               tools={toolSelectionOptions}
               selectedTools={selectedTools}

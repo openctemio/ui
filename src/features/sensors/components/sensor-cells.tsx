@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils'
 import type { Sensor, SensorVersionStatus } from '@/lib/api/sensor-types'
 
+import { capacityLabel, sensorCapacity, type SensorToolRow } from '../lib/capabilities'
 import { formatDurationShort, keyExpiry } from '../lib/format'
 import { isOneShotSensor } from '../lib/sensor-state'
 import { normalizeSensorVersion, sensorVersionStatus } from '../lib/sensor-version'
@@ -137,10 +138,12 @@ export function SensorJobsCell({ sensor }: { sensor: Sensor }) {
     return <span className={muted}>—</span>
   }
   const current = sensor.current_jobs ?? 0
-  const max = sensor.max_concurrent_jobs || 0
+  // The capacity dispatch uses: the sensor's reported cap narrowed by the
+  // limit set on it.
+  const max = sensorCapacity(sensor).effective || 0
   const pct = max > 0 ? Math.min(100, (current / max) * 100) : 0
   return (
-    <span className="inline-flex items-center gap-2 tabular-nums">
+    <span className="inline-flex items-center gap-2 tabular-nums" title={capacityLabel(sensor)}>
       <span className="h-1.5 w-11 overflow-hidden rounded-full bg-muted" aria-hidden>
         <span className="block h-full bg-info" style={{ width: `${pct}%` }} />
       </span>
@@ -217,22 +220,67 @@ export function SensorKeyCell({
   }
 }
 
-/** The first tools, then "+N" (all of them on hover). */
+/**
+ * The first tools, then "+N" (all of them on hover), and a "not installed"
+ * tag for tools set on the sensor that it reports missing.
+ */
 export function SensorToolsCell({
   tools,
+  missing,
   max = 2,
 }: {
   tools: string[] | null | undefined
+  /** Set on the sensor but reported as not installed. */
+  missing?: string[]
   max?: number
 }) {
   const list = tools ?? []
-  if (list.length === 0) return <span className={cn('text-sm', muted)}>none</span>
+  const gone = missing ?? []
+  const tag = gone.length > 0 && (
+    <SensorTag tone="warning" title={`Set on the sensor but not installed: ${gone.join(', ')}`}>
+      {gone.length} not installed
+    </SensorTag>
+  )
+  if (list.length === 0) {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <span className={cn('text-sm', muted)}>none</span>
+        {tag}
+      </span>
+    )
+  }
   const shown = list.slice(0, max).join(', ')
   const more = list.length - max
   return (
-    <span className={cn('text-sm', muted)} title={list.join(', ')}>
-      {shown}
-      {more > 0 ? ` +${more}` : ''}
+    <span className="inline-flex items-center gap-1.5">
+      <span className={cn('text-sm', muted)} title={list.join(', ')}>
+        {shown}
+        {more > 0 ? ` +${more}` : ''}
+      </span>
+      {tag}
     </span>
+  )
+}
+
+/** A sensor's tools with versions and their status, for the drawer. */
+export function SensorToolList({ rows }: { rows: SensorToolRow[] }) {
+  if (rows.length === 0) return <span className={cn('text-sm', muted)}>none</span>
+  return (
+    <ul className="flex flex-wrap gap-x-3 gap-y-1">
+      {rows.map((r) => (
+        <li key={r.name} className="inline-flex items-center gap-1.5 text-sm">
+          <span className={cn(r.status === 'ready' || r.status === 'declared' ? '' : muted)}>
+            {r.name}
+          </span>
+          {r.version && <span className={cn('font-mono text-xs', muted)}>{r.version}</span>}
+          {r.status === 'not_installed' && <SensorTag tone="warning">not installed</SensorTag>}
+          {r.status === 'excluded' && (
+            <SensorTag title="Installed, but the sensor's tool limit leaves it out">
+              not allowed
+            </SensorTag>
+          )}
+        </li>
+      ))}
+    </ul>
   )
 }
