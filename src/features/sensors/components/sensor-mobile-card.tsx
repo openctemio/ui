@@ -7,6 +7,7 @@ import type { Sensor } from '@/lib/api/sensor-types'
 
 import { SensorStateBadge } from './sensor-state-badge'
 import { ProtocolTag } from './sensor-cells'
+import { CONTENT_STATE_META, worstContentState } from '../lib/content'
 import { formatDurationShort, keyExpiry } from '../lib/format'
 import { isOneShotSensor, sensorState, type FleetThresholds } from '../lib/sensor-state'
 import { normalizeSensorVersion, sensorVersionStatus } from '../lib/sensor-version'
@@ -53,6 +54,13 @@ export function SensorMobileCard({
   const k = keyExpiry(sensor.key_expires_at, now)
   if (k.kind === 'soon') facts.push({ text: `key expires in ${k.days}d`, tone: 'warning' })
   if (k.kind === 'expired') facts.push({ text: 'key expired', tone: 'destructive' })
+  const content = worstContentState(sensor.content)
+  if (content === 'failed' || content === 'stale') {
+    facts.push({
+      text: `content ${CONTENT_STATE_META[content].label.toLowerCase()}`,
+      tone: content === 'failed' ? 'destructive' : 'warning',
+    })
+  }
 
   return (
     <button

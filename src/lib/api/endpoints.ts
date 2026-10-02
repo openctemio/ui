@@ -1070,6 +1070,15 @@ export const sensorEndpoints = {
    */
   commands: (sensorId: string, perPage = 20) =>
     `${API_BASE.COMMANDS}${buildQueryString({ sensor_id: sensorId, per_page: perPage })}`,
+
+  /** The tenant's scanner content policy (RFC-031): GET, PUT with sensors:write. */
+  contentPolicy: () => `${API_BASE.SENSORS}/content-policy`,
+
+  /** Ask one sensor to refresh its scanner content now (sensors:write). */
+  refreshContent: (sensorId: string) => `${API_BASE.SENSORS}/${sensorId}/content/refresh`,
+
+  /** Ask every sensor that manages content to refresh it (sensors:write). */
+  refreshFleetContent: () => `${API_BASE.SENSORS}/content/refresh`,
 } as const
 
 // ============================================

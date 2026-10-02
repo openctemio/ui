@@ -157,4 +157,47 @@ describe('sensorHealthChecks', () => {
     const none = byKey(sensorHealthChecks(me, { ...ctx, zones: [{ ...zones[0], sensor_ids: [] }] }))
     expect(none.zone).toMatchObject({ status: 'info', action: 'zones' })
   })
+
+  it('content: no line without reported content; the worst problem otherwise', () => {
+    expect(byKey(sensorHealthChecks(sensor(), ctx)).content).toBeUndefined()
+    const fresh = byKey(
+      sensorHealthChecks(
+        sensor({
+          content: [
+            {
+              tool: 'nuclei',
+              name: 'nuclei-templates',
+              version: 'v10.4.9',
+              managed: true,
+              stale: false,
+            },
+          ],
+        }),
+        ctx
+      )
+    )
+    expect(fresh.content).toMatchObject({ status: 'ok', text: 'Nuclei templates v10.4.9' })
+    const stale = byKey(
+      sensorHealthChecks(
+        sensor({
+          content: [
+            {
+              tool: 'trivy',
+              name: 'trivy-db',
+              version: '2026-09-29T01:00:00Z',
+              managed: true,
+              stale: true,
+              age_seconds: 3 * 86400,
+              max_age_hours: 48,
+            },
+          ],
+        }),
+        ctx
+      )
+    )
+    expect(stale.content).toMatchObject({
+      status: 'warning',
+      text: 'Trivy vulnerability DB is 3d old (limit 2d).',
+    })
+  })
 })

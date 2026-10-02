@@ -37,6 +37,7 @@ import { SensorInstallFlow } from './sensor-install-flow'
 import { EditSensorDialog } from './edit-sensor-dialog'
 import { RegenerateKeyDialog } from './regenerate-key-dialog'
 import { SensorDetailSheet } from './sensor-detail-sheet'
+import { FleetContentRefreshButton } from './sensor-content-cells'
 import { SensorTable } from './sensor-table'
 import { FleetHealthStrip } from './fleet-health-strip'
 import { SensorFacetPanel } from './sensor-facet-panel'
@@ -571,6 +572,7 @@ export function SensorsSection({
   const toolbarEnd = (
     <>
       <LiveIndicator updatedAt={updatedAt} now={now} />
+      <FleetContentRefreshButton sensors={scopedSensors} onDone={handleRefresh} />
       <RefreshButton onClick={handleRefresh} loading={isLoading} />
     </>
   )
