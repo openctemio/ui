@@ -12,7 +12,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { BulkActionBar } from '@/features/shared'
+import { BulkActionBar, GatedButton } from '@/features/shared'
+import { Permission, useHasPermission } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { Check, X, AlertTriangle, RefreshCw, ShieldCheck, ShieldX, Loader2 } from 'lucide-react'
@@ -26,6 +27,19 @@ import {
 } from '../hooks/use-exposures'
 
 type ActionType = 'resolve' | 'accept' | 'false_positive' | 'reactivate'
+
+/**
+ * Accepting a risk and marking a false positive close an exposure without
+ * fixing it, so the API requires findings:approve for them (api#675); resolve
+ * and reactivate keep findings:write. Shown on the disabled actions.
+ */
+export const APPROVE_REQUIRED_REASON =
+  'Accepting a risk or marking a false positive needs approval rights (findings:approve). Ask an owner or administrator.'
+
+/** Whether the current user may accept risk / mark false positive. */
+export function useCanApproveExposures(): boolean {
+  return useHasPermission(Permission.FindingsApprove)
+}
 
 interface ExposureActionDialogProps {
   exposure: ExposureEvent | null
@@ -212,6 +226,7 @@ export function ExposureQuickActions({
   className,
 }: ExposureQuickActionsProps) {
   const [actionType, setActionType] = useState<ActionType | null>(null)
+  const canApprove = useCanApproveExposures()
 
   const isActive = exposure.state === 'active'
 
@@ -224,14 +239,26 @@ export function ExposureQuickActions({
               <Check className="me-1 h-4 w-4" />
               Resolve
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setActionType('accept')}>
+            <GatedButton
+              size="sm"
+              variant="outline"
+              allowed={canApprove}
+              reason={APPROVE_REQUIRED_REASON}
+              onClick={() => setActionType('accept')}
+            >
               <AlertTriangle className="me-1 h-4 w-4" />
               Accept
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setActionType('false_positive')}>
+            </GatedButton>
+            <GatedButton
+              size="sm"
+              variant="outline"
+              allowed={canApprove}
+              reason={APPROVE_REQUIRED_REASON}
+              onClick={() => setActionType('false_positive')}
+            >
               <X className="me-1 h-4 w-4" />
               False positive
-            </Button>
+            </GatedButton>
           </>
         ) : (
           <Button size="sm" variant="outline" onClick={() => setActionType('reactivate')}>
@@ -273,6 +300,7 @@ export function ExposureBulkActions({
   const [isProcessing, setIsProcessing] = useState(false)
   const [bulkAction, setBulkAction] = useState<'accept' | 'false_positive' | null>(null)
   const [reason, setReason] = useState('')
+  const canApprove = useCanApproveExposures()
 
   const count = selectedIds.length
 
@@ -327,24 +355,28 @@ export function ExposureBulkActions({
           )}
           Resolve
         </Button>
-        <Button
+        <GatedButton
           size="sm"
           variant="ghost"
+          allowed={canApprove}
+          reason={APPROVE_REQUIRED_REASON}
           onClick={() => setBulkAction('accept')}
           disabled={isProcessing}
         >
           <AlertTriangle className="me-2 h-4 w-4" />
           Accept risk
-        </Button>
-        <Button
+        </GatedButton>
+        <GatedButton
           size="sm"
           variant="ghost"
+          allowed={canApprove}
+          reason={APPROVE_REQUIRED_REASON}
           onClick={() => setBulkAction('false_positive')}
           disabled={isProcessing}
         >
           <X className="me-2 h-4 w-4" />
           False positive
-        </Button>
+        </GatedButton>
       </BulkActionBar>
 
       <Dialog open={bulkAction !== null} onOpenChange={(open) => !open && setBulkAction(null)}>

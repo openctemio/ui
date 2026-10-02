@@ -1120,9 +1120,8 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
   ],
 
   [Role.Member]: [
-    // Core
+    // Core (the audit log is owner/admin only)
     Permission.DashboardRead,
-    Permission.AuditRead,
     Permission.SettingsRead,
     // Assets (read + write, no delete)
     Permission.AssetsRead,
@@ -1160,9 +1159,8 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.ScannerTemplatesWrite,
     Permission.SecretStoreRead,
     Permission.SecretStoreWrite,
-    // Sensors (read + write, no delete)
+    // Sensors: read only (creating sensors and their keys is owner/admin only)
     Permission.SensorsRead,
-    Permission.SensorsWrite,
     Permission.CommandsRead,
     Permission.CommandsWrite,
     Permission.ScanZonesRead,
@@ -1181,8 +1179,7 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.ApiKeysRead,
     Permission.PipelinesRead,
     Permission.PipelinesWrite,
-    // Settings (read only)
-    Permission.BillingRead,
+    // Settings (read only; billing is owner/admin only)
     Permission.SLARead,
     // Attack Surface (read + write)
     Permission.ScopeRead,
@@ -1218,9 +1215,8 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
   ],
 
   [Role.Viewer]: [
-    // Core
+    // Core (the audit log is owner/admin only)
     Permission.DashboardRead,
-    Permission.AuditRead,
     Permission.SettingsRead,
     // Assets (read only)
     Permission.AssetsRead,
@@ -1260,8 +1256,7 @@ export const RolePermissions: Record<RoleString, PermissionString[]> = {
     Permission.WebhooksRead,
     Permission.ApiKeysRead,
     Permission.PipelinesRead,
-    // Settings (read only)
-    Permission.BillingRead,
+    // Settings (read only; billing is owner/admin only)
     Permission.SLARead,
     // Attack Surface (read only)
     Permission.ScopeRead,

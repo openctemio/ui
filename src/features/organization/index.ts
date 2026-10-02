@@ -17,6 +17,9 @@ export * from './api/use-audit-logs'
 // Hooks
 export * from './hooks/use-tenant-logo'
 
+// Policy helpers
+export * from './lib/member-policy'
+
 // Components
 export * from './components/role-checklist'
 export * from './components/add-user-dialog'

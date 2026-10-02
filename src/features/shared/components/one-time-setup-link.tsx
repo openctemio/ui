@@ -16,6 +16,12 @@ import { cn } from '@/lib/utils'
  */
 export interface SetupLinkOutcome {
   email_sent: boolean
+  /**
+   * The organization can send email but the send failed, and the link was
+   * deliberately not returned (the platform console's first-owner bootstrap).
+   * The person uses "Forgot password" on the sign-in page.
+   */
+  email_failed?: boolean
   setup_token?: string
   /** RFC3339 */
   setup_expires_at?: string
@@ -112,6 +118,17 @@ export function SetupLinkResult({ outcome, email }: { outcome: SetupLinkOutcome;
         expiresAt={outcome.setup_expires_at}
         email={email}
       />
+    )
+  }
+  if (outcome.email_failed) {
+    return (
+      <Alert variant="destructive">
+        <MailCheck className="size-4" />
+        <AlertTitle>Setup email not sent</AlertTitle>
+        <AlertDescription>
+          {`The account for ${email} was created, but the email with its setup link could not be sent. For security the link is not shown here. Once email works, ${email} can use "Forgot password" on the sign-in page to set a password.`}
+        </AlertDescription>
+      </Alert>
     )
   }
   return (

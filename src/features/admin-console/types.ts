@@ -121,7 +121,6 @@ export interface CreatedOrganization extends AdminOrganization {
 }
 
 /** Membership level an admin can give someone they add to an organization. */
-export type AdminOrgUserRole = 'admin' | 'member' | 'viewer'
 
 export interface AdminOrganizationUser {
   user_id: string
@@ -139,10 +138,13 @@ export interface AdminOrganizationUserList {
   total: number
 }
 
+/**
+ * POST /admin/tenants/{id}/users: the platform console only creates the FIRST
+ * owner of an organization that has none (409 otherwise). No role choice.
+ */
 export interface AdminCreateOrganizationUserInput {
   email: string
   name: string
-  role: AdminOrgUserRole
 }
 
 /** Same shape as the tenant-side create-user response. */

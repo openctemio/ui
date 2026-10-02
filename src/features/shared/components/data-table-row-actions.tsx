@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { Can } from '@/lib/permissions'
 
@@ -23,6 +24,12 @@ export interface RowAction {
   /** Renders in destructive (red) styling — for Delete/Remove. */
   destructive?: boolean
   disabled?: boolean
+  /**
+   * Why a disabled item is unavailable (e.g. "Only the owner can…"). Shown as
+   * a tooltip and to screen readers, so the action is visible but explained
+   * instead of failing with a 403.
+   */
+  disabledReason?: string
   /** Insert a separator above this item (e.g. before a destructive action). */
   separatorBefore?: boolean
   /** Gate this item behind a permission (wrapped in <Can>). Omit = always shown. */
@@ -63,14 +70,22 @@ export function DataTableRowActions({
           const item = (
             <>
               {action.separatorBefore && <DropdownMenuSeparator />}
-              <DropdownMenuItem
-                onClick={action.onClick}
-                disabled={action.disabled}
-                className={cn(action.destructive && 'text-destructive focus:text-destructive')}
-              >
-                {action.icon && <action.icon className="me-2 h-4 w-4" />}
-                {action.label}
-              </DropdownMenuItem>
+              {action.disabled && action.disabledReason ? (
+                <DisabledMenuItem
+                  label={action.label}
+                  icon={action.icon}
+                  reason={action.disabledReason}
+                />
+              ) : (
+                <DropdownMenuItem
+                  onClick={action.onClick}
+                  disabled={action.disabled}
+                  className={cn(action.destructive && 'text-destructive focus:text-destructive')}
+                >
+                  {action.icon && <action.icon className="me-2 h-4 w-4" />}
+                  {action.label}
+                </DropdownMenuItem>
+              )}
             </>
           )
           return action.permission ? (
@@ -83,5 +98,33 @@ export function DataTableRowActions({
         })}
       </DropdownMenuContent>
     </DropdownMenu>
+  )
+}
+
+/**
+ * A menu item the user cannot use, explaining why on hover or focus. Shared by
+ * DataTableRowActions and hand-built menus (e.g. the members page).
+ */
+export function DisabledMenuItem({
+  label,
+  icon: Icon,
+  reason,
+}: {
+  label: string
+  icon?: LucideIcon
+  reason: string
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div tabIndex={0} aria-label={`${label}: ${reason}`}>
+          <DropdownMenuItem disabled>
+            {Icon && <Icon className="me-2 h-4 w-4" />}
+            {label}
+          </DropdownMenuItem>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="left">{reason}</TooltipContent>
+    </Tooltip>
   )
 }

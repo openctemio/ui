@@ -28,7 +28,14 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Main } from '@/components/layout'
-import { DataTable, EmptyState, MetricStrip, PageHeader, SeverityBadge } from '@/features/shared'
+import {
+  DataTable,
+  EmptyState,
+  GatedButton,
+  MetricStrip,
+  PageHeader,
+  SeverityBadge,
+} from '@/features/shared'
 import type { MetricStripItem } from '@/features/shared'
 import { useUrlFilter, useUrlFilterList } from '@/hooks/use-url-param'
 import { useDebounce } from '@/hooks/use-debounce'
@@ -82,6 +89,8 @@ import {
   ExposureBulkActions,
   ExposureSecurityContext,
   ExposuresTabs,
+  APPROVE_REQUIRED_REASON,
+  useCanApproveExposures,
 } from '@/features/exposures/components'
 import type {
   ExposureEvent,
@@ -339,6 +348,8 @@ export default function ExposuresPage() {
   const hasActiveFilters =
     !!searchQuery || selectedSeverities.length > 0 || activeView !== 'needs_attention'
 
+  // Accept risk / false positive need findings:approve (api#675).
+  const canApprove = useCanApproveExposures()
   const columns = useMemo(
     () =>
       getExposureColumns({
@@ -347,8 +358,9 @@ export default function ExposuresPage() {
         onMarkFalsePositive: (e) => handleAction(e, 'false_positive'),
         onReactivate: (e) => handleAction(e, 'reactivate'),
         onViewDetails: setDetailExposure,
+        canApprove,
       }),
-    [handleAction]
+    [handleAction, canApprove]
   )
 
   // Headline numbers double as the lifecycle quick filter.
@@ -985,6 +997,7 @@ interface ExposureDetailSheetProps {
 }
 
 function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: ExposureDetailSheetProps) {
+  const canApprove = useCanApproveExposures()
   const { currentTenant } = useTenant()
   const [secretsRevealed, setSecretsRevealed] = useState(false)
   const { history, isLoading: historyLoading } = useExposureHistory(
@@ -1025,14 +1038,26 @@ function ExposureDetailSheet({ exposure, open, onOpenChange, onAction }: Exposur
                 <ShieldCheck className="me-1.5 h-4 w-4" />
                 Resolve
               </Button>
-              <Button size="sm" variant="outline" onClick={() => onAction('accept')}>
+              <GatedButton
+                size="sm"
+                variant="outline"
+                allowed={canApprove}
+                reason={APPROVE_REQUIRED_REASON}
+                onClick={() => onAction('accept')}
+              >
                 <Shield className="me-1.5 h-4 w-4" />
                 Accept risk
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => onAction('false_positive')}>
+              </GatedButton>
+              <GatedButton
+                size="sm"
+                variant="outline"
+                allowed={canApprove}
+                reason={APPROVE_REQUIRED_REASON}
+                onClick={() => onAction('false_positive')}
+              >
                 <ShieldX className="me-1.5 h-4 w-4" />
                 False positive
-              </Button>
+              </GatedButton>
             </div>
           )}
           {exposure.state !== 'active' && (
