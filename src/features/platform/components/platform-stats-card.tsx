@@ -6,7 +6,7 @@
  * - Current usage vs max concurrent slots
  * - Queued jobs
  * - Tier-specific stats (online sensors per tier)
- * - Upgrade prompt when platform sensors are disabled
+ * Renders nothing when the tenant has no platform sensors (the open-source build).
  */
 
 'use client'
@@ -57,12 +57,11 @@ export function PlatformStatsCard({ className }: PlatformStatsCardProps) {
     return <PlatformStatsCardSkeleton className={className} />
   }
 
-  if (isComingSoon) {
-    return <PlatformSensorsComingSoonCard className={className} />
-  }
-
-  if (!isEnabled) {
-    return <PlatformSensorsDisabledCard className={className} />
+  // No platform sensors here (the open-source build has none, or the API has
+  // no stats): show nothing. A "coming soon" or "not on your plan" card told
+  // people nothing they could act on.
+  if (isComingSoon || !isEnabled) {
+    return null
   }
 
   return (
@@ -149,49 +148,6 @@ function TierStatItem({ tier, stats }: { tier: PlatformSensorTier; stats?: TierS
         <span className={cn(online > 0 && 'text-green-500')}>{online}</span> / {total}
       </span>
     </div>
-  )
-}
-
-/**
- * Card shown when platform stats feature is coming soon (API not yet implemented)
- * Matches StatsCard layout for consistent grid height
- */
-function PlatformSensorsComingSoonCard({ className }: { className?: string }) {
-  return (
-    <Card className={cn('border-dashed', className)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Platform Sensors</CardTitle>
-        <Zap className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold text-muted-foreground">--</div>
-        <div className="flex items-center gap-1">
-          <Clock className="h-3 w-3 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">Coming soon</span>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-/**
- * Card shown when platform sensors are disabled for the tenant
- * Matches StatsCard layout for consistent grid height
- */
-function PlatformSensorsDisabledCard({ className }: { className?: string }) {
-  return (
-    <Card className={cn('border-dashed', className)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Platform Sensors</CardTitle>
-        <Zap className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold text-muted-foreground">0</div>
-        <div className="flex items-center gap-1">
-          <span className="text-xs text-muted-foreground">Not available on current plan</span>
-        </div>
-      </CardContent>
-    </Card>
   )
 }
 

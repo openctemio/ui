@@ -671,6 +671,7 @@ export { capabilityEndpoints, customCapabilityEndpoints } from './endpoints'
 export {
   // Sensor list/detail hooks
   useSensors,
+  useAllSensors,
   useSensor,
   useAvailableCapabilities,
 

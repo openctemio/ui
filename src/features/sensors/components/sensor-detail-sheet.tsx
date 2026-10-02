@@ -14,9 +14,7 @@ import {
   KeyRound,
   Trash2,
   CheckCircle,
-  XCircle,
   AlertCircle,
-  Clock,
   Activity,
   AlertTriangle,
   FileCode,
@@ -25,16 +23,19 @@ import {
   Power,
   PowerOff,
   History,
-  BarChart3,
 } from 'lucide-react'
 
 import type { Sensor } from '@/lib/api/sensor-types'
 import { CapabilityBadge } from '@/components/capability-badge'
 import { SensorTypeIcon, SENSOR_TYPE_LABELS, SENSOR_TYPE_COLORS } from './sensor-type-icon'
 import { SensorAuditLog } from './sensor-audit-log'
-import { SensorAnalytics } from './sensor-analytics'
+import { SensorStateBadge } from './sensor-state-badge'
 import { Can, Permission } from '@/lib/permissions'
 import { SensorZonesSection } from '@/features/scan-zones'
+import { useSensor, SENSOR_REFRESH_MS } from '@/lib/api/sensor-hooks'
+import { useNow } from '@/hooks/use-now'
+import { normalizeSensorVersion } from '../lib/sensor-version'
+import { sensorState, type FleetThresholds } from '../lib/sensor-state'
 
 interface SensorDetailSheetProps {
   sensor: Sensor | null
@@ -47,66 +48,12 @@ interface SensorDetailSheetProps {
   onActivate?: (sensor: Sensor) => void
   onDeactivate?: (sensor: Sensor) => void
   onRevoke?: (sensor: Sensor) => void
-}
-
-// Status config for admin-controlled status (active, disabled, revoked)
-const statusConfig: Record<
-  string,
-  { icon: React.ReactNode; color: string; bgColor: string; label: string }
-> = {
-  active: {
-    icon: <CheckCircle className="h-3.5 w-3.5" />,
-    color: 'text-green-500',
-    bgColor: 'bg-green-500',
-    label: 'Active',
-  },
-  disabled: {
-    icon: <XCircle className="h-3.5 w-3.5" />,
-    color: 'text-gray-400',
-    bgColor: 'bg-gray-400',
-    label: 'Disabled',
-  },
-  revoked: {
-    icon: <XCircle className="h-3.5 w-3.5" />,
-    color: 'text-gray-500',
-    bgColor: 'bg-gray-500',
-    label: 'Revoked',
-  },
-}
-
-// Health config for heartbeat-based health (online, offline, error, unknown)
-const healthConfig: Record<
-  string,
-  { icon: React.ReactNode; color: string; bgColor: string; label: string }
-> = {
-  online: {
-    icon: <CheckCircle className="h-3.5 w-3.5" />,
-    color: 'text-green-500',
-    bgColor: 'bg-green-500',
-    label: 'Online',
-  },
-  offline: {
-    icon: <XCircle className="h-3.5 w-3.5" />,
-    color: 'text-gray-400',
-    bgColor: 'bg-gray-400',
-    label: 'Offline',
-  },
-  error: {
-    icon: <AlertCircle className="h-3.5 w-3.5" />,
-    color: 'text-red-500',
-    bgColor: 'bg-red-500',
-    label: 'Error',
-  },
-  unknown: {
-    icon: <Clock className="h-3.5 w-3.5" />,
-    color: 'text-yellow-500',
-    bgColor: 'bg-yellow-500',
-    label: 'Unknown',
-  },
+  /** State ladder thresholds from GET /sensors/stats. */
+  thresholds?: FleetThresholds
 }
 
 export function SensorDetailSheet({
-  sensor,
+  sensor: sensorProp,
   open,
   onOpenChange,
   onEdit,
@@ -116,25 +63,28 @@ export function SensorDetailSheet({
   onActivate,
   onDeactivate,
   onRevoke,
+  thresholds,
 }: SensorDetailSheetProps) {
-  if (!sensor) return null
+  // Re-read the sensor while the drawer is open (every 15s) so it follows the
+  // sensor instead of showing the row as it was when it was clicked.
+  const { data: live } = useSensor(open && sensorProp ? sensorProp.id : null, {
+    refreshInterval: SENSOR_REFRESH_MS,
+  })
+  const now = useNow()
+  if (!sensorProp) return null
+  const sensor = live && live.id === sensorProp.id ? live : sensorProp
 
-  // Use health for display when sensor is active, otherwise show admin status
-  const displayHealth =
-    sensor.status === 'active'
-      ? healthConfig[sensor.health] || healthConfig.unknown
-      : statusConfig[sensor.status] || statusConfig.disabled
   const isDaemon = sensor.execution_mode === 'daemon'
-
-  // Gradient based on health (for active sensors) or status
+  const state = sensorState(sensor, now, thresholds)
+  // Header tint follows the state, with theme tokens only.
   const gradientClass =
-    sensor.status !== 'active'
-      ? 'from-gray-500/20 via-gray-500/10'
-      : sensor.health === 'online'
-        ? 'from-green-500/20 via-green-500/10'
-        : sensor.health === 'error'
-          ? 'from-red-500/20 via-red-500/10'
-          : 'from-gray-500/20 via-gray-500/10'
+    state === 'online'
+      ? 'from-success/15 via-success/5'
+      : state === 'offline'
+        ? 'from-destructive/15 via-destructive/5'
+        : state === 'degraded' || state === 'stale'
+          ? 'from-warning/15 via-warning/5'
+          : 'from-muted via-muted/40'
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -174,10 +124,7 @@ export function SensorDetailSheet({
                 {sensor.description || SENSOR_TYPE_LABELS[sensor.type]}
               </p>
             </div>
-            <Badge className={`${displayHealth.bgColor} text-white gap-1`}>
-              {displayHealth.icon}
-              {displayHealth.label}
-            </Badge>
+            <SensorStateBadge sensor={sensor} now={now} thresholds={thresholds} />
           </div>
 
           {/* Execution Mode Badge */}
@@ -243,10 +190,6 @@ export function SensorDetailSheet({
         <Tabs defaultValue="overview" className="px-6 pb-6">
           <TabsList className="mb-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analytics">
-              <BarChart3 className="me-1 h-3 w-3" />
-              Analytics
-            </TabsTrigger>
             <TabsTrigger value="capabilities">Capabilities</TabsTrigger>
             <TabsTrigger value="activity">
               <History className="me-1 h-3 w-3" />
@@ -323,16 +266,6 @@ export function SensorDetailSheet({
             )}
           </TabsContent>
 
-          <TabsContent value="analytics" className="mt-0">
-            <div className="rounded-xl border bg-card p-4">
-              <h4 className="mb-3 flex items-center gap-2 text-sm font-medium">
-                <BarChart3 className="h-4 w-4" />
-                Session Analytics (Last 30 Days)
-              </h4>
-              <SensorAnalytics sensorId={sensor.id} />
-            </div>
-          </TabsContent>
-
           <TabsContent value="capabilities" className="mt-0 space-y-4">
             {/* Capabilities */}
             <div className="rounded-xl border bg-card p-4">
@@ -395,14 +328,21 @@ export function SensorDetailSheet({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Version</span>
-                  <span className="font-mono text-sm">{sensor.version || 'Unknown'}</span>
+                  <span className="font-mono text-sm">
+                    {normalizeSensorVersion(sensor.version) ?? 'Not reported'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Hostname</span>
                   <span className="text-sm">{sensor.hostname || 'N/A'}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">IP Address</span>
+                  <span
+                    className="text-sm text-muted-foreground"
+                    title="The address the platform sees the sensor connect from"
+                  >
+                    IP Address
+                  </span>
                   <code className="rounded bg-muted px-2 py-1 text-xs">
                     {sensor.ip_address || 'N/A'}
                   </code>

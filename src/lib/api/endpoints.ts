@@ -984,11 +984,7 @@ export const auditLogEndpoints = {
 // SENSOR ENDPOINTS
 // ============================================
 
-import type {
-  SensorListFilters,
-  SensorSessionListFilters,
-  SensorDailyStatsListFilters,
-} from './sensor-types'
+import type { SensorListFilters } from './sensor-types'
 
 /**
  * Sensor endpoints for managing sensors (runners, workers, collectors, sensors)
@@ -1060,47 +1056,6 @@ export const sensorEndpoints = {
    */
   availableCapabilities: (includePlatform: boolean = true) =>
     `${API_BASE.SENSORS}/available-capabilities?include_platform=${includePlatform}`,
-
-  // ============================================
-  // SENSOR ANALYTICS (Sessions & Daily Stats)
-  // ============================================
-
-  /**
-   * List sensor sessions
-   */
-  listSessions: (sensorId: string, filters?: SensorSessionListFilters) => {
-    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.SENSORS}/${sensorId}/sessions${queryString}`
-  },
-
-  /**
-   * Get active session for a sensor
-   */
-  getActiveSession: (sensorId: string) => `${API_BASE.SENSORS}/${sensorId}/sessions/active`,
-
-  /**
-   * Get session stats for a sensor
-   */
-  getSessionStats: (sensorId: string, filters?: { started_at?: string; ended_at?: string }) => {
-    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.SENSORS}/${sensorId}/sessions/stats${queryString}`
-  },
-
-  /**
-   * List daily stats for a sensor
-   */
-  listDailyStats: (sensorId: string, filters?: SensorDailyStatsListFilters) => {
-    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.SENSORS}/${sensorId}/stats/daily${queryString}`
-  },
-
-  /**
-   * Get time series data for a sensor
-   */
-  getTimeSeries: (sensorId: string, filters?: { from?: string; to?: string }) => {
-    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : ''
-    return `${API_BASE.SENSORS}/${sensorId}/stats/timeseries${queryString}`
-  },
 } as const
 
 // ============================================
