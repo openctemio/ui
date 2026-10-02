@@ -20,6 +20,7 @@ import {
 
 import { useCloneScanConfig, invalidateScanConfigsCache } from '@/lib/api/scan-hooks'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { notifyScannerConfigWarnings } from '../lib/scanner-config-warnings'
 import type { ScanConfig } from '@/lib/api/scan-types'
 import {
   SCAN_TYPE_LABELS,
@@ -51,6 +52,7 @@ export function CloneScanDialog({ scan, open, onOpenChange, onSuccess }: CloneSc
     try {
       const result = await cloneScan({ name: newName.trim() })
       toast.success(`Scan "${newName}" created successfully`)
+      notifyScannerConfigWarnings(result)
       await invalidateScanConfigsCache()
       onOpenChange(false)
       if (onSuccess && result) {
