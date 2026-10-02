@@ -10,6 +10,7 @@ import {
   sensorToolRows,
   toolsNotInstalled,
 } from '../capabilities'
+import { TEST_SENSOR_KEY_PREFIX } from '@/test/sensor-keys'
 
 type S = Pick<
   Sensor,
@@ -123,7 +124,7 @@ describe('fleet capacity', () => {
       execution_mode: 'daemon',
       status: 'active',
       health: 'online',
-      api_key_prefix: 'rda_x',
+      api_key_prefix: TEST_SENSOR_KEY_PREFIX,
       cpu_percent: 0,
       memory_percent: 0,
       max_concurrent_jobs: 5,

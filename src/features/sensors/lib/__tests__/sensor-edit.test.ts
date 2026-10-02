@@ -3,10 +3,13 @@ import { describe, expect, it } from 'vitest'
 import type { Sensor } from '@/lib/api/sensor-types'
 
 import {
+  allowedToolsBody,
+  allowToolBody,
   isSensorEditDirty,
   reportedToolNames,
   sensorEditDraft,
   sensorUpdateBody,
+  toolsInstalledNotAllowed,
   validateSensorEdit,
   zoneChanges,
 } from '../sensor-edit'
@@ -138,6 +141,53 @@ describe('zoneChanges', () => {
     expect(zoneChanges({ ...initial, zoneIds: ['b', 'c'] }, initial)).toEqual({
       join: ['c'],
       leave: ['a'],
+    })
+  })
+})
+
+describe('allowedToolsBody (review after the first heartbeat)', () => {
+  it('sends nothing when every installed tool stays checked', () => {
+    expect(allowedToolsBody(base, ['nuclei', 'trivy'], caps)).toBeNull()
+  })
+  it('sends only the allowed subset when the admin unchecks a tool', () => {
+    expect(allowedToolsBody(base, ['trivy'], caps)).toEqual({ tools: ['trivy'], capabilities: [] })
+  })
+  it('derives capabilities when the sensor reports none', () => {
+    const noCaps = { ...base, reported: { ...base.reported!, capabilities: null } }
+    expect(allowedToolsBody(noCaps, ['nuclei'], caps)).toEqual({
+      tools: ['nuclei'],
+      capabilities: ['cap:nuclei'],
+    })
+  })
+  it('ignores tools that are not installed and refuses an empty subset', () => {
+    expect(allowedToolsBody(base, ['semgrep'], caps)).toBeNull()
+    expect(allowedToolsBody(base, [], caps)).toBeNull()
+  })
+  it('all checked clears an existing limit (every reported tool)', () => {
+    expect(allowedToolsBody({ ...base, tools: ['trivy'] }, ['nuclei', 'trivy'], caps)).toEqual({
+      tools: [],
+      capabilities: [],
+    })
+  })
+})
+
+describe('toolsInstalledNotAllowed', () => {
+  it('is empty without a limit: every reported tool is allowed', () => {
+    expect(toolsInstalledNotAllowed(base)).toEqual([])
+  })
+  it('lists installed tools the narrowed limit leaves out', () => {
+    expect(toolsInstalledNotAllowed({ ...base, tools: ['nuclei'] })).toEqual(['trivy'])
+  })
+  it('is empty before the sensor reports its tools', () => {
+    expect(toolsInstalledNotAllowed({ tools: ['nuclei'], reported: null })).toEqual([])
+  })
+})
+
+describe('allowToolBody', () => {
+  it('adds the tool to the limit and keeps it a limit', () => {
+    expect(allowToolBody({ ...base, tools: ['nuclei'] }, 'trivy', caps)).toEqual({
+      tools: ['nuclei', 'trivy'],
+      capabilities: [],
     })
   })
 })

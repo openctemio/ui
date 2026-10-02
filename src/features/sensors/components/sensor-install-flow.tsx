@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, KeyRound, Loader2, RadioTower } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -23,41 +23,39 @@ import { Permission, useHasPermission } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 
 import { SensorInstallSnippets } from './sensor-install-snippets'
-import { useSensorFormOptions } from '../hooks'
-import { normalizeSensorVersion } from '../lib/sensor-version'
+import { SensorFirstReport } from './sensor-tool-review'
+import { hasReportedTools } from '../lib/capabilities'
 
 /** What the sensor does, mapped to the API's legacy type and execution mode. */
 export type InstallRole = 'scanner' | 'ci' | 'collector'
 
+/**
+ * The roles. None of them sets tools: which tools a sensor has is known only
+ * to the sensor, which reports them on its first heartbeat (step 3).
+ */
 export const INSTALL_ROLES: Record<
   InstallRole,
-  { label: string; hint: string; type: SensorType; mode: 'daemon' | 'standalone'; tools: string[] }
+  { label: string; hint: string; type: SensorType; mode: 'daemon' | 'standalone' }
 > = {
   scanner: {
     label: 'Scanner',
     hint: 'Runs the scans the platform sends it, all the time',
     type: 'worker',
     mode: 'daemon',
-    tools: ['nuclei', 'trivy', 'semgrep', 'betterleaks'],
   },
   ci: {
     label: 'CI runner',
     hint: 'Scans once from a pipeline and exits',
     type: 'runner',
     mode: 'standalone',
-    tools: ['semgrep', 'betterleaks', 'trivy'],
   },
   collector: {
     label: 'Collector',
     hint: 'Collects assets and telemetry, no scanning',
     type: 'collector',
     mode: 'daemon',
-    tools: [],
   },
 }
-
-/** The tools in the default sensor image (ghcr.io/openctemio/sensor). */
-export const IMAGE_TOOLS = ['nuclei', 'trivy', 'semgrep', 'betterleaks']
 
 /** How often the flow checks for the first heartbeat. */
 export const FIRST_HEARTBEAT_POLL_MS = 5000
@@ -68,27 +66,26 @@ export type InstallStep = 'name' | 'install' | 'connected'
 type Step = InstallStep
 
 const STEPS = [
-  { key: 'name', title: 'Name it and pick a role', text: 'The name shows on this page.' },
+  {
+    key: 'name',
+    title: 'Name it and pick a role',
+    text: 'The name shows on this page. A zone is optional.',
+  },
   {
     key: 'install',
     title: 'Run the command on the host',
     text: 'docker run, Compose, Kubernetes or Helm. The key is already in it.',
   },
   {
-    key: 'wait',
-    title: 'Wait for the first heartbeat',
-    text: 'Usually under a minute. This page updates by itself.',
-  },
-  {
-    key: 'zone',
-    title: 'Assign it to a zone',
-    text: 'Optional. Private ranges need a zone to be scanned.',
+    key: 'review',
+    title: 'Review what it reported',
+    text: 'When its first heartbeat arrives: its host, version and tools. Choose which tools jobs may use.',
   },
 ] as const
 
-/** The step the flow is on, 0-based, and its title ("Step 2 of 4: Run the command on the host"). */
+/** The step the flow is on, 0-based, and its title ("Step 2 of 3: Run the command on the host"). */
 export function installStepIndex(step: InstallStep): number {
-  return step === 'name' ? 0 : step === 'connected' ? 3 : 1
+  return step === 'name' ? 0 : step === 'connected' ? 2 : 1
 }
 
 export function installStepLabel(step: InstallStep): string {
@@ -131,47 +128,49 @@ function StepList({ step }: { step: Step }) {
   )
 }
 
-/** Watches the new sensor until its first heartbeat arrives. */
+/**
+ * Poll until the sensor has sent its first heartbeat and its tool list. A
+ * module-level function: SWR restarts its timer whenever the interval
+ * changes identity, and the page re-renders every second.
+ */
+function firstHeartbeatInterval(latest?: Sensor): number {
+  return latest?.last_seen_at && hasReportedTools(latest) ? 0 : FIRST_HEARTBEAT_POLL_MS
+}
+
+/**
+ * Watches the new sensor until its first heartbeat arrives, then shows what
+ * it reported. It keeps checking while the sensor's tool list has not
+ * arrived (it can lag the first heartbeat), so the review fills in by itself.
+ */
 function FirstHeartbeat({
   sensorId,
   onConnected,
   onOpen,
+  onDone,
+  children,
 }: {
   sensorId: string
-  onConnected: (sensor: Sensor) => void
+  onConnected: () => void
   onOpen?: (sensor: Sensor) => void
+  onDone?: () => void
+  /** Shown with the review, above its buttons (the zone picker). */
+  children?: React.ReactNode
 }) {
-  const [connected, setConnected] = useState<Sensor | null>(null)
-  const { data } = useSensor(sensorId, {
-    refreshInterval: connected ? 0 : FIRST_HEARTBEAT_POLL_MS,
-    onSuccess: (s: Sensor) => {
-      if (!connected && s?.last_seen_at) {
-        setConnected(s)
-        onConnected(s)
-      }
-    },
-  })
-  const s = connected ?? data
-  if (s?.last_seen_at) {
-    const v = normalizeSensorVersion(s.version)
+  const { data: s } = useSensor(sensorId, { refreshInterval: firstHeartbeatInterval })
+  const connected = !!s?.last_seen_at
+  const notified = useRef(false)
+  useEffect(() => {
+    if (connected && !notified.current) {
+      notified.current = true
+      onConnected()
+    }
+  }, [connected, onConnected])
+
+  if (s && connected) {
     return (
-      <div
-        className="flex flex-wrap items-center gap-3 rounded-lg border border-success/40 bg-success/10 p-3 text-sm"
-        role="status"
-      >
-        <Check className="h-4 w-4 text-success" aria-hidden />
-        <div className="min-w-0 flex-1">
-          <p className="font-medium">Connected</p>
-          <p className="text-muted-foreground">
-            {s.name} sent its first heartbeat{v ? `, running ${v}` : ''}.
-          </p>
-        </div>
-        {onOpen && (
-          <Button size="sm" variant="outline" onClick={() => onOpen(s)}>
-            Open sensor
-          </Button>
-        )}
-      </div>
+      <SensorFirstReport sensor={s} onOpen={onOpen} onDone={onDone}>
+        {children}
+      </SensorFirstReport>
     )
   }
   return (
@@ -199,6 +198,8 @@ export interface SensorInstallFlowProps {
   onCreated?: (sensor: Sensor) => void
   /** "Open sensor" after the first heartbeat. */
   onOpen?: (sensor: Sensor) => void
+  /** "Done" after reviewing what the sensor reported (the dialog closes). */
+  onDone?: () => void
   /** Rendered beside the steps: "Install your first sensor" on an empty page. */
   title?: string
   /**
@@ -214,32 +215,36 @@ export interface SensorInstallFlowProps {
 
 /**
  * Install a sensor (mockup frame C): name and role, then the commands with the
- * key already in them (shown once), a live wait for the first heartbeat, and
- * an optional zone. Creating a sensor issues a credential, so this is for
- * admins (sensors:write).
+ * key already in them (shown once), a live wait for the first heartbeat, then
+ * what the sensor reported, where the admin chooses which of its tools jobs
+ * may use. Creating a sensor issues a credential, so this is for admins
+ * (sensors:write).
  */
 export function SensorInstallFlow({
   onCreated,
   onOpen,
+  onDone,
   title = 'Install a sensor',
   variant = 'card',
   onStepChange,
   className,
 }: SensorInstallFlowProps) {
   const [step, setStepState] = useState<Step>('name')
+  const stepChange = useRef(onStepChange)
+  useEffect(() => {
+    stepChange.current = onStepChange
+  })
   const setStep = (next: Step) => {
     setStepState(next)
-    onStepChange?.(next)
+    stepChange.current?.(next)
   }
   const [name, setName] = useState('')
   const [role, setRole] = useState<InstallRole>('scanner')
-  const [tools, setTools] = useState<string[]>(INSTALL_ROLES.scanner.tools)
   const [zoneId, setZoneId] = useState<string>('')
   const [created, setCreated] = useState<{ sensor: Sensor; apiKey: string } | null>(null)
   const [assigning, setAssigning] = useState(false)
 
   const { trigger: createSensor, isMutating } = useCreateSensor()
-  const { getCapabilitiesForTools } = useSensorFormOptions()
   const canWriteZones = useHasPermission(Permission.ScanZonesWrite)
   const canReadZones = useHasPermission(Permission.ScanZonesRead)
   const { data: zonesData } = useScanZones(canReadZones)
@@ -270,13 +275,10 @@ export function SensorInstallFlow({
     if (!trimmed || nameError) return
     const r = INSTALL_ROLES[role]
     try {
-      const res = await createSensor({
-        name: trimmed,
-        type: r.type,
-        execution_mode: r.mode,
-        tools: tools as never[],
-        capabilities: getCapabilitiesForTools(tools) as never[],
-      })
+      // No tools or capabilities: the sensor reports what it has on its
+      // first heartbeat, and every reported tool is allowed until the admin
+      // narrows the list in step 3.
+      const res = await createSensor({ name: trimmed, type: r.type, execution_mode: r.mode })
       if (!res?.api_key || !res.sensor) throw new Error('The response had no key')
       setCreated({ sensor: res.sensor, apiKey: res.api_key })
       setStep('install')
@@ -287,6 +289,12 @@ export function SensorInstallFlow({
       toast.error(getErrorMessage(err, 'Could not create the sensor'))
     }
   }
+
+  // Stable for FirstHeartbeat's effect; moves to the review once.
+  const handleConnected = useCallback(() => {
+    setStepState('connected')
+    stepChange.current?.('connected')
+  }, [])
 
   const zoneSelect = canReadZones && zones.length > 0 && (
     <div className="space-y-1.5">
@@ -401,10 +409,7 @@ export function SensorInstallFlow({
                     type="button"
                     role="radio"
                     aria-checked={role === r}
-                    onClick={() => {
-                      setRole(r)
-                      setTools(INSTALL_ROLES[r].tools)
-                    }}
+                    onClick={() => setRole(r)}
                     className={cn(
                       'rounded-lg border bg-background p-3 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                       role === r ? 'border-primary ring-1 ring-primary' : 'hover:bg-accent'
@@ -420,40 +425,9 @@ export function SensorInstallFlow({
             </fieldset>
 
             {role !== 'collector' && (
-              <fieldset className="space-y-2">
-                <legend className="text-sm font-medium">
-                  Limit to tools{' '}
-                  <span className="font-normal text-muted-foreground">(optional)</span>
-                </legend>
-                <p className="text-xs text-muted-foreground">
-                  The sensor reports which scanners it has installed, and scans go only to those.
-                  The tools selected here narrow that list; clear them all to allow every tool it
-                  reports.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {IMAGE_TOOLS.map((t) => {
-                    const on = tools.includes(t)
-                    return (
-                      <button
-                        key={t}
-                        type="button"
-                        aria-pressed={on}
-                        onClick={() =>
-                          setTools((cur) => (on ? cur.filter((x) => x !== t) : [...cur, t]))
-                        }
-                        className={cn(
-                          'rounded-full border px-3 py-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                          on
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'bg-background text-muted-foreground hover:bg-accent'
-                        )}
-                      >
-                        {t}
-                      </button>
-                    )
-                  })}
-                </div>
-              </fieldset>
+              <p className="text-xs text-muted-foreground">
+                You choose its tools after it connects: the sensor reports which scanners it has.
+              </p>
             )}
 
             <div className="flex justify-end">
@@ -465,24 +439,31 @@ export function SensorInstallFlow({
           </form>
         ) : created ? (
           <>
-            <div className="flex gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
-              <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
-              <div className="min-w-0 space-y-2">
-                <p>
-                  <span className="font-medium">Copy the key now.</span> It is shown only once and
-                  is already in the commands below. If you lose it, an admin can rotate it, which
-                  disconnects the old key.
-                </p>
-                <OneTimeSecretField label="API key" noun="API key" value={created.apiKey} />
-              </div>
-            </div>
-            <SensorInstallSnippets sensorId={created.sensor.id} apiKey={created.apiKey} />
+            {step === 'install' && (
+              <>
+                <div className="flex gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+                  <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
+                  <div className="min-w-0 space-y-2">
+                    <p>
+                      <span className="font-medium">Copy the key now.</span> It is shown only once
+                      and is already in the commands below. If you lose it, an admin can rotate it,
+                      which disconnects the old key.
+                    </p>
+                    <OneTimeSecretField label="API key" noun="API key" value={created.apiKey} />
+                  </div>
+                </div>
+                <SensorInstallSnippets sensorId={created.sensor.id} apiKey={created.apiKey} />
+              </>
+            )}
             <FirstHeartbeat
               sensorId={created.sensor.id}
-              onConnected={() => setStep('connected')}
+              onConnected={handleConnected}
               onOpen={onOpen}
-            />
-            {zoneSelect}
+              onDone={onDone}
+            >
+              {step === 'connected' && zoneSelect}
+            </FirstHeartbeat>
+            {step !== 'connected' && zoneSelect}
           </>
         ) : null}
       </div>
