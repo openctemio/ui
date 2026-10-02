@@ -10,7 +10,6 @@ import { NoOrganizationNotice } from './no-organization-notice'
 interface TeamOnboardingProps {
   /** The user already has teams (came from /select-tenant). */
   hasOtherTeams: boolean
-  suggestedName: string
 }
 
 /**
@@ -18,7 +17,7 @@ interface TeamOnboardingProps {
  * allows self-service organizations, otherwise a notice telling the user to ask
  * their administrator. The page keeps its sign-out button either way.
  */
-export function TeamOnboarding({ hasOtherTeams, suggestedName }: TeamOnboardingProps) {
+export function TeamOnboarding({ hasOtherTeams }: TeamOnboardingProps) {
   const { canCreate, isLoading } = useCanCreateOrganization()
 
   if (isLoading) {
@@ -47,7 +46,7 @@ export function TeamOnboarding({ hasOtherTeams, suggestedName }: TeamOnboardingP
         </p>
       </div>
 
-      <CreateTeamForm showCancel={false} isFirstTeam={true} suggestedName={suggestedName} />
+      <CreateTeamForm showCancel={false} isFirstTeam={true} />
     </>
   )
 }

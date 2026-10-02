@@ -44,24 +44,18 @@ interface CreateTeamFormProps {
   showCancel?: boolean
   /** Whether this is for a new user creating their first team */
   isFirstTeam?: boolean
-  /** Suggested team name (from user's name) */
-  suggestedName?: string
 }
 
 // Wrapper component that handles both first team and additional team flows
-export function CreateTeamForm({
-  showCancel = true,
-  isFirstTeam = false,
-  suggestedName = '',
-}: CreateTeamFormProps) {
+export function CreateTeamForm({ showCancel = true, isFirstTeam = false }: CreateTeamFormProps) {
   // For first team creation, we don't need TenantProvider context
   // Use the simpler form that only uses server action
   if (isFirstTeam) {
-    return <CreateFirstTeamFormInner showCancel={showCancel} suggestedName={suggestedName} />
+    return <CreateFirstTeamFormInner showCancel={showCancel} />
   }
 
   // For additional teams, we need TenantProvider context
-  return <CreateAdditionalTeamFormInner showCancel={showCancel} suggestedName={suggestedName} />
+  return <CreateAdditionalTeamFormInner showCancel={showCancel} />
 }
 
 // ============================================
@@ -95,28 +89,22 @@ function useBundleSelection() {
   }
 }
 
+const EMPTY_TEAM: CreateTenantInput = { name: '', slug: '', description: '' }
+
 // ============================================
 // FIRST TEAM FORM (no TenantProvider needed)
 // ============================================
 
-function CreateFirstTeamFormInner({
-  showCancel,
-  suggestedName,
-}: {
-  showCancel: boolean
-  suggestedName: string
-}) {
+function CreateFirstTeamFormInner({ showCancel }: { showCancel: boolean }) {
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { bundles, isLoadingBundles, selected, toggle } = useBundleSelection()
 
   const form = useForm<CreateTenantInput>({
     resolver: zodResolver(createTenantSchema),
-    defaultValues: {
-      name: suggestedName ? `${suggestedName}'s Team` : '',
-      slug: suggestedName ? generateSlug(suggestedName) : '',
-      description: '',
-    },
+    // No default name: an organization is named for the organization, not
+    // for the person creating it.
+    defaultValues: EMPTY_TEAM,
     mode: 'onChange',
   })
 
@@ -197,13 +185,7 @@ function CreateFirstTeamFormInner({
 // ADDITIONAL TEAM FORM (requires TenantProvider)
 // ============================================
 
-function CreateAdditionalTeamFormInner({
-  showCancel,
-  suggestedName,
-}: {
-  showCancel: boolean
-  suggestedName: string
-}) {
+function CreateAdditionalTeamFormInner({ showCancel }: { showCancel: boolean }) {
   const router = useRouter()
   const { trigger, isMutating } = useCreateTenant()
   const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false)
@@ -212,11 +194,9 @@ function CreateAdditionalTeamFormInner({
 
   const form = useForm<CreateTenantInput>({
     resolver: zodResolver(createTenantSchema),
-    defaultValues: {
-      name: suggestedName ? `${suggestedName}'s Team` : '',
-      slug: suggestedName ? generateSlug(suggestedName) : '',
-      description: '',
-    },
+    // No default name: an organization is named for the organization, not
+    // for the person creating it.
+    defaultValues: EMPTY_TEAM,
     mode: 'onChange',
   })
 
