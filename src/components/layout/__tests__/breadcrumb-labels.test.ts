@@ -20,6 +20,10 @@ describe('breadcrumbLabel', () => {
     expect(breadcrumbLabel('/account', 'account')).toBe('Account')
   })
 
+  it('names sub-pages the sidebar does not list', () => {
+    expect(breadcrumbLabel('/sensors/platform', 'platform')).toBe('Platform sensors')
+  })
+
   it('names settings pages as the settings rail does', () => {
     expect(breadcrumbLabel('/settings/scanning/credentials', 'credentials')).toBe(
       'Source credentials'
