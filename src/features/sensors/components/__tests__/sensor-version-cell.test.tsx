@@ -12,7 +12,7 @@ function cell(sensor: SensorVersionFields, extra: Record<string, string> = {}) {
 }
 
 describe('SensorVersionCell', () => {
-  it('reads "Sensor v0.5.0 · SDK v0.9.0" with the build facts in the tooltip', () => {
+  it('shows the version over the SDK, with the build facts in the tooltip', () => {
     const c = cell({
       version: '0.5.0',
       sdk_name: 'openctem-sdk-go',
@@ -22,7 +22,10 @@ describe('SensorVersionCell', () => {
       sensor_commit: 'abc1234',
       sensor_build_time: '2026-09-30T10:00:00Z',
     })
-    expect(c.textContent).toContain('Sensor v0.5.0 · SDK v0.9.0')
+    // Two lines: the sensor release on top, the SDK under it.
+    expect(c.querySelector('[data-slot="sensor-version"]')?.textContent).toBe('v0.5.0')
+    expect(c.querySelector('[data-slot="sdk-version"]')?.textContent).toBe('SDK v0.9.0')
+    expect(c.firstElementChild?.className).toContain('flex-col')
     const tip = c.querySelector('[title*="Product"]')
     expect(tip?.getAttribute('title')).toContain('Product: openctemio-sensor')
     expect(tip?.getAttribute('title')).toContain('Commit: abc1234')
@@ -34,7 +37,7 @@ describe('SensorVersionCell', () => {
   })
 
   it('leaves out the parts that are not reported', () => {
-    expect(cell({ version: 'v0.4.2' }).textContent).toContain('Sensor v0.4.2')
+    expect(cell({ version: 'v0.4.2' }).textContent).toContain('v0.4.2')
     expect(cell({ version: 'v0.4.2' }).textContent).not.toContain('SDK')
     expect(cell({ sdk_version: '0.9.0', sdk_status: 'current' }).textContent).toBe('SDK v0.9.0')
     expect(cell({ version: '', sdk_version: '' }).textContent).toBe('Not reported')
