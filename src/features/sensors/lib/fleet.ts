@@ -2,6 +2,7 @@ import type { Sensor, SensorRole, SensorState, SensorVersionStatus } from '@/lib
 import { sensorRoleOf } from '@/lib/api/sensor-types'
 import type { ScanZone } from '@/lib/api/scan-zone-types'
 
+import { dispatchTools, sensorCapacity } from './capabilities'
 import { canTakeJobs, sensorState, SENSOR_STATES, type FleetThresholds } from './sensor-state'
 import {
   compareSensorVersions,
@@ -121,7 +122,7 @@ export function summarizeFleet(
       can++
       ready.add(s.id)
       jobsRunning += s.current_jobs ?? 0
-      jobSlots += s.max_concurrent_jobs ?? 0
+      jobSlots += sensorCapacity(s).effective
     }
     if (s.protocol) hasProtocolInfo = true
     if (isEnabled(state) && sensorProtocolOf(s) === 'v1') protocolV1++
@@ -213,6 +214,7 @@ function searchText(s: Sensor): string {
     s.ip_address,
     normalizeSensorVersion(s.version),
     ...(s.tools ?? []),
+    ...dispatchTools(s),
   ]
     .filter(Boolean)
     .join(' ')
