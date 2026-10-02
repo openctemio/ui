@@ -36,6 +36,7 @@ import {
   generateSlug,
 } from '@/features/access-control'
 import { GroupDetailSheet } from '@/features/access-control/components/group-detail-sheet'
+import { NoTeamAccessCard } from '@/features/access-control/components/no-team-access-card'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { Can, Permission } from '@/lib/permissions'
 
@@ -270,6 +271,8 @@ export function TeamsSection({ header }: SectionProps) {
               />
             )}
           </div>
+
+          <NoTeamAccessCard className="mt-5" />
         </>
       )}
 

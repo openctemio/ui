@@ -41,8 +41,6 @@ export interface SecuritySettings {
   ip_whitelist: string[]
   allowed_domains: string[]
   email_verification_mode: EmailVerificationMode
-  /** Fail-closed data scope: non-admins see only assigned assets/findings. */
-  restricted_data_scope?: boolean
   /**
    * The caller's IP as the API sees it (read-only, GET only). Shown next to the
    * IP allowlist so an owner does not lock themselves out.
@@ -56,7 +54,17 @@ export interface UpdateSecuritySettingsInput {
   ip_whitelist?: string[]
   allowed_domains?: string[]
   email_verification_mode?: EmailVerificationMode
-  restricted_data_scope?: boolean
+}
+
+/**
+ * What members who are in no team (access group) see. Owners and admins always
+ * see everything; members in a team see that team's assets either way.
+ * GET/PATCH /tenants/{tenant}/settings/data-scope (owner/admin).
+ */
+export type MembersWithoutGroupSee = 'everything' | 'nothing'
+
+export interface DataScopePolicy {
+  members_without_group_see: MembersWithoutGroupSee
 }
 
 // ============================================

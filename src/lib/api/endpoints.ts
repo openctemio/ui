@@ -407,6 +407,12 @@ export const tenantEndpoints = {
     `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/security`,
 
   /**
+   * What members without a team see (GET/PATCH, owner/admin)
+   */
+  dataScopePolicy: (tenantIdOrSlug: string) =>
+    `${API_BASE.TENANTS}/${tenantIdOrSlug}/settings/data-scope`,
+
+  /**
    * Update API settings
    */
   updateAPISettings: (tenantIdOrSlug: string) =>
