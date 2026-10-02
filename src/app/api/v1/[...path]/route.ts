@@ -23,6 +23,7 @@ export const maxDuration = 60 // seconds
 export const dynamic = 'force-dynamic'
 import { isInSwitchCooldown } from '@/lib/api/switch-cooldown'
 import { applyClientIpHeaders } from '@/lib/api/client-ip-headers'
+import { proxyCacheHeaders } from '@/lib/api/proxy-cache-headers'
 import {
   isSensorProtocolPath,
   SENSOR_PROTOCOL_REFUSAL,
@@ -359,14 +360,14 @@ async function proxyRequest(
         statusText: response.statusText,
       })
       // Forward content headers
-      for (const key of [
-        'content-type',
-        'content-disposition',
-        'content-length',
-        'cache-control',
-      ]) {
+      for (const key of ['content-type', 'content-disposition', 'content-length']) {
         const val = response.headers.get(key)
         if (val) proxyResponse.headers.set(key, val)
+      }
+      for (const [key, val] of Object.entries(
+        proxyCacheHeaders(response.headers.get('cache-control'), Boolean(accessToken))
+      )) {
+        proxyResponse.headers.set(key, val)
       }
       if (refreshedTokenData) {
         setTokenCookies(proxyResponse, refreshedTokenData)
@@ -404,6 +405,13 @@ async function proxyRequest(
         proxyResponse.headers.set(header, value)
       }
     })
+    // The API's caching decision (no-store on secrets, max-age on config),
+    // keyed by the session cookie for authenticated responses.
+    for (const [key, val] of Object.entries(
+      proxyCacheHeaders(response.headers.get('cache-control'), Boolean(accessToken))
+    )) {
+      proxyResponse.headers.set(key, val)
+    }
 
     // Forward Set-Cookie headers from backend (important for auth endpoints)
     const setCookieHeaders = response.headers.getSetCookie()
