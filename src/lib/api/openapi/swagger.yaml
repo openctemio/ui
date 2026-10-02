@@ -3177,6 +3177,28 @@ definitions:
       title:
         type: string
     type: object
+  github_com_openctemio_api_pkg_domain_scan.ConfigSecretReason:
+    enum:
+    - key_name
+    - known_format
+    - high_entropy
+    type: string
+    x-enum-varnames:
+    - SecretReasonKeyName
+    - SecretReasonKnownFormat
+    - SecretReasonHighEntropy
+  github_com_openctemio_api_pkg_domain_scan.ConfigSecretWarning:
+    properties:
+      path:
+        description: |-
+          Path locates the value: dotted keys, [n] for list items
+          ("headers.Authorization", "args[2]").
+        type: string
+      reason:
+        allOf:
+        - $ref: '#/definitions/github_com_openctemio_api_pkg_domain_scan.ConfigSecretReason'
+        description: Reason is why it was flagged.
+    type: object
   github_com_openctemio_api_pkg_domain_scanprofile.FindingCounts:
     properties:
       critical:
@@ -3214,6 +3236,338 @@ definitions:
         type: boolean
       reason:
         type: string
+    type: object
+  github_com_openctemio_api_pkg_domain_scoping.AssetSummary:
+    properties:
+      in_business_unit:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_openctemio_api_pkg_domain_scoping.BoundarySummary:
+    properties:
+      exclusions:
+        type: integer
+      targets:
+        type: integer
+    type: object
+  github_com_openctemio_api_pkg_domain_scoping.CountSummary:
+    properties:
+      total:
+        type: integer
+    type: object
+  github_com_openctemio_api_pkg_domain_scoping.CrownJewelSummary:
+    properties:
+      total:
+        type: integer
+      with_owner:
+        type: integer
+    type: object
+  github_com_openctemio_api_pkg_domain_scoping.CycleSummary:
+    properties:
+      attacker_profiles:
+        description: AttackerProfiles is the number of profiles linked to the cycle.
+        type: integer
+      end_date:
+        type: string
+      exclusions:
+        type: integer
+      id:
+        type: string
+      in_scope_services:
+        type: integer
+      name:
+        type: string
+      objectives:
+        description: Charter array lengths.
+        type: integer
+      scope_assets:
+        description: |-
+          ScopeAssets is the number of rows in the cycle's scope snapshot (zero
+          until the cycle is activated).
+        type: integer
+      start_date:
+        type: string
+      status:
+        type: string
+      success_criteria:
+        type: integer
+      threat_scenarios:
+        type: integer
+    type: object
+  github_com_openctemio_api_pkg_domain_scoping.ServiceSummary:
+    properties:
+      total:
+        type: integer
+      with_assets:
+        type: integer
+    type: object
+  github_com_openctemio_api_pkg_domain_scoping.Summary:
+    properties:
+      active_cycle:
+        allOf:
+        - $ref: '#/definitions/github_com_openctemio_api_pkg_domain_scoping.CycleSummary'
+        description: |-
+          ActiveCycle is the cycle the scope is being written for: the tenant's
+          active cycle, else the most recent one in review, else the most recent
+          one in planning. Nil when there is none of those.
+      assets:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_scoping.AssetSummary'
+      attacker_profiles:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_scoping.CountSummary'
+      boundary:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_scoping.BoundarySummary'
+      business_services:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_scoping.ServiceSummary'
+      business_units:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_scoping.CountSummary'
+      crown_jewels:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_scoping.CrownJewelSummary'
+      cycles:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_scoping.CountSummary'
+      threat_models:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_scoping.ThreatModelSummary'
+    type: object
+  github_com_openctemio_api_pkg_domain_scoping.ThreatModelSummary:
+    properties:
+      crown_jewels_covered:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.CapabilityMismatch:
+    properties:
+      capabilities_not_reported:
+        description: |-
+          CapabilitiesNotReported are capabilities the administrator set that
+          the sensor does not report.
+        items:
+          type: string
+        type: array
+      tools_not_installed:
+        description: |-
+          ToolsNotInstalled are tools the administrator set that the sensor
+          reports as not installed or does not report at all.
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.Manifest:
+    properties:
+      capabilities:
+        items:
+          type: string
+        type: array
+      concurrency:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ManifestConcurrency'
+      platform:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ManifestPlatform'
+      resources:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ManifestResources'
+      schema:
+        type: integer
+      sdk:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ManifestSDK'
+      sensor:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ManifestBuild'
+      tools:
+        items:
+          $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ManifestTool'
+        type: array
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.ManifestBuild:
+    properties:
+      build_time:
+        type: string
+      commit:
+        type: string
+      name:
+        type: string
+      version:
+        type: string
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.ManifestConcurrency:
+    properties:
+      ceiling:
+        type: integer
+      model:
+        type: string
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.ManifestContent:
+    properties:
+      digest:
+        type: string
+      managed:
+        type: boolean
+      name:
+        type: string
+      source:
+        type: string
+      version:
+        type: string
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.ManifestIgnored:
+    properties:
+      path:
+        type: string
+      reason:
+        type: string
+      value:
+        type: string
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.ManifestPlatform:
+    properties:
+      arch:
+        type: string
+      os:
+        type: string
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.ManifestResources:
+    properties:
+      cpu_cores:
+        type: number
+      mem_total_bytes:
+        type: integer
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.ManifestSDK:
+    properties:
+      name:
+        type: string
+      version:
+        type: string
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.ManifestTool:
+    properties:
+      capabilities:
+        items:
+          type: string
+        type: array
+      content:
+        items:
+          $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ManifestContent'
+        type: array
+      installed:
+        type: boolean
+      kind:
+        type: string
+      name:
+        type: string
+      target_types:
+        items:
+          type: string
+        type: array
+      version:
+        type: string
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.ReportedCapacity:
+    properties:
+      active_jobs:
+        type: integer
+      per_tool:
+        additionalProperties:
+          $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ToolCost'
+        type: object
+      slots_free:
+        type: integer
+      slots_total:
+        type: integer
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.ReportedContent:
+    properties:
+      checked_at:
+        description: |-
+          CheckedAt is when the sensor last confirmed with its source that this
+          is still the newest (or pinned) version: old content is not stale
+          while it keeps being confirmed (sdk-go ContentInfo.Stale).
+        type: string
+      digest:
+        type: string
+      error:
+        description: Error is the last refresh failure (the sensor keeps the old version).
+        type: string
+      fetched_at:
+        type: string
+      managed:
+        description: |-
+          Managed is true when the sensor controls the content (it refreshes,
+          verifies and swaps it); false when the tool fetches it by itself.
+        type: boolean
+      name:
+        type: string
+      source:
+        type: string
+      tool:
+        description: |-
+          Tool is the tool the content belongs to ("trivy", "nuclei"). Empty
+          while stored inside its ReportedTool; set by Sensor.ReportedContent.
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: string
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.ReportedQueue:
+    properties:
+      claimed:
+        type: integer
+      oldest_age_seconds:
+        type: integer
+      queued_local:
+        type: integer
+      running:
+        type: integer
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.ReportedResources:
+    properties:
+      cpu_cores:
+        type: number
+      cpu_used_pct:
+        type: number
+      disk_free_bytes:
+        type: integer
+      load1:
+        type: number
+      mem_available_bytes:
+        type: integer
+      mem_total_bytes:
+        type: integer
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.ReportedTool:
+    properties:
+      capabilities:
+        description: |-
+          Capabilities are what this tool serves besides its own name ("dast",
+          "validate:nuclei"), known names only; nil when the sensor did not say
+          (sdk-go before v0.13 reports only the sensor's flat list).
+        items:
+          type: string
+        type: array
+      content:
+        description: |-
+          Content is the scanner content the tool scans with (RFC-031,
+          content.go); nil when the sensor reported none for it.
+        items:
+          $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ReportedContent'
+        type: array
+      installed:
+        type: boolean
+      kind:
+        description: Kind is "scanner" or "collector"; "" when the sensor did not
+          say.
+        type: string
+      name:
+        type: string
+      version:
+        type: string
+    type: object
+  github_com_openctemio_api_pkg_domain_sensor.ToolCost:
+    properties:
+      est_cpu_s:
+        type: number
+      est_mem_bytes:
+        type: integer
+      throughput_targets_per_min:
+        type: number
     type: object
   github_com_openctemio_api_pkg_domain_templatesource.GitSourceConfig:
     properties:
@@ -3567,6 +3921,24 @@ definitions:
       tenant_id:
         type: string
     type: object
+  github_com_openctemio_api_pkg_version.Info:
+    properties:
+      build_time:
+        example: "2026-10-02T10:00:00Z"
+        type: string
+      channel:
+        enum:
+        - release
+        - development
+        example: release
+        type: string
+      commit:
+        example: 4d2f4b02
+        type: string
+      version:
+        example: v0.9.0
+        type: string
+    type: object
   internal_infra_http_handler.APIKeyDataRequest:
     properties:
       key:
@@ -3700,13 +4072,10 @@ definitions:
         type: string
       role:
         enum:
-        - admin
-        - member
-        - viewer
+        - owner
         type: string
     required:
     - email
-    - role
     type: object
   internal_infra_http_handler.AdminCreateOrganizationRequest:
     properties:
@@ -4599,6 +4968,30 @@ definitions:
         example: 12
         type: integer
     type: object
+  internal_infra_http_handler.AttackerProfileResponse:
+    properties:
+      assumptions:
+        type: string
+      capabilities:
+        additionalProperties: {}
+        type: object
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_default:
+        type: boolean
+      name:
+        type: string
+      profile_type:
+        type: string
+      updated_at:
+        type: string
+    type: object
   internal_infra_http_handler.AuditLogListResponse:
     properties:
       data:
@@ -5039,6 +5432,13 @@ definitions:
       ransomware_use:
         type: string
     type: object
+  internal_infra_http_handler.CTEMCycleProfilesResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/internal_infra_http_handler.AttackerProfileResponse'
+        type: array
+    type: object
   internal_infra_http_handler.CTEMCycleResponse:
     properties:
       charter:
@@ -5070,6 +5470,24 @@ definitions:
       status:
         type: string
       updated_at:
+        type: string
+    type: object
+  internal_infra_http_handler.CTEMScopeSnapshotResponse:
+    properties:
+      asset_criticality:
+        type: string
+      asset_id:
+        type: string
+      asset_name:
+        description: Asset fields, empty when the asset has since been deleted.
+        type: string
+      asset_type:
+        type: string
+      id:
+        type: string
+      included_at:
+        type: string
+      scope_target_id:
         type: string
     type: object
   internal_infra_http_handler.CTISIngestRequest:
@@ -5344,6 +5762,47 @@ definitions:
         type: string
       vulnerability_count:
         type: integer
+    type: object
+  internal_infra_http_handler.ContentPinBody:
+    properties:
+      max_age_hours:
+        type: integer
+      rulesets:
+        items:
+          type: string
+        type: array
+      version:
+        type: string
+    type: object
+  internal_infra_http_handler.ContentPolicyBody:
+    properties:
+      content:
+        additionalProperties:
+          $ref: '#/definitions/internal_infra_http_handler.ContentPinBody'
+        type: object
+      refresh_interval_hours:
+        type: integer
+    type: object
+  internal_infra_http_handler.ContentPolicyResponse:
+    properties:
+      commands_created:
+        description: 'CommandsCreated / Skipped: only on PUT with apply_now.'
+        type: integer
+      defaults:
+        allOf:
+        - $ref: '#/definitions/internal_infra_http_handler.ContentPolicyBody'
+        description: Defaults is the platform default.
+      policy:
+        allOf:
+        - $ref: '#/definitions/internal_infra_http_handler.ContentPolicyBody'
+        description: Policy is the effective policy (defaults filled in).
+      skipped:
+        type: integer
+      updated_at:
+        description: UpdatedAt / UpdatedBy are null while the tenant uses the defaults.
+        type: string
+      updated_by:
+        type: string
     type: object
   internal_infra_http_handler.CreateAssetGroupRequest:
     properties:
@@ -6738,6 +7197,17 @@ definitions:
           $ref: '#/definitions/internal_infra_http_handler.DataFlowStepResponse'
         type: array
     type: object
+  internal_infra_http_handler.DataScopePolicyResponse:
+    properties:
+      members_without_group_see:
+        description: |-
+          MembersWithoutGroupSee is "everything" (fail-open) or "nothing"
+          (fail-closed). Owners and admins always see everything.
+        enum:
+        - everything
+        - nothing
+        type: string
+    type: object
   internal_infra_http_handler.DedupKeyRequest:
     properties:
       branch:
@@ -7556,6 +8026,16 @@ definitions:
         description: Replacement string
         type: string
     type: object
+  internal_infra_http_handler.FleetRefreshContentResponse:
+    properties:
+      commands_created:
+        type: integer
+      skipped:
+        description: |-
+          Skipped: sensors that do not manage content, are disabled or revoked,
+          or already have a refresh queued.
+        type: integer
+    type: object
   internal_infra_http_handler.ForgotPasswordRequest:
     properties:
       email:
@@ -7785,6 +8265,14 @@ definitions:
     properties:
       active_jobs:
         type: integer
+      arch:
+        type: string
+      capabilities:
+        items:
+          type: string
+        type: array
+      capacity:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ReportedCapacity'
       collectors:
         items:
           type: string
@@ -7803,6 +8291,21 @@ definitions:
         type: integer
       hostname:
         type: string
+      instance_id:
+        description: |-
+          InstanceID is the random id of the sensor process (sdk-go v0.12+), for
+          clone detection. Optional; older SDKs do not send it.
+        type: string
+      manifest_digest:
+        description: |-
+          ManifestDigest is the digest of the sensor's registered manifest, as
+          the platform returned it (RFC-033, protocol v2 feature "manifest").
+          When it is not the stored one the v2 answer asks for the manifest
+          (action send_manifest). Absent: the platform derives the manifest
+          from this heartbeat.
+        type: string
+      max_concurrent_jobs:
+        type: integer
       memory_percent:
         type: number
       message:
@@ -7813,6 +8316,8 @@ definitions:
         type: number
       network_tx_mbps:
         type: number
+      os:
+        type: string
       outbox:
         allOf:
         - $ref: '#/definitions/internal_infra_http_handler.HeartbeatOutbox'
@@ -7821,18 +8326,74 @@ definitions:
           disk, waiting to be delivered). Optional: SDKs without an outbox omit
           it, and a heartbeat without it leaves the stored snapshot untouched.
           Display data only; values are clamped before they are stored.
+      queue:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ReportedQueue'
       region:
         type: string
+      resources:
+        allOf:
+        - $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ReportedResources'
+        description: |-
+          The sensor's load, computed by the SDK (RFC-030 §5.8), all optional:
+          the machine's resources (container limits when it runs in one), its
+          job slots and per-tool cost, and its local work queue. Untrusted:
+          clamped before it is stored, and it can only lower what dispatch
+          hands the sensor.
       scanners:
         items:
           type: string
         type: array
+      sdk:
+        description: |-
+          Build information, optional (docs/architecture/sensors.md "Build
+          information"): sdk {name, version} and sensor {name, version, commit,
+          build_time}. Kept raw and read leniently: a member of an unexpected
+          shape is ignored rather than failing the heartbeat. Untrusted; sensors
+          that omit it are read from their User-Agent.
+        type: object
+      sensor:
+        type: object
       status:
         type: string
+      tools:
+        description: |-
+          What the sensor reports it can do (RFC-029 §4.3.1), all optional:
+          its tool inventory, the capabilities it serves, how many jobs it runs
+          at once, and its platform. An absent list is "not reported" (the
+          administrator's settings apply); [] is "none". Untrusted: sanitized
+          against the tool catalog before it is stored, and it can only narrow
+          what the administrator allows.
+        items:
+          $ref: '#/definitions/internal_infra_http_handler.HeartbeatTool'
+        type: array
       total_scans:
         type: integer
       uptime_seconds:
         type: integer
+      version:
+        type: string
+    type: object
+  internal_infra_http_handler.HeartbeatTool:
+    properties:
+      capabilities:
+        description: |-
+          Capabilities are what the tool serves besides its name (sdk-go
+          v0.13+); sanitized against the capability registry like the flat list.
+        items:
+          type: string
+        type: array
+      content:
+        description: Content is the scanner content the tool scans with (RFC-031).
+        items:
+          $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ReportedContent'
+        type: array
+      installed:
+        type: boolean
+      kind:
+        description: Kind is "scanner" or "collector" (sdk-go v0.10+).
+        type: string
+      name:
+        type: string
       version:
         type: string
     type: object
@@ -9040,6 +9601,12 @@ definitions:
     type: object
   internal_infra_http_handler.ProvisionedUserResponse:
     properties:
+      email_failed:
+        description: |-
+          EmailFailed: the organization can send email but the send failed, and
+          the link is deliberately not returned (platform administrator's
+          first-owner bootstrap). The person uses forgot-password.
+        type: boolean
       email_sent:
         type: boolean
       membership_id:
@@ -9175,6 +9742,25 @@ definitions:
       type:
         type: string
       url:
+        type: string
+    type: object
+  internal_infra_http_handler.RefreshContentRequest:
+    properties:
+      content:
+        items:
+          type: string
+        type: array
+      force:
+        type: boolean
+    type: object
+  internal_infra_http_handler.RefreshContentResponse:
+    properties:
+      already_pending:
+        description: |-
+          AlreadyPending: a refresh was already queued for the sensor; that
+          command is returned and no new one was created.
+        type: boolean
+      command_id:
         type: string
     type: object
   internal_infra_http_handler.RefreshTokenRequest:
@@ -9681,6 +10267,16 @@ definitions:
       scanner_config:
         additionalProperties: {}
         type: object
+      scanner_config_warnings:
+        description: |-
+          ScannerConfigWarnings lists scanner_config values that look like
+          secrets (a token, a password, an Authorization header). The config is
+          sent to the sensor in clear inside every command, so a secret there
+          travels and rests unprotected. A warning, never a refusal; the value
+          itself is never echoed (RFC-032 Phase 0).
+        items:
+          $ref: '#/definitions/github_com_openctemio_api_pkg_domain_scan.ConfigSecretWarning'
+        type: array
       scanner_name:
         type: string
       schedule_cron:
@@ -10142,21 +10738,237 @@ definitions:
       updated_at:
         type: string
     type: object
+  internal_infra_http_handler.SensorActivityItemResponse:
+    properties:
+      action:
+        type: string
+      actor:
+        type: string
+      at:
+        type: string
+      category:
+        enum:
+        - people
+        - status
+        - updates
+        - jobs
+        type: string
+      details:
+        additionalProperties: {}
+        type: object
+      id:
+        type: string
+      last_at:
+        type: string
+      repeat_count:
+        type: integer
+      result:
+        type: string
+      source:
+        enum:
+        - sensor
+        - audit
+        - job
+        type: string
+      summary:
+        type: string
+      type:
+        description: |-
+          Type: online, offline, restarted (status); version_changed,
+          sdk_version_changed, protocol_changed, tools_changed,
+          capacity_changed, content_updated, content_refresh_failed (updates);
+          job_claimed, job_completed, job_failed, job_canceled, job_expired
+          (jobs); audit (people).
+        type: string
+    type: object
+  internal_infra_http_handler.SensorActivityResponse:
+    properties:
+      audit_included:
+        description: |-
+          AuditIncluded is false when the caller cannot read the audit log:
+          administrator actions (people) are then left out.
+        type: boolean
+      items:
+        items:
+          $ref: '#/definitions/internal_infra_http_handler.SensorActivityItemResponse'
+        type: array
+      next_cursor:
+        description: NextCursor fetches the next (older) page; "" when there is none.
+        type: string
+    type: object
   internal_infra_http_handler.SensorConfigTemplatesResponse:
     properties:
+      api_key_included:
+        description: |-
+          APIKeyIncluded is true when the snippets carry the key passed in
+          X-Sensor-API-Key; otherwise they read it from OPENCTEM_API_KEY.
+        type: boolean
+      api_url:
+        description: APIURL is the platform URL the snippets point the sensor at.
+        type: string
+      ca_certificate:
+        description: |-
+          CACertificate is the PEM of the platform's private CA the snippets
+          install (SENSOR_CA_CERT_FILE); "" when none is configured.
+        type: string
+      ca_fingerprint_sha256:
+        description: CAFingerprintSHA256 is the SHA-256 fingerprint of that CA, colon
+          hex.
+        type: string
       cli:
+        type: string
+      compose:
+        description: |-
+          Compose is a compose.yaml for the sensor; Kubernetes a Secret, PVC and
+          Deployment (a Job for a one-shot sensor); Helm the commands that turn
+          on the sensor bundled with the openctem chart.
         type: string
       docker:
         type: string
       env:
         type: string
+      helm:
+        type: string
+      image:
+        description: Image is the sensor image the snippets run, with its pinned tag.
+        type: string
+      kubernetes:
+        type: string
       yaml:
+        type: string
+    type: object
+  internal_infra_http_handler.SensorContentResponse:
+    properties:
+      age_seconds:
+        type: integer
+      checked_at:
+        description: |-
+          CheckedAt is when the sensor last confirmed this is still the newest
+          (or pinned) version; stale needs both an age and a confirmation
+          older than max_age_hours.
+        type: string
+      digest:
+        type: string
+      error:
+        description: Error is the last refresh failure ("" when the last refresh worked).
+        type: string
+      fetched_at:
+        type: string
+      managed:
+        description: |-
+          Managed: the sensor refreshes, verifies and pins it; false when the
+          tool fetches its content itself (never stale-flagged).
+        type: boolean
+      max_age_hours:
+        type: integer
+      name:
+        enum:
+        - trivy-db
+        - trivy-java-db
+        - nuclei-templates
+        - semgrep-rules
+        type: string
+      pin_mismatch:
+        type: boolean
+      pinned_version:
+        type: string
+      source:
+        type: string
+      stale:
+        type: boolean
+      tool:
+        type: string
+      updated_at:
+        type: string
+      version:
         type: string
     type: object
   internal_infra_http_handler.SensorDisableRequest:
     properties:
       reason:
         maxLength: 500
+        type: string
+    type: object
+  internal_infra_http_handler.SensorEffectiveResponse:
+    properties:
+      capabilities:
+        items:
+          type: string
+        type: array
+      max_concurrent_jobs:
+        type: integer
+      tools:
+        items:
+          type: string
+        type: array
+    type: object
+  internal_infra_http_handler.SensorHealthReasonResponse:
+    properties:
+      code:
+        enum:
+        - outbox_backlog
+        - outbox_dead_letters
+        - outbox_evicted
+        - key_expired
+        - key_expiring
+        - identity_cloned
+        - version_unsupported
+        - sdk_unsupported
+        - no_tools
+        - error_reported
+        - content_stale
+        - content_refresh_failed
+        type: string
+      message:
+        type: string
+      severity:
+        enum:
+        - warning
+        - critical
+        type: string
+    type: object
+  internal_infra_http_handler.SensorLoadResponse:
+    properties:
+      capacity:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ReportedCapacity'
+      fresh:
+        type: boolean
+      queue:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ReportedQueue'
+      reported_at:
+        type: string
+      resources:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ReportedResources'
+    type: object
+  internal_infra_http_handler.SensorManifestListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/internal_infra_http_handler.SensorManifestResponse'
+        type: array
+    type: object
+  internal_infra_http_handler.SensorManifestResponse:
+    properties:
+      current:
+        type: boolean
+      current_since:
+        type: string
+      digest:
+        type: string
+      first_seen_at:
+        type: string
+      ignored:
+        items:
+          $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ManifestIgnored'
+        type: array
+      last_seen_at:
+        type: string
+      manifest:
+        $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.Manifest'
+      source:
+        enum:
+        - sensor
+        - heartbeat
         type: string
     type: object
   internal_infra_http_handler.SensorOutboxResponse:
@@ -10174,10 +10986,40 @@ definitions:
       reported_at:
         type: string
     type: object
+  internal_infra_http_handler.SensorProtocolResponse:
+    properties:
+      deprecated:
+        type: boolean
+      seen_at:
+        type: string
+      user_agent:
+        type: string
+      version:
+        type: integer
+    type: object
   internal_infra_http_handler.SensorRegenerateAPIKeyResponse:
     properties:
       api_key:
         type: string
+    type: object
+  internal_infra_http_handler.SensorReportedResponse:
+    properties:
+      arch:
+        type: string
+      capabilities:
+        items:
+          type: string
+        type: array
+      max_concurrent_jobs:
+        type: integer
+      os:
+        type: string
+      reported_at:
+        type: string
+      tools:
+        items:
+          $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.ReportedTool'
+        type: array
     type: object
   internal_infra_http_handler.SensorResponse:
     properties:
@@ -10189,6 +11031,25 @@ definitions:
         items:
           type: string
         type: array
+      capability_mismatch:
+        allOf:
+        - $ref: '#/definitions/github_com_openctemio_api_pkg_domain_sensor.CapabilityMismatch'
+        description: |-
+          CapabilityMismatch lists settings the sensor's report contradicts
+          (a tool set here that the sensor does not have); omitted when none.
+      content:
+        description: |-
+          Content is the scanner content the sensor reports (trivy DB, nuclei
+          templates, semgrep rules; RFC-031), one entry per tool and content,
+          judged against the tenant's content policy. Never null.
+        items:
+          $ref: '#/definitions/internal_infra_http_handler.SensorContentResponse'
+        type: array
+      content_refresh_supported:
+        description: |-
+          ContentRefreshSupported: the sensor manages content, so it accepts
+          POST /sensors/{id}/content/refresh.
+        type: boolean
       cpu_percent:
         description: System metrics
         type: number
@@ -10198,6 +11059,8 @@ definitions:
         type: integer
       description:
         type: string
+      effective:
+        $ref: '#/definitions/internal_infra_http_handler.SensorEffectiveResponse'
       error_count:
         type: integer
       execution_mode:
@@ -10205,23 +11068,90 @@ definitions:
       health:
         description: 'Automatic: unknown, online, offline, error'
         type: string
+      health_reasons:
+        description: |-
+          HealthReasons lists the problems found (never null): an outbox backlog
+          or lost results, an expired or expiring key, a version below the
+          minimum, no scan tools, an error the sensor reported.
+        items:
+          $ref: '#/definitions/internal_infra_http_handler.SensorHealthReasonResponse'
+        type: array
       hostname:
         type: string
       id:
         type: string
+      identity_cloned_at:
+        description: |-
+          IdentityClonedAt is when two live processes were seen using this
+          sensor's key (health reason identity_cloned); null = not flagged.
+        type: string
+      instance_id:
+        description: |-
+          InstanceID is the sensor process of the last heartbeat that changed
+          it: the SDK's per-process id, or "host:<hash>" for SDKs that send none.
+        type: string
       ip_address:
+        type: string
+      is_platform_sensor:
+        description: IsPlatformSensor marks shared platform infrastructure.
+        type: boolean
+      key_expires_at:
+        description: KeyExpiresAt is when the current API key stops working; null
+          = never.
+        type: string
+      key_last_used_at:
+        description: |-
+          KeyLastUsedAt and KeyLastUsedIP are the last authenticated request with
+          any of the sensor's keys and the client address it came from (behind a
+          trusted proxy, the forwarded address); null until recorded.
+        type: string
+      key_last_used_ip:
         type: string
       labels:
         additionalProperties: {}
         type: object
+      last_error_at:
+        description: LastErrorAt is when the sensor last reported an error.
+        type: string
+      last_offline_at:
+        description: LastOfflineAt is when the sensor was last marked offline.
+        type: string
       last_seen_at:
         description: Statistics
         type: string
+      load:
+        allOf:
+        - $ref: '#/definitions/internal_infra_http_handler.SensorLoadResponse'
+        description: |-
+          Load is the load the sensor last reported on its heartbeat
+          (resources, capacity, local queue); null when it never reported one.
+          fresh is false once it is older than 3 minutes (dispatch then ignores
+          it).
       load_factor:
         description: 0.0 to 1.0
         type: number
+      manifest_at:
+        type: string
+      manifest_digest:
+        description: |-
+          The current manifest (RFC-033): its digest, when it became current
+          and where it came from (sensor: registered; heartbeat: derived by the
+          platform). "" / null before the first one. The document itself is
+          GET /sensors/{id}/manifest.
+        type: string
+      manifest_source:
+        enum:
+        - ""
+        - sensor
+        - heartbeat
+        type: string
       max_concurrent_jobs:
-        description: Load balancing
+        description: |-
+          Load balancing. current_jobs is the number of commands the sensor
+          holds now (acknowledged or running), counted by the platform;
+          available_slots is what dispatch may still hand it: its effective
+          capacity minus current_jobs, and no more than the free slots of a
+          fresh load report (RFC-030 §5.8).
         type: integer
       memory_percent:
         type: number
@@ -10239,7 +11169,69 @@ definitions:
           results: dead_letter_count > 0, evicted_count > 0, or
           oldest_age_seconds > 3600. False when there is no snapshot.
         type: boolean
+      protocol:
+        allOf:
+        - $ref: '#/definitions/internal_infra_http_handler.SensorProtocolResponse'
+        description: |-
+          Protocol is what the platform last saw of the sensor's protocol
+          (RFC-029 §5.3); null before the first heartbeat that recorded it.
+          deprecated is true for protocol v1: the sensor needs an upgrade.
       region:
+        type: string
+      reported:
+        allOf:
+        - $ref: '#/definitions/internal_infra_http_handler.SensorReportedResponse'
+        description: |-
+          capabilities, tools and max_concurrent_jobs above are the
+          administrator's settings (limits). Reported is what the sensor last
+          reported it has (RFC-029 §4.3.1), null when it never reported;
+          Effective is what dispatch uses: the report narrowed by the
+          administrator's settings (the settings alone without a report).
+      sdk_name:
+        description: |-
+          Build information the sensor reported on its heartbeat, or that was
+          read from its User-Agent (older sensors). "" / null when unknown.
+        type: string
+      sdk_status:
+        description: |-
+          SDKStatus compares sdk_version with SENSOR_SDK_MIN_VERSION and
+          SENSOR_SDK_LATEST_VERSION.
+        enum:
+        - current
+        - outdated
+        - unsupported
+        - unknown
+        type: string
+      sdk_version:
+        type: string
+      sensor_build_time:
+        type: string
+      sensor_commit:
+        type: string
+      sensor_product:
+        type: string
+      started_at:
+        description: |-
+          StartedAt is when the sensor process started (from the uptime its
+          heartbeat reports); null when it never reported one.
+        type: string
+      state:
+        description: |-
+          State is the computed operational state: online, degraded, stale,
+          offline, idle (a CI sensor between runs), never_connected, disabled or
+          revoked. Online means a heartbeat within the online window (see
+          GET /sensors/stats online_window_seconds); stale is older than that but
+          within the heartbeat timeout; degraded is heartbeating with at least
+          one health reason.
+        enum:
+        - online
+        - degraded
+        - stale
+        - offline
+        - idle
+        - never_connected
+        - disabled
+        - revoked
         type: string
       status:
         description: 'Admin-controlled: active, disabled, revoked'
@@ -10260,7 +11252,20 @@ definitions:
         type: string
       updated_at:
         type: string
+      uptime_seconds:
+        description: |-
+          UptimeSeconds is the process uptime at the last heartbeat; null unless
+          the sensor is heartbeating and reports its uptime.
+        type: integer
       version:
+        type: string
+      version_status:
+        description: VersionStatus compares the version with the release channel.
+        enum:
+        - latest
+        - update_available
+        - unsupported
+        - unknown
         type: string
     type: object
   internal_infra_http_handler.SensorRevokeRequest:
@@ -10281,6 +11286,25 @@ definitions:
         additionalProperties:
           type: integer
         type: object
+      by_sdk_status:
+        additionalProperties:
+          type: integer
+        description: BySDKStatus counts sensors per SDK status (every status present).
+        type: object
+      by_sdk_version:
+        additionalProperties:
+          type: integer
+        description: |-
+          BySDKVersion counts sensors per reported SDK version ("unknown" when
+          none); its keys are the values GET /sensors?sdk_version= accepts.
+        type: object
+      by_state:
+        additionalProperties:
+          type: integer
+        description: |-
+          ByState counts sensors per computed state (every state is present,
+          zeros included); the same state GET /sensors returns per sensor.
+        type: object
       by_status:
         additionalProperties:
           type: integer
@@ -10289,8 +11313,51 @@ definitions:
         additionalProperties:
           type: integer
         type: object
+      by_version_status:
+        additionalProperties:
+          type: integer
+        description: ByVersionStatus counts sensors per version status.
+        type: object
+      can_take_jobs:
+        description: |-
+          CanTakeJobs counts sensors that can be dispatched work now: enabled,
+          long-running (not one-shot CI) and online or degraded.
+        type: integer
+      job_slots:
+        type: integer
+      jobs_running:
+        description: |-
+          JobsRunning is the sum of current jobs on those sensors, JobSlots the
+          sum of their max concurrent jobs.
+        type: integer
+      latest_version:
+        description: |-
+          LatestVersion and MinVersion are the release channel
+          (SENSOR_LATEST_VERSION, SENSOR_MIN_VERSION); "" when not configured.
+        type: string
+      min_version:
+        type: string
+      needs_attention:
+        description: NeedsAttention counts enabled sensors with at least one health
+          reason.
+        type: integer
+      offline_after_seconds:
+        type: integer
       online_active:
         type: integer
+      online_window_seconds:
+        description: |-
+          OnlineWindowSeconds and OfflineAfterSeconds are the thresholds of the
+          state ladder: a heartbeat at most online_window_seconds old is online,
+          one older than offline_after_seconds is offline, stale in between.
+        type: integer
+      sdk_latest_version:
+        type: string
+      sdk_min_version:
+        description: |-
+          SDKMinVersion and SDKLatestVersion are the SDK policy
+          (SENSOR_SDK_MIN_VERSION, SENSOR_SDK_LATEST_VERSION); "" when not set.
+        type: string
       total:
         type: integer
     type: object
@@ -11130,6 +12197,17 @@ definitions:
         minimum: 0
         type: integer
     type: object
+  internal_infra_http_handler.UpdateContentPolicyRequest:
+    properties:
+      apply_now:
+        description: |-
+          ApplyNow sends the policy to every sensor that manages content now (a
+          refresh_content command each, not forced). Otherwise sensors get it
+          with their next refresh request.
+        type: boolean
+      policy:
+        $ref: '#/definitions/internal_infra_http_handler.ContentPolicyBody'
+    type: object
   internal_infra_http_handler.UpdateCredentialRequest:
     properties:
       description:
@@ -11141,6 +12219,16 @@ definitions:
         maxLength: 255
         minLength: 1
         type: string
+    type: object
+  internal_infra_http_handler.UpdateDataScopePolicyRequest:
+    properties:
+      members_without_group_see:
+        enum:
+        - everything
+        - nothing
+        type: string
+    required:
+    - members_without_group_see
     type: object
   internal_infra_http_handler.UpdateFindingStatusRequest:
     properties:
@@ -12785,16 +13873,19 @@ paths:
     post:
       consumes:
       - application/json
-      description: Same as the organization administrator's POST /tenants/{tenant}/users,
-        with a built-in role. The one-time set-password link is emailed when SMTP
-        is configured, otherwise setup_token is returned once.
+      description: 'Bootstrap only: creates the owner of an organization that has
+        no active owner, and nothing else (409 when it has one: its owner and administrators
+        add users themselves). The one-time set-password link is emailed when the
+        organization can send email and is then never returned; only when email cannot
+        be sent is setup_token returned, once. Written to the organization''s audit
+        log.'
       parameters:
       - description: Organization ID
         in: path
         name: tenantId
         required: true
         type: string
-      - description: User
+      - description: First owner
         in: body
         name: request
         required: true
@@ -12812,12 +13903,12 @@ paths:
           schema:
             $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
         "409":
-          description: Account exists
+          description: Organization already has an owner, or the account exists
           schema:
             $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
       security:
       - BearerAuth: []
-      summary: Create a user in an organization (platform admin)
+      summary: Create the first owner of an organization (platform admin)
       tags:
       - Admin Organizations
   /admin/threat-intel/sync:
@@ -12981,6 +14072,22 @@ paths:
       summary: Reset another administrator's two-step verification
       tags:
       - Admin Users
+  /admin/version:
+    get:
+      description: 'The running API build: release tag (or "<tag>-dev" on a development
+        build), short commit, build time and channel.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_version.Info'
+      security:
+      - BearerAuth: []
+      summary: API version
+      tags:
+      - System
   /agent/commands:
     get:
       consumes:
@@ -17531,6 +18638,97 @@ paths:
       security:
       - BearerAuth: []
       summary: Close CTEM cycle
+      tags:
+      - CTEM Cycles
+  /ctem-cycles/{id}/profiles:
+    get:
+      parameters:
+      - description: Cycle ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.CTEMCycleProfilesResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: List a cycle's attacker profiles
+      tags:
+      - CTEM Cycles
+  /ctem-cycles/{id}/profiles/{profileId}:
+    delete:
+      parameters:
+      - description: Cycle ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Profile ID
+        format: uuid
+        in: path
+        name: profileId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Unlink an attacker profile from a cycle
+      tags:
+      - CTEM Cycles
+  /ctem-cycles/{id}/scope:
+    get:
+      parameters:
+      - description: Cycle ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_infra_http_handler.CTEMScopeSnapshotResponse'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get a cycle's scope snapshot
       tags:
       - CTEM Cycles
   /custom-tools:
@@ -24093,6 +25291,10 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: The caller requested this exclusion (separation of duties)
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
         "404":
           description: Not Found
           schema:
@@ -24843,6 +26045,31 @@ paths:
       summary: Bulk delete scope targets
       tags:
       - Scope
+  /scoping/summary:
+    get:
+      description: 'Tenant-wide readiness counts for CTEM scoping: the cycle in focus
+        and its charter, crown jewels and their owners, business services and units,
+        the boundary, attacker profiles, threat models and cycles.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_domain_scoping.Summary'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Scoping overview
+      tags:
+      - Scoping
   /secret-store:
     get:
       consumes:
@@ -25276,9 +26503,62 @@ paths:
       summary: Activate sensor
       tags:
       - Sensors
+  /sensors/{id}/activity:
+    get:
+      description: 'What happened to a sensor, newest first: status changes (online,
+        offline, restarts), updates (version, SDK, protocol, tools, capacity, content),
+        jobs it claimed and finished, and administrator actions from the audit log.
+        Audit items are included only when the caller holds audit:read.'
+      parameters:
+      - description: Sensor ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 'Categories, comma-separated: people, status, updates, jobs (default
+          all)'
+        in: query
+        name: types
+        type: string
+      - description: next_cursor of the previous page
+        in: query
+        name: cursor
+        type: string
+      - default: 30
+        description: Page size (1-100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.SensorActivityResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Sensor activity timeline
+      tags:
+      - Sensors
   /sensors/{id}/config-templates:
     get:
-      description: Returns rendered config templates for a sensor in multiple formats
+      description: 'Returns the install and configuration snippets for a sensor: docker
+        run, Compose, Kubernetes, Helm, YAML, env and CLI, pinned to the sensor image
+        of SENSOR_LATEST_VERSION, pointed at the public platform URL, and installing
+        the platform''s private CA when SENSOR_CA_CERT_FILE is set.'
       parameters:
       - description: Sensor ID
         in: path
@@ -25297,6 +26577,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/internal_infra_http_handler.SensorConfigTemplatesResponse'
+        "400":
+          description: X-Sensor-API-Key is malformed
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
         "404":
           description: Not Found
           schema:
@@ -25312,6 +26596,49 @@ paths:
       security:
       - BearerAuth: []
       summary: Get sensor configuration templates
+      tags:
+      - Sensors
+  /sensors/{id}/content/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Queue a refresh_content command for the sensor (trivy DB, nuclei
+        templates, semgrep rules). 409 when the sensor manages no content (an older
+        sensor) or is disabled. A refresh already queued is returned instead of a
+        new one.
+      parameters:
+      - description: Sensor ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Content to refresh
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/internal_infra_http_handler.RefreshContentRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.RefreshContentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Refresh a sensor's scanner content
       tags:
       - Sensors
   /sensors/{id}/deactivate:
@@ -25352,6 +26679,81 @@ paths:
       security:
       - BearerAuth: []
       summary: Disable sensor
+      tags:
+      - Sensors
+  /sensors/{id}/manifest:
+    get:
+      description: 'The sensor''s current manifest (RFC-033): build, platform, resources,
+        concurrency ceiling, and its tools with their kind, version, capabilities
+        and content, as the platform kept them, plus what it ignored. 404 when the
+        sensor has none yet.'
+      parameters:
+      - description: Sensor ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.SensorManifestResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Sensor manifest
+      tags:
+      - Sensors
+  /sensors/{id}/manifests:
+    get:
+      description: The sensor's manifest versions, most recently current first (RFC-033).
+        The newest 50 are kept, older ones for 90 days.
+      parameters:
+      - description: Sensor ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 50
+        description: Versions (1-50)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.SensorManifestListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Sensor manifest history
       tags:
       - Sensors
   /sensors/{id}/regenerate-key:
@@ -25452,6 +26854,87 @@ paths:
       summary: Get available capabilities
       tags:
       - sensors
+  /sensors/content-policy:
+    get:
+      description: 'The tenant''s scanner content policy (RFC-031): refresh interval,
+        and per content the maximum age, a pinned version and semgrep rulesets. Defaults
+        are filled in.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.ContentPolicyResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get the scanner content policy
+      tags:
+      - Sensors
+    put:
+      consumes:
+      - application/json
+      description: Replace the tenant's scanner content policy. With apply_now every
+        sensor that manages content gets a refresh_content command carrying it.
+      parameters:
+      - description: Policy
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infra_http_handler.UpdateContentPolicyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.ContentPolicyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Update the scanner content policy
+      tags:
+      - Sensors
+  /sensors/content/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Queue a refresh_content command for every sensor of the tenant
+        that manages content and has none queued.
+      parameters:
+      - description: Content to refresh
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/internal_infra_http_handler.RefreshContentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.FleetRefreshContentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Refresh scanner content on every sensor
+      tags:
+      - Sensors
   /sensors/stats:
     get:
       description: Returns aggregated stats for the tenant's sensors (status, health,
@@ -27207,6 +28690,86 @@ paths:
       summary: List pending invitations
       tags:
       - Tenants
+  /tenants/{tenant}/settings/data-scope:
+    get:
+      description: 'Returns what members who are in no access group see: everything
+        (all assets and findings) or nothing. Owners and admins always see everything.'
+      parameters:
+      - description: Tenant ID or slug
+        in: path
+        name: tenant
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.DataScopePolicyResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Get the data scope of members without an access group
+      tags:
+      - Tenants
+    patch:
+      consumes:
+      - application/json
+      description: 'Sets what members who are in no access group see: everything (all
+        assets and findings) or nothing. Owners and admins always see everything.
+        The change is audited.'
+      parameters:
+      - description: Tenant ID or slug
+        in: path
+        name: tenant
+        required: true
+        type: string
+      - description: Policy
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_infra_http_handler.UpdateDataScopePolicyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_infra_http_handler.DataScopePolicyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+      security:
+      - BearerAuth: []
+      summary: Set the data scope of members without an access group
+      tags:
+      - Tenants
   /tenants/{tenant}/users:
     post:
       consumes:
@@ -27256,7 +28819,9 @@ paths:
     post:
       description: Replaces the one-time set-password link of an account an administrator
         created that has never been used and belongs to this organization only. Owner/admin
-        only. 400 for any other account (its owner recovers it with forgot-password).
+        only; an owner or administrator account, or one holding a role the caller
+        could not grant, needs an owner (403). 400 for any other account (its owner
+        recovers it with forgot-password).
       parameters:
       - description: Tenant ID or slug
         in: path
@@ -27277,6 +28842,10 @@ paths:
             $ref: '#/definitions/internal_infra_http_handler.ProvisionedUserResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
+        "403":
+          description: Forbidden
           schema:
             $ref: '#/definitions/github_com_openctemio_api_pkg_apierror.Error'
         "404":
@@ -28111,6 +29680,22 @@ paths:
       summary: Get user's tenants
       tags:
       - Users
+  /version:
+    get:
+      description: 'The running API build: release tag (or "<tag>-dev" on a development
+        build), short commit, build time and channel.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_openctemio_api_pkg_version.Info'
+      security:
+      - BearerAuth: []
+      summary: API version
+      tags:
+      - System
   /vulnerabilities:
     get:
       description: Retrieves a paginated list of CVE vulnerabilities
@@ -28411,7 +29996,9 @@ paths:
       - Vulnerabilities
 securityDefinitions:
   BearerAuth:
-    description: 'JWT Bearer token. Format: "Bearer {token}"'
+    description: 'JWT access token, or a tenant oct_ API key (read-only: GET/HEAD
+      on tenant routes, within the key''s scopes). Format: "Bearer {token}". An oct_
+      key may instead be sent as X-API-Key.'
     in: header
     name: Authorization
     type: apiKey
