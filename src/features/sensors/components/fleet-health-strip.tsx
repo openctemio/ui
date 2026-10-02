@@ -11,6 +11,7 @@ const ATTENTION_WORDS: Record<AttentionKind, string> = {
   key: 'key',
   version: 'version',
   tools: 'tools',
+  content: 'scanner content',
   error: 'errors',
 }
 

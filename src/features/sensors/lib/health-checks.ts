@@ -1,6 +1,7 @@
 import type { Sensor } from '@/lib/api/sensor-types'
 import type { ScanZone } from '@/lib/api/scan-zone-types'
 
+import { contentCheckSummary } from './content'
 import { formatDurationShort, keyExpiry } from './format'
 import { isOneShotSensor, sensorState, type FleetThresholds } from './sensor-state'
 import { normalizeSensorVersion, sensorVersionStatus } from './sensor-version'
@@ -15,7 +16,8 @@ export type HealthCheckStatus = 'ok' | 'warning' | 'critical' | 'info'
 export type HealthCheckAction = 'rotate_key' | 'install' | 'edit' | 'zones'
 
 export interface HealthCheck {
-  key: 'heartbeat' | 'outbox' | 'key' | 'version' | 'tools' | 'zone' | 'protocol' | 'error'
+  key:
+    'heartbeat' | 'outbox' | 'key' | 'version' | 'tools' | 'content' | 'zone' | 'protocol' | 'error'
   label: string
   status: HealthCheckStatus
   text: string
@@ -225,6 +227,10 @@ export function sensorHealthChecks(sensor: Sensor, ctx: HealthCheckContext): Hea
       action: 'edit',
     })
   }
+
+  // Scanner content (RFC-031), once the sensor reports it
+  const content = contentCheckSummary(sensor, now)
+  if (content) checks.push({ key: 'content', label: 'Content', ...content })
 
   // Zone
   if (ctx.zones) {

@@ -16,7 +16,7 @@ export interface ReleaseChannel {
 }
 
 /** What a health reason is about, for the "Needs attention" caption. */
-export type AttentionKind = 'backlog' | 'key' | 'version' | 'tools' | 'error'
+export type AttentionKind = 'backlog' | 'key' | 'version' | 'tools' | 'content' | 'error'
 
 function attentionKindsOf(sensor: Sensor, channel: ReleaseChannel): AttentionKind[] {
   const kinds: AttentionKind[] = []
@@ -29,9 +29,11 @@ function attentionKindsOf(sensor: Sensor, channel: ReleaseChannel): AttentionKin
           ? 'version'
           : r.code === 'no_tools'
             ? 'tools'
-            : r.code === 'error_reported'
-              ? 'error'
-              : null
+            : r.code.startsWith('content_')
+              ? 'content'
+              : r.code === 'error_reported'
+                ? 'error'
+                : null
     if (kind && !kinds.includes(kind)) kinds.push(kind)
   }
   // Older APIs send no reasons: derive what the page can see itself.
