@@ -29,6 +29,7 @@ import { OptionsStep } from './new-scan/options-step'
 import { ScheduleStep } from './new-scan/schedule-step'
 import { DEFAULT_NEW_SCAN, type NewScanFormData, type ScheduleFrequency } from '../types'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { notifyScannerConfigWarnings } from '../lib/scanner-config-warnings'
 import { useUpdateScanConfig, invalidateScanConfigsCache } from '@/lib/api/scan-hooks'
 import type {
   ScanConfig,
@@ -277,9 +278,10 @@ export function EditScanDialog({ scanConfig, open, onOpenChange, onSuccess }: Ed
         }
       }
 
-      await updateScanConfig(request)
+      const updated = await updateScanConfig(request)
 
       toast.success(`Scan "${formData.name}" updated successfully`)
+      notifyScannerConfigWarnings(updated)
       await invalidateScanConfigsCache()
       onSuccess?.()
       onOpenChange(false)
