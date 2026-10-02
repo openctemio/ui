@@ -14,7 +14,7 @@ import { TEST_SENSOR_KEY_PREFIX } from '@/test/sensor-keys'
 
 type S = Pick<
   Sensor,
-  'tools' | 'reported' | 'effective' | 'max_concurrent_jobs' | 'capability_mismatch'
+  'tools' | 'reported' | 'effective' | 'max_concurrent_jobs' | 'capability_mismatch' | 'load'
 >
 
 const base = (over: Partial<S> = {}): S => ({
@@ -91,22 +91,47 @@ describe('sensorCapacity', () => {
       reported: report(null, 3),
       effective: { tools: [], capabilities: [], max_concurrent_jobs: 3 },
     })
-    expect(sensorCapacity(s)).toEqual({ effective: 3, reported: 3, limit: 5 })
-    expect(capacityLabel(s)).toBe('reported 3 · limit 5')
+    expect(sensorCapacity(s)).toEqual({ effective: 3, reported: 3, slots: null, limit: 5 })
+    expect(capacityLabel(s)).toBe('operator cap 3 · your limit 5')
   })
 
   it('computes the smaller one without an effective block', () => {
     expect(sensorCapacity(base({ reported: report(null, 8) }))).toEqual({
       effective: 5,
       reported: 8,
+      slots: null,
       limit: 5,
     })
   })
 
   it('is the limit when nothing is reported', () => {
     const s = base({ reported: null })
-    expect(sensorCapacity(s)).toEqual({ effective: 5, reported: null, limit: 5 })
-    expect(capacityLabel(s)).toBe('limit 5')
+    expect(sensorCapacity(s)).toEqual({ effective: 5, reported: null, slots: null, limit: 5 })
+    expect(capacityLabel(s)).toBe('your limit 5')
+  })
+
+  // Live (api RFC-033): a 4-core sensor reported the SDK's bound 64 as its
+  // ceiling and 4 slots; the limit is 5. It runs 4.
+  const load = (slots: number) => ({
+    capacity: { slots_total: slots, slots_free: slots, active_jobs: 0 },
+    reported_at: null,
+    fresh: true,
+  })
+
+  it('never counts on more than the slots the sensor can run now', () => {
+    const s = base({ reported: report(null, 64), load: load(4) })
+    expect(sensorCapacity(s)).toEqual({ effective: 4, reported: 64, slots: 4, limit: 5 })
+    expect(capacityLabel(s)).toBe('Runs 4 at once now · operator cap 64 · your limit 5')
+  })
+
+  it('takes the effective capacity from the API when it has one', () => {
+    const s = base({
+      reported: report(null, null),
+      load: load(4),
+      effective: { tools: [], capabilities: [], max_concurrent_jobs: 4 },
+    })
+    expect(sensorCapacity(s).effective).toBe(4)
+    expect(capacityLabel(s)).toBe('Runs 4 at once now · your limit 5')
   })
 })
 

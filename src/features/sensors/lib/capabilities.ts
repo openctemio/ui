@@ -24,6 +24,8 @@ export interface SensorToolRow {
   name: string
   version?: string
   status: SensorToolStatus
+  /** What the tool serves besides its name, as the sensor reported. */
+  capabilities?: string[]
 }
 
 type ToolSource = Pick<Sensor, 'tools' | 'reported' | 'effective'>
@@ -56,7 +58,13 @@ export function sensorToolRows(sensor: ToolSource): SensorToolRow[] {
       : effective.has(t.name)
         ? 'ready'
         : 'excluded'
-    rows.set(t.name, { name: t.name, version: t.version || undefined, status })
+    const caps = t.capabilities?.filter(Boolean) ?? []
+    rows.set(t.name, {
+      name: t.name,
+      version: t.version || undefined,
+      status,
+      ...(caps.length > 0 ? { capabilities: caps } : {}),
+    })
   }
   for (const name of limit) {
     if (!rows.has(name)) rows.set(name, { name, status: 'not_installed' })
@@ -85,30 +93,47 @@ export function toolsNotInstalled(
     .map((r) => r.name)
 }
 
+/**
+ * A sensor's capacity (api RFC-033, Kubernetes' capacity vs allocatable):
+ * what it can run now (its slots, sized from CPU and memory), the ceiling its
+ * operator set, and the limit set here. Dispatch uses the smallest of them.
+ */
 export interface SensorCapacity {
   /** The concurrent jobs dispatch allows. */
   effective: number
-  /** The sensor's own cap; null when it did not report one. */
+  /** The sensor operator's ceiling; null when it reported none. */
   reported: number | null
+  /** The jobs the sensor can run at once now; null when it reported none. */
+  slots: number | null
   /** The limit set on the sensor. */
   limit: number
 }
 
-type CapacitySource = Pick<Sensor, 'max_concurrent_jobs' | 'reported' | 'effective'>
+type CapacitySource = Pick<Sensor, 'max_concurrent_jobs' | 'reported' | 'effective' | 'load'>
 
-/** The sensor's capacity: effective, reported and the limit. */
+/** The sensor's capacity: effective, its slots, its ceiling and the limit. */
 export function sensorCapacity(sensor: CapacitySource): SensorCapacity {
   const limit = sensor.max_concurrent_jobs ?? 0
   const reported = sensor.reported?.max_concurrent_jobs ?? null
+  const rawSlots = sensor.load?.capacity?.slots_total
+  const slots = rawSlots != null && rawSlots > 0 ? rawSlots : null
   let effective = sensor.effective?.max_concurrent_jobs
   if (effective == null) {
-    effective = reported != null && reported > 0 && limit > 0 ? Math.min(reported, limit) : limit
+    const set = [limit, reported ?? 0, slots ?? 0].filter((n) => n > 0)
+    effective = set.length > 0 ? Math.min(...set) : limit
   }
-  return { effective, reported, limit }
+  return { effective, reported, slots, limit }
 }
 
-/** "reported 3 · limit 5", or "limit 5" when the sensor reports nothing. */
+/**
+ * "Runs 4 at once now · operator cap 64 · your limit 5": each number that is
+ * known; "your limit 5" alone when the sensor reports neither.
+ */
 export function capacityLabel(sensor: CapacitySource): string {
   const c = sensorCapacity(sensor)
-  return c.reported != null ? `reported ${c.reported} · limit ${c.limit}` : `limit ${c.limit}`
+  const parts: string[] = []
+  if (c.slots != null) parts.push(`Runs ${c.slots} at once now`)
+  if (c.reported != null) parts.push(`operator cap ${c.reported}`)
+  parts.push(`your limit ${c.limit}`)
+  return parts.join(' · ')
 }
