@@ -71,7 +71,10 @@ export function SensorMobileCard({
         </span>
         <SensorStateBadge sensor={sensor} now={now} thresholds={thresholds} />
       </span>
-      <ProtocolTag sensor={sensor} />
+      {/* A tag, not a full-width bar: the card is a column flexbox. */}
+      <span className="self-start">
+        <ProtocolTag sensor={sensor} />
+      </span>
       {facts.length > 0 && (
         <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
           {facts.map((f) => (
