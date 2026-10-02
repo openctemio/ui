@@ -47,6 +47,7 @@ import { Permission, useHasPermission } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 
 import { SensorAuditLog } from './sensor-audit-log'
+import { SensorContentSection } from './sensor-content-section'
 import { SensorStateBadge } from './sensor-state-badge'
 import { ProtocolTag, PROTOCOL_V1_SUNSET, PROTOCOL_V2_SENSOR_VERSION } from './sensor-cells'
 import { SensorInstallSnippets } from './sensor-install-snippets'
@@ -521,6 +522,8 @@ export function SensorDetailSheet({
                   <HealthChecklist checks={checks} canManage={canWrite} onAction={handleAction} />
                 </div>
               </section>
+
+              <SensorContentSection sensor={sensor} now={now} canManage={canWrite} />
 
               <section>
                 <h3 className="text-sm font-semibold">Runtime</h3>

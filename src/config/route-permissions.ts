@@ -553,6 +553,12 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
     permission: Permission.ToolsRead,
     module: Module.Scans,
   },
+  // Scanner content policy (RFC-031): a sensors setting, so the sensors
+  // guard; saving needs sensors:write (checked by the page and the API).
+  '/settings/scanning/content': {
+    permission: Permission.SensorsRead,
+    module: Module.Sensors,
+  },
 
   // ========================================
   // Settings - Organization (Core feature, no module required)

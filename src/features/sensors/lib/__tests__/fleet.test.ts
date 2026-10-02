@@ -104,6 +104,17 @@ describe('summarizeFleet', () => {
     expect(s.attentionKinds).toEqual(['backlog', 'version'])
   })
 
+  it('content reasons count as scanner-content attention (RFC-031)', () => {
+    const f = fleet()
+    f[1] = {
+      ...f[1],
+      health_reasons: [{ code: 'content_stale', severity: 'warning', message: 'm' }],
+    }
+    const s = summarizeFleet(f, NOW, undefined, channel)
+    expect(s.needsAttention).toBe(3)
+    expect(s.attentionKinds).toContain('content')
+  })
+
   it('updates: below latest, with the unsupported ones counted apart', () => {
     const s = summarizeFleet(fleet(), NOW, undefined, channel)
     expect(s.updates).toBe(3) // v0.4.0, v0.3.0, v0.4.1

@@ -29,6 +29,8 @@ import {
   SensorVersionCell,
 } from './sensor-cells'
 import { SensorMobileCard } from './sensor-mobile-card'
+import { SensorContentCell } from './sensor-content-cells'
+import { worstContentState } from '../lib/content'
 import { normalizeSensorVersion } from '../lib/sensor-version'
 import { sensorState, SENSOR_STATES, type FleetThresholds } from '../lib/sensor-state'
 import type { ReleaseChannel } from '../lib/fleet'
@@ -192,6 +194,14 @@ export function SensorTable({
         enableSorting: false,
         header: 'Tools',
         cell: ({ row }) => <SensorToolsCell tools={row.original.tools} />,
+      },
+      {
+        id: 'content',
+        meta: { label: 'Content' },
+        accessorFn: (a) => worstContentState(a.content) ?? '',
+        enableSorting: false,
+        header: 'Content',
+        cell: ({ row }) => <SensorContentCell sensor={row.original} now={now} />,
       },
       {
         id: 'type',
