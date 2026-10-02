@@ -1,121 +1,227 @@
 'use client'
 
+import { useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Cloud, Crown, Server, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, Cloud } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { EmptyState, ErrorState, MetricStrip, PageHeader } from '@/features/shared'
+import {
+  EmptyState,
+  ErrorState,
+  Meter,
+  MetricStrip,
+  PageHeader,
+  type MetricStripItem,
+} from '@/features/shared'
 import { usePlatformUsage } from '@/lib/api/platform-hooks'
 import { SENSOR_REFRESH_MS } from '@/lib/api/sensor-hooks'
-import {
-  PLATFORM_SENSOR_TIERS,
-  PLATFORM_TIER_DESCRIPTIONS,
-  PLATFORM_TIER_LABELS,
-  type PlatformSensorTier,
-  type TierStats,
-} from '@/lib/api/platform-types'
-import { cn } from '@/lib/utils'
 
-const TIER_ICONS: Record<PlatformSensorTier, LucideIcon> = {
-  shared: Server,
-  dedicated: Cloud,
-  premium: Crown,
+import {
+  PLATFORM_QUEUE_LIMIT,
+  summarizePlatformPool,
+  type PlatformPool,
+  type PoolTier,
+} from '../lib/pool'
+import { PoolCallout, PoolStatePill } from './pool-state'
+
+/**
+ * The headline numbers. Only what the API measures: there is no per-tenant
+ * quota, reset time or wait estimate to show (API follow-ups), so those tiles
+ * are left out rather than faked.
+ */
+export function poolMetrics(pool: PlatformPool): MetricStripItem[] {
+  const blocked = pool.state === 'down' || pool.state === 'full'
+  return [
+    {
+      key: 'queued',
+      label: 'Your queued jobs',
+      value: pool.queued,
+      // Waiting is only a problem while nothing can pick the jobs up.
+      tone: blocked ? 'warning' : 'default',
+      detail:
+        pool.queued === 0
+          ? 'nothing waiting'
+          : pool.state === 'down'
+            ? 'waiting for a sensor to come online'
+            : 'waiting for a free slot',
+    },
+    {
+      key: 'online',
+      label: 'Sensors online',
+      value: pool.online,
+      hint: `of ${pool.total}`,
+      detail:
+        pool.offline > 0 ? (
+          <span className="text-destructive">{pool.offline} offline</span>
+        ) : (
+          'all online'
+        ),
+    },
+    {
+      key: 'slots',
+      label: 'Job slots in use',
+      value: pool.inUse,
+      hint: `/ ${pool.slots}`,
+      detail: (
+        <>
+          <Meter
+            className="mt-1 max-w-40"
+            value={pool.inUse}
+            max={pool.slots}
+            label={`${pool.inUse} of ${pool.slots} job slots in use across all organizations`}
+            tone={pool.slots > 0 && pool.inUse >= pool.slots ? 'warning' : 'default'}
+          />
+          <span className="mt-1 block">all organizations</span>
+        </>
+      ),
+    },
+    {
+      key: 'free',
+      label: 'Free slots',
+      value: pool.free,
+      detail:
+        pool.online === 0
+          ? 'no sensor online'
+          : pool.free === 0
+            ? 'new jobs wait in the queue'
+            : 'ready for new jobs',
+    },
+  ]
 }
 
-/** A share of capacity as a small bar (theme tokens). */
-function UsageBar({ value, max, label }: { value: number; max: number; label: string }) {
-  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0
+function TierRow({ tier }: { tier: PoolTier }) {
   return (
-    <span
-      role="img"
-      aria-label={label}
-      className="mt-1 block h-1.5 w-full max-w-40 overflow-hidden rounded-full bg-muted"
+    <li
+      data-tier={tier.key}
+      className="grid grid-cols-2 gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1.3fr)] sm:items-center"
     >
-      <span
-        className={cn('block h-full', pct > 90 ? 'bg-destructive' : 'bg-info')}
-        style={{ width: `${pct}%` }}
-      />
-    </span>
+      <div className="col-span-2 flex min-w-0 items-center justify-between gap-2 sm:col-span-1 sm:justify-start">
+        <span className="truncate text-sm font-medium">{tier.label}</span>
+        <PoolStatePill state={tier.state} />
+      </div>
+      <div className="min-w-0">
+        <div className="text-xs text-muted-foreground">Sensors online</div>
+        <div className="text-sm tabular-nums">
+          <span className="font-medium">{tier.online}</span>
+          <span className="text-muted-foreground"> of {tier.total}</span>
+        </div>
+      </div>
+      <div className="min-w-0">
+        <div className="text-xs text-muted-foreground">Job slots in use</div>
+        <div className="text-sm tabular-nums">
+          <span className="font-medium">{tier.inUse}</span>
+          <span className="text-muted-foreground"> / {tier.slots}</span>
+        </div>
+        <Meter
+          className="mt-1"
+          value={tier.inUse}
+          max={tier.slots}
+          label={`${tier.label}: ${tier.inUse} of ${tier.slots} job slots in use`}
+          tone={tier.state === 'full' ? 'warning' : 'default'}
+        />
+      </div>
+    </li>
   )
 }
 
-function TierCard({
-  tier,
-  stats,
-  accessible,
-  maxTier,
-}: {
-  tier: PlatformSensorTier
-  stats?: TierStats
-  accessible: boolean
-  maxTier?: PlatformSensorTier
-}) {
-  const Icon = TIER_ICONS[tier]
-  const online = stats?.online_sensors ?? 0
-  const total = stats?.total_sensors ?? 0
+/**
+ * The pool by tier, aggregate only (no sensor names, no other organization's
+ * jobs). Only with two or more tiers: with one, the strip above already says
+ * all of it. A tier is a label the operator puts on a sensor; the API does not
+ * dispatch by tier or tie tiers to a plan, so there is no "included / upgrade"
+ * comparison to make.
+ */
+function TiersCard({ pool, className }: { pool: PlatformPool; className?: string }) {
   return (
-    <Card className={cn(!accessible && 'opacity-60')} data-tier={tier}>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-sm font-medium">{PLATFORM_TIER_LABELS[tier]}</CardTitle>
-          <Icon className="h-4 w-4 text-muted-foreground" aria-hidden />
-        </div>
-        <CardDescription>{PLATFORM_TIER_DESCRIPTIONS[tier]}</CardDescription>
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle>By tier</CardTitle>
+        <CardDescription>
+          Tiers group the platform sensors. Totals for all organizations.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-1">
-        <p className="text-2xl font-semibold tabular-nums">
-          {online}
-          <span className="ms-1 text-sm font-normal text-muted-foreground">of {total} online</span>
-        </p>
-        {accessible ? (
-          stats ? (
-            <p className="text-xs text-muted-foreground tabular-nums">
-              {stats.current_load} of {stats.total_capacity} job slots in use
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">No sensors in this tier yet</p>
-          )
-        ) : (
-          // A reason, not an upsell: the tier is outside this organization's access.
-          <p className="text-xs text-muted-foreground">
-            Above your organization&apos;s tier
-            {maxTier ? ` (${PLATFORM_TIER_LABELS[maxTier]})` : ''}, so its sensors do not run your
-            scans.
-          </p>
-        )}
+      <CardContent>
+        <ul className="divide-y" aria-label="Platform sensors by tier">
+          {pool.tiers.map((t) => (
+            <TierRow key={t.key} tier={t} />
+          ))}
+        </ul>
       </CardContent>
     </Card>
   )
 }
 
+const ROUTING: { term: string; text: string }[] = [
+  {
+    term: 'Auto',
+    text: 'Your own sensors first. A scan goes to platform sensors only when none of your sensors can run its scanner and your organization may use platform sensors.',
+  },
+  {
+    term: 'Platform sensor',
+    text: 'Always platform sensors. The scan is refused, with the reason, when a target is internal, in a scan zone or in an asset group, or when your organization may not use platform sensors.',
+  },
+  { term: 'Your sensor', text: 'Never platform sensors.' },
+]
+
 /**
- * Platform sensors: shared scanning capacity the platform operator runs, which
- * your organization's scans can use in addition to your own sensors. A page of
- * its own (the owner's request) instead of a card under the tenant's fleet.
+ * Which scans can land here, from the API's routing rules (api:
+ * internal/app/scan/trigger.go decideSensorRouting / shouldUsePlatformSensor).
+ * Keep in step with them.
+ */
+function RoutingCard({ className }: { className?: string }) {
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle>When your scans run here</CardTitle>
+        <CardDescription>Each scan&apos;s Sensor setting decides.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <dl className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {ROUTING.map((r) => (
+            <div key={r.term} className="min-w-0 space-y-0.5">
+              <dt className="text-sm font-medium">{r.term}</dt>
+              <dd className="text-sm text-muted-foreground">{r.text}</dd>
+            </div>
+          ))}
+        </dl>
+        <ul className="list-disc space-y-1 border-t ps-5 pt-4 text-sm text-muted-foreground">
+          <li>
+            Platform sensors scan public targets only. Internal addresses, asset groups and targets
+            in a scan zone stay on your own sensors.
+          </li>
+          <li>A platform job that waits {PLATFORM_QUEUE_LIMIT} for a free slot fails.</li>
+          <li>Each run shows where it went in its dispatch details.</li>
+        </ul>
+      </CardContent>
+    </Card>
+  )
+}
+
+function LoadingState() {
+  return (
+    <div className="mt-5 space-y-5" aria-busy="true" aria-label="Loading">
+      <Skeleton className="h-[5.5rem] w-full rounded-xl" />
+      <Skeleton className="h-56 w-full rounded-xl" />
+    </div>
+  )
+}
+
+/**
+ * Platform sensors: the shared pool the platform operator runs, seen from one
+ * organization. Answers, in order: can it take my scans now (callout), what do
+ * I have waiting and how busy is it (strip), how each tier is doing, and which
+ * of my scans go there at all.
  */
 export function PlatformSensorsPage() {
-  const {
-    data,
-    isEnabled,
-    maxTier,
-    accessibleTiers,
-    maxConcurrent,
-    maxQueued,
-    currentActive,
-    currentQueued,
-    availableSlots,
-    tierStats,
-    isLoading,
-    error,
-  } = usePlatformUsage({ refreshInterval: SENSOR_REFRESH_MS })
+  const { data, isLoading, error } = usePlatformUsage({ refreshInterval: SENSOR_REFRESH_MS })
+  const pool = useMemo(() => summarizePlatformPool(data), [data])
 
   const header = (
     <PageHeader
       title="Platform sensors"
-      description="Shared sensors run by the platform operator. Your scans can use them in addition to your own sensors."
+      description="Shared sensors the platform operator runs for every organization: whether they can take your scans and what you have waiting."
     >
       <Button variant="outline" size="sm" asChild>
         <Link href="/sensors">
@@ -130,19 +236,12 @@ export function PlatformSensorsPage() {
     return (
       <>
         {header}
-        <div className="mt-5 space-y-5" aria-busy="true" aria-label="Loading">
-          <Skeleton className="h-20 w-full rounded-xl" />
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-            {PLATFORM_SENSOR_TIERS.map((t) => (
-              <Skeleton key={t} className="h-36 rounded-xl" />
-            ))}
-          </div>
-        </div>
+        <LoadingState />
       </>
     )
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <>
         {header}
@@ -153,15 +252,15 @@ export function PlatformSensorsPage() {
     )
   }
 
-  if (!isEnabled) {
+  if (!pool) {
     return (
       <>
         {header}
         <div className="mt-5">
           <EmptyState
             icon={Cloud}
-            title="No platform sensors here"
-            description="This installation has no shared platform sensors. Your scans run on your own sensors."
+            title="No platform sensors"
+            description="The platform operator runs no shared sensors here, so your scans run on your own sensors."
             action={
               <Button size="sm" variant="outline" asChild>
                 <Link href="/sensors">Go to your sensors</Link>
@@ -173,86 +272,21 @@ export function PlatformSensorsPage() {
     )
   }
 
-  const onlineTotal = PLATFORM_SENSOR_TIERS.reduce(
-    (n, t) => n + (tierStats?.[t]?.online_sensors ?? 0),
-    0
-  )
-  const sensorTotal = PLATFORM_SENSOR_TIERS.reduce(
-    (n, t) => n + (tierStats?.[t]?.total_sensors ?? 0),
-    0
-  )
-
   return (
     <>
       {header}
-
-      {maxTier && (
-        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-          Your tier
-          <Badge variant="outline">{PLATFORM_TIER_LABELS[maxTier]}</Badge>
-        </p>
-      )}
-
-      <MetricStrip
-        className="mt-4"
-        items={[
-          {
-            key: 'active',
-            label: 'Active jobs',
-            value: currentActive,
-            hint: `/ ${maxConcurrent}`,
-            detail: (
-              <UsageBar
-                value={currentActive}
-                max={maxConcurrent}
-                label={`${currentActive} of ${maxConcurrent} concurrent jobs in use`}
-              />
-            ),
-          },
-          {
-            key: 'queued',
-            label: 'Queued',
-            value: currentQueued,
-            hint: maxQueued > 0 ? `/ ${maxQueued}` : undefined,
-            tone: 'warning',
-            detail: 'your platform jobs waiting for a slot',
-          },
-          {
-            key: 'available',
-            label: 'Available slots',
-            value: availableSlots,
-            detail: 'for your next platform scans',
-          },
-          {
-            key: 'online',
-            label: 'Online platform sensors',
-            value: onlineTotal,
-            hint: `of ${sensorTotal}`,
-          },
-        ]}
-      />
-
-      <h2 className="mt-5 text-base font-semibold">Tiers</h2>
-      <div className="mt-3 grid grid-cols-1 gap-5 sm:grid-cols-3">
-        {PLATFORM_SENSOR_TIERS.map((t) => (
-          <TierCard
-            key={t}
-            tier={t}
-            stats={tierStats?.[t]}
-            accessible={accessibleTiers.includes(t)}
-            maxTier={maxTier}
-          />
-        ))}
-      </div>
-      <p className="mt-3 text-xs text-muted-foreground">Updates every 15 seconds.</p>
+      <PoolCallout pool={pool} className="mt-5" />
+      <MetricStrip className="mt-5" items={poolMetrics(pool)} />
+      {pool.tiers.length > 1 && <TiersCard pool={pool} className="mt-5" />}
+      <RoutingCard className="mt-5" />
     </>
   )
 }
 
 /**
- * The header link to the platform sensors page: shown only when the tenant has
- * platform sensors (GET /platform/stats says enabled), the condition the old
- * card used. Without them there is nothing to link to, and no upsell.
+ * The header link to the platform sensors page: shown only when the
+ * installation has platform sensors. Without them there is nothing to link
+ * to, and no upsell.
  */
 export function PlatformSensorsLink() {
   const { isEnabled } = usePlatformUsage()

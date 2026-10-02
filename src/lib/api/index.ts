@@ -937,7 +937,6 @@ export {
 export {
   // Platform hooks
   usePlatformStats,
-  usePlatformSensors,
   usePlatformUsage,
 
   // Cache utilities
@@ -946,27 +945,9 @@ export {
   invalidatePlatformStatsCache,
 } from './platform-hooks'
 
-export type {
-  PlatformSensorTier,
-  TierStats,
-  PlatformStatsResponse,
-  PlatformSensor,
-  PlatformSensorListFilters,
-  PlatformSensorListResponse,
-} from './platform-types'
+export type { PlatformSensorTier, TierStats, PlatformStatsResponse } from './platform-types'
 
-export {
-  PLATFORM_SENSOR_TIERS,
-  PLATFORM_TIER_LABELS,
-  PLATFORM_TIER_DESCRIPTIONS,
-  PLATFORM_TIER_COLORS,
-  PLATFORM_TIER_BG_COLORS,
-  PLATFORM_TIER_BORDER_COLORS,
-  PLATFORM_TIER_ICONS,
-  getTierPriority,
-  isTierAccessible,
-  getAccessibleTiers,
-} from './platform-types'
+export { PLATFORM_SENSOR_TIERS, PLATFORM_TIER_LABELS } from './platform-types'
 
 // ============================================
 // PLATFORM ENDPOINTS
