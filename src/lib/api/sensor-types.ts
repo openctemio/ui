@@ -58,6 +58,7 @@ export interface SensorHealthReason {
     | 'outbox_evicted'
     | 'key_expired'
     | 'key_expiring'
+    | 'identity_cloned'
     | 'version_unsupported'
     | 'no_tools'
     | 'error_reported'

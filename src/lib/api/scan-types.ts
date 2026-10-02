@@ -54,6 +54,16 @@ export const SENSOR_PREFERENCE_DESCRIPTIONS: Record<SensorPreference, string> = 
 }
 
 /**
+ * A scanner_config value the API flagged as secret-looking (api RFC-032
+ * Phase 0). Only the path and the reason; never the value.
+ */
+export interface ScannerConfigWarning {
+  /** Dotted keys, [n] for list items ("headers.Authorization", "args[2]"). */
+  path: string
+  reason: 'key_name' | 'known_format' | 'high_entropy' | (string & {})
+}
+
+/**
  * Scan Configuration entity
  */
 export interface ScanConfig {
@@ -68,6 +78,8 @@ export interface ScanConfig {
   pipeline_id?: string
   scanner_name?: string
   scanner_config?: Record<string, unknown>
+  /** scanner_config values that look like secrets (never blocks a save). */
+  scanner_config_warnings?: ScannerConfigWarning[]
   targets_per_job: number
   schedule_type: ScheduleType
   schedule_cron?: string
