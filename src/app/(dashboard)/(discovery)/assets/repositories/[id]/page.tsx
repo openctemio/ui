@@ -2472,9 +2472,11 @@ export default function RepositoryDetailPage() {
     return transformToRepositoryView(repositoryData as unknown as ApiAssetResponse)
   }, [repositoryData])
 
-  // Fetch findings from API
+  // This repository's findings, once the repository has loaded. (Passing no
+  // filters instead would fetch the tenant's unfiltered first page.)
   const { data: findingsData } = useFindingsApi(
-    repositoryData ? { asset_id: repositoryId, per_page: 20 } : undefined
+    { asset_id: repositoryId, per_page: 20 },
+    { enabled: !!repositoryData }
   )
 
   const findings: FindingDetail[] = useMemo(() => {

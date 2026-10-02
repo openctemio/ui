@@ -106,6 +106,7 @@ import { FindingPickerPanel } from '@/features/remediation/components/finding-pi
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { patch, del } from '@/lib/api/client'
 import { useFindingsApi } from '@/features/findings/api/use-findings-api'
+import type { FindingApiFilters } from '@/features/findings/api/finding-api.types'
 import { AssigneeSelect } from '@/features/findings/components/assignee-select'
 import { useMembers } from '@/features/organization/api/use-members'
 import { useTenant } from '@/context/tenant-provider'
@@ -351,17 +352,15 @@ function getAvailableActions(status: TaskStatus) {
   }
 }
 
+const OPEN_FINDINGS_FOR_TASKS: FindingApiFilters = {
+  per_page: 100,
+  statuses: ['new', 'confirmed', 'in_progress'],
+}
+
 // ─── Main Component ──────────────────────────────────────────────────
 
 export default function RemediationPage() {
   const router = useRouter()
-
-  // API data
-  const { data: findingsData } = useFindingsApi({
-    per_page: 100,
-    statuses: ['new', 'confirmed', 'in_progress'],
-  })
-  const findings = findingsData?.data ?? []
 
   const {
     data: campaignData,
@@ -467,6 +466,15 @@ export default function RemediationPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [formData, setFormData] = useState<TaskFormData>(emptyFormData)
   const [dueDateOpen, setDueDateOpen] = useState(false)
+
+  // Open findings for the task drawer (linked-finding titles) and the task
+  // form's picker. Only those two surfaces read them, so fetch the page of 100
+  // (~130 KB) when one of them opens, not on every visit to the board.
+  const findingsNeeded = !!viewTask || !!editTask || isCreateOpen
+  const { data: findingsData } = useFindingsApi(OPEN_FINDINGS_FOR_TASKS, {
+    enabled: findingsNeeded,
+  })
+  const findings = useMemo(() => findingsData?.data ?? [], [findingsData])
 
   // Keep the open drawer in sync with the latest task data (after inline edits).
   useEffect(() => {

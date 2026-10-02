@@ -162,13 +162,20 @@ async function fetchFinding(url: string): Promise<ApiFinding> {
  * }
  * ```
  */
-export function useFindingsApi(filters?: FindingApiFilters, config?: SWRConfiguration) {
+export function useFindingsApi(
+  filters?: FindingApiFilters,
+  config?: SWRConfiguration & {
+    /** false = do not fetch yet (e.g. the list is only shown inside a closed dialog) */
+    enabled?: boolean
+  }
+) {
   const { currentTenant } = useTenant()
+  const { enabled = true, ...swrConfig } = config ?? {}
 
   // Ensure user has a tenant before making requests
-  const key = currentTenant ? buildFindingsEndpoint(filters) : null
+  const key = currentTenant && enabled ? buildFindingsEndpoint(filters) : null
 
-  return useSWR<ApiFindingListResponse>(key, fetchFindings, { ...defaultConfig, ...config })
+  return useSWR<ApiFindingListResponse>(key, fetchFindings, { ...defaultConfig, ...swrConfig })
 }
 
 /**
