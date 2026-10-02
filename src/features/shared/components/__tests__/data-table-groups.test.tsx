@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import type { ColumnDef } from '@tanstack/react-table'
 import { DataTable, groupRowsForDisplay } from '../data-table/data-table'
 
@@ -46,10 +46,8 @@ describe('DataTable rowGroups', () => {
         }}
       />
     )
-    const body = container.querySelector('tbody')!
-    const cells = within(body)
-      .getAllByRole('row')
-      .map((r) => r.textContent)
+    // One tbody per group (a native row group).
+    const cells = [...container.querySelectorAll('tbody tr')].map((r) => r.textContent)
     expect(cells).toEqual(['dmz · 1', 'b', 'lab · 2', 'a', 'c', 'none · 1', 'd'])
     const header = container.querySelector('[data-slot="row-group-header"] td')!
     expect(header.getAttribute('colspan')).toBe('1')

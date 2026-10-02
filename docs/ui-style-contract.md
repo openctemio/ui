@@ -76,6 +76,61 @@ Every page, top to bottom:
 - The first column is the row's name; row actions are the last column with
   `id: 'actions'` (both are pinned automatically).
 
+### Grouped lists
+
+A grouped view is the same list, organised under group headers. It is one
+`<DataTable>` with `rowGroups`: each group is a full-width header row inside
+the table, followed by its rows with the table's normal columns. Sensors
+(group by zone / role / version) and Findings (group by CVE / asset / owner /
+severity / source / component / type, and the verification queue) are the
+reference implementations.
+
+- **One table, never a card per group.** Rows keep their columns, sort,
+  selection, row actions, the drawer and the bulk-action bar. A card per group
+  shows a summary and hides the rows; at 1440px it fits four groups and no
+  findings.
+- **Group by is a toolbar select** (`Layers` icon, "No grouping" / "Group" as
+  the first option) and lives in the URL (`?group=`). Not tabs.
+- **The header row** (`renderHeader`): the group's name first (`font-medium`,
+  foreground), then muted meta joined with `·` (type, owner, CVSS, counts).
+  Summary counts go on the end (`renderActions`), compact: a status mix such
+  as `3 open · 1 fixing · 0 applied · 2 resolved` with a dot coloured only when
+  the number is above zero, and at most one mini bar (`% verified`). Hide the
+  summary below `lg` before it wraps the name.
+- **Group actions** (`renderActions`): `size="sm"` buttons at `h-7`, ghost for
+  navigation (View), outline for a change (Mark fixed, Approve). Gate each on
+  its permission **and** on the API being able to do it for that group type;
+  hide it otherwise (no dead buttons). Two at most; more go in a `⋯` menu.
+- **Selection** (`selectable`, with a `select` column): the header gets a
+  checkbox that selects the group's rows on screen (indeterminate when some
+  are). It feeds the same `BulkActionBar` as the flat list. Turn it on when
+  the page has bulk actions.
+- **Collapsible** (`collapsible`): a chevron before the name with
+  `aria-expanded`. Collapse state is view state, not URL state.
+- **Large or server-side groups:** paginate the **groups**, not the rows, and
+  load a group's rows when it opens (`groups`, `expandedKeys`,
+  `useLazyGroupRows`). Open the first few groups on arrival (Findings: 3),
+  show the first 5 rows, then `Showing 5 of 22 · Show 20 more` in the group
+  footer (`renderFooter`), up to the API's page cap, then `View all N in the
+list`. Pagination says "groups" (`paginationNoun`, `pageSizeLabel`).
+- **A dimension the list API cannot filter rows by** is a header-only group
+  (no chevron, no requests), never an expandable group with the wrong rows.
+  When the API might ignore a row filter, check the rows belong to the group
+  and say "These findings open in the list" instead of showing others.
+- **Small client lists** (a few hundred rows): group in the browser with
+  `getKey` / `order`; the table pages through the rows group by group, so a
+  group is not split across pages.
+- **Semantics:** each group is its own `<tbody>` named by its header
+  (`aria-labelledby`); the header content stays in view while a wide table
+  scrolls sideways. Group headers are not sticky vertically (the table frame
+  is the scroll container, see section 9).
+- **Phone:** the same groups render as section headers between the row cards.
+
+Do not: render groups as separate cards or separate tables, put a chart or a
+progress card per group, colour a zero, repeat the group's own value in a
+column of every row when it can be hidden, or fetch every group's rows on page
+load.
+
 ## 4. Cards and sections
 
 - shadcn `<Card>`. A section inside a card: `<CardHeader>` with `<CardTitle>`
