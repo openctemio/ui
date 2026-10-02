@@ -35,3 +35,10 @@ export {
   TypeBreakdownUnavailable,
   humanize,
 } from './exposure-type-overview'
+
+export {
+  ExposuresTabs,
+  ViewFindingsButton,
+  findingsHrefForSources,
+  listedFindingCount,
+} from './exposures-section'

@@ -23,11 +23,7 @@ import {
   FilterPanelToggle,
   FilterSheet,
 } from '@/features/shared'
-
-const REMEDIATION_TABS = [
-  { label: 'Tasks', href: '/remediation' },
-  { label: 'Solution families', href: '/remediations' },
-]
+import { REMEDIATION_SECTION_TABS } from '@/config/section-tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -1116,7 +1112,7 @@ export default function RemediationPage() {
           </Button>
         </PageHeader>
 
-        <SectionTabs tabs={REMEDIATION_TABS} className="mt-4 mb-0" />
+        <SectionTabs tabs={REMEDIATION_SECTION_TABS} className="mt-4 mb-0" />
 
         <MetricStrip className="mt-5" loading={isLoading} items={metrics} />
 
