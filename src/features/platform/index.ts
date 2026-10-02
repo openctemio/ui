@@ -1,12 +1,9 @@
 /**
- * Platform Feature Module
- *
- * Tiered Platform Sensors feature components and utilities.
- * Platform sensors are cloud-hosted scanning infrastructure with
- * three tiers: shared, dedicated, and premium.
+ * Platform sensors: the shared scanning pool the platform operator runs, as
+ * one organization sees it (GET /api/v1/platform/stats).
  */
 
-// Components
-export { TierBadge, MaxTierBadge, AccessibleTiersList } from './components/tier-badge'
-export { PlatformStatsCard, PlatformStatsInline } from './components/platform-stats-card'
+export { PlatformStatsCard } from './components/platform-stats-card'
 export { PlatformSensorsPage, PlatformSensorsLink } from './components/platform-sensors-page'
+export { PoolCallout, PoolStatePill } from './components/pool-state'
+export { summarizePlatformPool, type PlatformPool, type PoolState } from './lib/pool'

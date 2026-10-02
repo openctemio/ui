@@ -27,6 +27,7 @@
 import * as React from 'react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { Meter } from './meter'
 
 type IconType = React.ElementType
 
@@ -205,12 +206,6 @@ const STAT_TONE: Record<DetailStatTone, string> = {
   warning: 'text-warning',
   destructive: 'text-destructive',
 }
-const METER_TONE: Record<DetailStatTone, string> = {
-  default: 'bg-info',
-  success: 'bg-success',
-  warning: 'bg-warning',
-  destructive: 'bg-destructive',
-}
 
 export interface DetailStatProps {
   /** Sentence case, short ("Jobs running"). */
@@ -240,8 +235,6 @@ export function DetailStat({
   title,
   className,
 }: DetailStatProps) {
-  const pct =
-    meter && meter.max > 0 ? Math.min(100, Math.max(0, (meter.value / meter.max) * 100)) : 0
   return (
     <div className={cn('min-w-0 bg-card px-3 py-2.5', className)} data-slot="detail-stat">
       <dt className="truncate text-xs text-muted-foreground">{label}</dt>
@@ -260,19 +253,7 @@ export function DetailStat({
       </dd>
       {meter && (
         <dd className="mt-1.5">
-          <div
-            role="meter"
-            aria-label={meter.label}
-            aria-valuemin={0}
-            aria-valuemax={meter.max}
-            aria-valuenow={meter.value}
-            className="h-1 overflow-hidden rounded-full bg-muted"
-          >
-            <div
-              className={cn('h-full rounded-full', METER_TONE[tone])}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
+          <Meter value={meter.value} max={meter.max} label={meter.label} tone={tone} />
         </dd>
       )}
       {caption && (

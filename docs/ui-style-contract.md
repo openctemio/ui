@@ -39,6 +39,9 @@ Every page, top to bottom:
   label top-left, muted icon top-right, value, optional caption.
 - Never: pastel icon tiles, coloured card borders, coloured icons before the
   label, card-in-card stat grids.
+- A share of capacity (job slots in use, quota spent) is the shared `<Meter>`
+  (`role="meter"`, a label saying what it measures), in a metric's `detail`,
+  a `DetailStat` or a row. Not a hand-made bar.
 - Colour a number only when it is a problem **and** greater than zero
   (`tone="danger"` / `text-destructive`). A zero is never coloured.
 
