@@ -1,14 +1,14 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import type { ColumnDef } from '@tanstack/react-table'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
 import { PageHeader, EmptyState, DataTable, DataTableColumnHeader } from '@/features/shared'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import {
   Dialog,
@@ -18,39 +18,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Plus,
-  Play,
-  Eye,
-  CheckCircle,
-  RefreshCw,
-  ScrollText,
-  NotebookPen,
-  CalendarClock,
-  Lightbulb,
-} from 'lucide-react'
+import { Plus, RefreshCw, CalendarClock, Lightbulb } from 'lucide-react'
 import { get, post } from '@/lib/api/client'
-import { getErrorMessage } from '@/lib/api/error-handler'
 import { toast } from 'sonner'
-import { CharterEditorSheet, summarizeEvaluation, type CtemCycle } from '@/features/cycles'
+import { summarizeEvaluation, type CtemCycle } from '@/features/cycles'
+import { CycleStatusBadge } from '@/features/cycles/components/cycle-status-badge'
 
 interface PaginatedResponse {
   data: CtemCycle[]
   total: number
   page: number
   per_page: number
-}
-
-const statusColors: Record<CtemCycle['status'], string> = {
-  planning:
-    'bg-blue-500/10 text-blue-500 border-blue-500/20 dark:bg-blue-900/30 dark:text-blue-400',
-  active:
-    'bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-900/30 dark:text-green-400', // palette-ok: distinct cycle-status accent
-  review:
-    'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 dark:bg-yellow-900/30 dark:text-yellow-400', // palette-ok: distinct cycle-status accent
-  closed: 'bg-muted text-muted-foreground',
 }
 
 // Feed-forward "lessons" callout accent — a distinct info hue, not a severity/status color.
@@ -101,6 +80,7 @@ function firstOfNextMonth(): Date {
 }
 
 export default function CtemCyclesPage() {
+  const router = useRouter()
   const {
     data: response,
     isLoading,
@@ -109,7 +89,7 @@ export default function CtemCyclesPage() {
     revalidateOnFocus: false,
   })
 
-  const cycles = response?.data ?? []
+  const cycles = useMemo(() => response?.data ?? [], [response])
 
   // Feedback-to-scope loop: surface the most recent finished cycle's
   // scope-refinement notes so they visibly feed the NEXT cycle's scoping
@@ -139,43 +119,8 @@ export default function CtemCyclesPage() {
     start_date: '',
     end_date: '',
   })
-  // F-10: confirm state for destructive / irreversible cycle transitions.
-  const [pendingAction, setPendingAction] = useState<{
-    id: string
-    action: 'activate' | 'review' | 'close'
-    cycleName: string
-  } | null>(null)
-  // Cycle whose charter is being viewed/edited in the side sheet.
-  const [charterCycle, setCharterCycle] = useState<CtemCycle | null>(null)
-  // Cycle whose scope-refinement notes (feedback-to-scope) are being edited.
-  const [scopeCycle, setScopeCycle] = useState<CtemCycle | null>(null)
-  const [scopeNotes, setScopeNotes] = useState('')
-  const [savingScope, setSavingScope] = useState(false)
-
   const resetForm = () => {
     setFormData({ name: '', description: '', start_date: '', end_date: '' })
-  }
-
-  const openScopeRefinement = (cycle: CtemCycle) => {
-    setScopeNotes(cycle.charter?.scope_refinement_notes ?? '')
-    setScopeCycle(cycle)
-  }
-
-  const handleSaveScopeRefinement = async () => {
-    if (!scopeCycle) return
-    setSavingScope(true)
-    try {
-      await post(`/api/v1/ctem-cycles/${scopeCycle.id}/scope-refinement`, {
-        scope_refinement_notes: scopeNotes,
-      })
-      await mutate()
-      toast.success('Scope refinement notes saved')
-      setScopeCycle(null)
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to save scope refinement notes'))
-    } finally {
-      setSavingScope(false)
-    }
   }
 
   const handleCreate = async () => {
@@ -184,71 +129,16 @@ export default function CtemCyclesPage() {
       return
     }
     try {
-      await post('/api/v1/ctem-cycles', formData)
+      const created = await post<CtemCycle>('/api/v1/ctem-cycles', formData)
       await mutate()
-      toast.success('CTEM cycle created')
+      toast.success('Cycle created')
       setIsCreateOpen(false)
       resetForm()
+      // Straight to the new cycle, where its charter is written.
+      if (created?.id) router.push(`/cycles/${created.id}`)
     } catch {
       toast.error('Failed to create cycle')
     }
-  }
-
-  const handleStatusChange = async (id: string, action: 'activate' | 'review' | 'close') => {
-    // Cycle transitions have dedicated endpoints that also snapshot scope
-    // (activate) and enforce close gates. A plain PATCH {status} does NOT
-    // transition the cycle — it hits the metadata Update handler, which
-    // blanks the name and only matches WHERE status='planning'.
-    const endpointMap = { activate: 'activate', review: 'start-review', close: 'close' } as const
-    const successMap = {
-      activate: 'Cycle activated',
-      review: 'Cycle moved to review',
-      close: 'Cycle closed',
-    } as const
-    try {
-      const updated = await post<CtemCycle>(`/api/v1/ctem-cycles/${id}/${endpointMap[action]}`)
-      await mutate()
-      // Closing judges the charter's success criteria; say how it went and
-      // open the charter so the per-criterion outcome is right there.
-      const outcome = action === 'close' ? summarizeEvaluation(updated?.charter_evaluation) : null
-      if (outcome && updated) {
-        toast.success(`${successMap[action]}: ${outcome.toLowerCase()}`)
-        setCharterCycle(updated)
-      } else {
-        toast.success(successMap[action])
-      }
-    } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to update cycle status'))
-    }
-  }
-
-  // F-10: copy shown in the confirmation dialog for each transition.
-  const confirmCopy: Record<
-    'activate' | 'review' | 'close',
-    { title: string; body: string; actionLabel: string }
-  > = {
-    activate: {
-      title: 'Activate this cycle?',
-      body: 'Activating freezes the current asset scope into an immutable snapshot. This is an expensive operation and the scope cannot be changed afterwards.',
-      actionLabel: 'Activate',
-    },
-    review: {
-      title: 'Move to review?',
-      body: 'The cycle will stop accepting new findings into scope and enter the review phase. You can still close it afterwards.',
-      actionLabel: 'Start review',
-    },
-    close: {
-      title: 'Close this cycle?',
-      body: 'Closing is irreversible. The cycle and its scope snapshot become read-only archive data.',
-      actionLabel: 'Close cycle',
-    },
-  }
-
-  const confirmStatusChange = async () => {
-    if (!pendingAction) return
-    const { id, action } = pendingAction
-    setPendingAction(null)
-    await handleStatusChange(id, action)
   }
 
   const columns = useMemo<ColumnDef<CtemCycle>[]>(
@@ -256,16 +146,16 @@ export default function CtemCyclesPage() {
       {
         accessorKey: 'name',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Name" />,
-        cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+        cell: ({ row }) => (
+          <Link href={`/cycles/${row.original.id}`} className="font-medium hover:underline">
+            {row.original.name}
+          </Link>
+        ),
       },
       {
         accessorKey: 'status',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-        cell: ({ row }) => (
-          <Badge variant="outline" className={statusColors[row.original.status]}>
-            {row.original.status}
-          </Badge>
-        ),
+        cell: ({ row }) => <CycleStatusBadge status={row.original.status} />,
       },
       {
         accessorKey: 'start_date',
@@ -286,10 +176,9 @@ export default function CtemCyclesPage() {
           const summary = summarizeEvaluation(ev)
           if (!summary) return <span className="text-muted-foreground">-</span>
           return (
-            <button
-              type="button"
+            <Link
+              href={`/cycles/${row.original.id}?tab=outcome`}
               className="text-start text-sm tabular-nums hover:underline"
-              onClick={() => setCharterCycle(row.original)}
               title="View the success criteria outcome"
             >
               {summary}
@@ -298,93 +187,7 @@ export default function CtemCyclesPage() {
                   {Math.round(ev.completion_rate)}%
                 </span>
               )}
-            </button>
-          )
-        },
-      },
-      {
-        id: 'actions',
-        header: () => <div className="text-end">Actions</div>,
-        enableSorting: false,
-        enableHiding: false,
-        cell: ({ row }) => {
-          const cycle = row.original
-          return (
-            <div className="flex items-center justify-end gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setCharterCycle(cycle)}
-                title={cycle.status === 'planning' ? 'Edit charter' : 'View charter'}
-              >
-                <ScrollText className="me-1 h-3 w-3" />
-                Charter
-              </Button>
-              {cycle.status === 'planning' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    setPendingAction({
-                      id: cycle.id,
-                      action: 'activate',
-                      cycleName: cycle.name,
-                    })
-                  }
-                >
-                  <Play className="me-1 h-3 w-3" />
-                  Activate
-                </Button>
-              )}
-              {cycle.status === 'active' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    setPendingAction({
-                      id: cycle.id,
-                      action: 'review',
-                      cycleName: cycle.name,
-                    })
-                  }
-                >
-                  <Eye className="me-1 h-3 w-3" />
-                  Start review
-                </Button>
-              )}
-              {(cycle.status === 'review' || cycle.status === 'closed') && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => openScopeRefinement(cycle)}
-                  title="Record scope-refinement notes (feedback to next cycle's scope)"
-                >
-                  <NotebookPen className="me-1 h-3 w-3" />
-                  Scope notes
-                </Button>
-              )}
-              {cycle.status === 'review' && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    setPendingAction({
-                      id: cycle.id,
-                      action: 'close',
-                      cycleName: cycle.name,
-                    })
-                  }
-                >
-                  <CheckCircle className="me-1 h-3 w-3" />
-                  Close
-                </Button>
-              )}
-              {cycle.status === 'closed' && (
-                <Badge variant="outline" className="text-xs">
-                  Completed
-                </Badge>
-              )}
-            </div>
+            </Link>
           )
         },
       },
@@ -449,13 +252,14 @@ export default function CtemCyclesPage() {
           ) : cycles.length === 0 ? (
             <EmptyState
               icon={RefreshCw}
-              title="No CTEM cycles yet"
-              description="Create a cycle to get started."
+              title="No cycles yet"
+              description="A cycle binds the charter, the scope it freezes and the outcome it is judged by. Create one to start."
             />
           ) : (
             <DataTable
               columns={columns}
               data={cycles}
+              onRowClick={(cycle) => router.push(`/cycles/${cycle.id}`)}
               searchPlaceholder="Search cycles..."
               emptyMessage="No cycles found"
               emptyDescription="No cycles match the current search."
@@ -534,67 +338,6 @@ export default function CtemCyclesPage() {
               Cancel
             </Button>
             <Button onClick={handleCreate}>Create</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* F-10: ConfirmDialog for irreversible cycle transitions. */}
-      <ConfirmDialog
-        open={pendingAction !== null}
-        onOpenChange={(open) => !open && setPendingAction(null)}
-        title={pendingAction ? confirmCopy[pendingAction.action].title : ''}
-        desc={
-          pendingAction ? (
-            <>
-              <span className="block font-medium text-foreground">
-                Cycle: {pendingAction.cycleName}
-              </span>
-              <span className="block mt-2">{confirmCopy[pendingAction.action].body}</span>
-            </>
-          ) : (
-            ''
-          )
-        }
-        confirmText={pendingAction ? confirmCopy[pendingAction.action].actionLabel : ''}
-        handleConfirm={confirmStatusChange}
-      />
-
-      <CharterEditorSheet
-        cycle={charterCycle}
-        open={charterCycle !== null}
-        onOpenChange={(open) => !open && setCharterCycle(null)}
-        onSaved={() => mutate()}
-      />
-
-      {/* Feedback-to-scope: record what the review/close learned about scope. */}
-      <Dialog open={scopeCycle !== null} onOpenChange={(open) => !open && setScopeCycle(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Scope refinement &amp; lessons</DialogTitle>
-            <DialogDescription>
-              {scopeCycle ? `${scopeCycle.name} — ` : ''}
-              what this cycle taught you about scope: gaps to add, items to exclude next time,
-              lessons for the next charter. Feeds the next cycle&rsquo;s scoping.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="scope-notes">Notes</Label>
-            <Textarea
-              id="scope-notes"
-              value={scopeNotes}
-              onChange={(e) => setScopeNotes(e.target.value)}
-              placeholder="e.g. Add exposed RDP to scope next cycle; the legacy VPN exclusion held up."
-              rows={6}
-              disabled={savingScope}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setScopeCycle(null)} disabled={savingScope}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveScopeRefinement} disabled={savingScope}>
-              {savingScope ? 'Saving…' : 'Save notes'}
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

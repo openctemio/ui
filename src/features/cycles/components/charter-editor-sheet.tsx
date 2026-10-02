@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSWRConfig } from 'swr'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Plus, X, Lock, Info, Loader2 } from 'lucide-react'
@@ -28,6 +29,9 @@ import { getErrorMessage } from '@/lib/api/error-handler'
 import type { CtemCycle } from '../types'
 import { CharterOutcome } from './charter-outcome'
 import { InScopeServicesField } from './in-scope-services-field'
+import { CharterAttackerProfilesField } from './charter-attacker-profiles-field'
+import { CharterExclusionsField } from './charter-exclusions-field'
+import { cycleKey, syncCycleProfiles, useCycleProfiles } from '../api'
 import {
   charterFormSchema,
   charterToForm,
@@ -101,7 +105,19 @@ export function CharterEditorSheet({
     if (open) reset(charterToForm(cycle?.charter))
   }, [open, cycle, reset])
 
-  const exclusions = useFieldArray({ control, name: 'exclusions' })
+  // The attacker profiles the cycle assumes are links (ctem_cycle_attacker_profiles),
+  // not charter text: loaded with the sheet, written on Save after the charter.
+  const { mutate: mutateCache } = useSWRConfig()
+  const { data: linkedProfiles } = useCycleProfiles(open && cycle ? cycle.id : null)
+  const savedProfileIds = useMemo(
+    () => (linkedProfiles?.data ?? []).map((p) => p.id),
+    [linkedProfiles]
+  )
+  const [profileIds, setProfileIds] = useState<string[]>([])
+  useEffect(() => {
+    if (open) setProfileIds(savedProfileIds)
+  }, [open, savedProfileIds])
+
   const successCriteria = useFieldArray({ control, name: 'success_criteria' })
 
   const watched = watch()
@@ -118,6 +134,8 @@ export function CharterEditorSheet({
         end_date: cycle.end_date || '',
         charter: formToCharter(data),
       })
+      await syncCycleProfiles(cycle.id, savedProfileIds, profileIds)
+      await mutateCache(`${cycleKey(cycle.id)}/profiles`)
       toast.success('Charter saved')
       onSaved?.()
       onOpenChange(false)
@@ -146,7 +164,7 @@ export function CharterEditorSheet({
           </div>
           <SheetDescription>
             {cycle?.name
-              ? `Scope charter for "${cycle.name}" — threat scenarios, measurable success criteria, reasoned exclusions, escalation and roles.`
+              ? `Scope charter for "${cycle.name}": attacker profiles, measurable success criteria, reasoned exclusions, escalation and roles.`
               : 'Scope charter for this cycle.'}
           </SheetDescription>
         </SheetHeader>
@@ -176,15 +194,18 @@ export function CharterEditorSheet({
                 <CardDescription>Frame scope by what the cycle defends against.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <ListField
-                  control={control}
-                  name="threat_scenarios"
-                  label="Threat scenarios"
-                  description="What this cycle defends against (e.g. ransomware via exposed RDP)."
-                  placeholder="e.g. Ransomware via exposed RDP"
-                  addLabel="Add threat scenario"
-                  editable={editable}
-                />
+                <div className="space-y-2">
+                  <Label>Attacker profiles</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Who this cycle defends against. The threat model reasons over the same profiles.
+                  </p>
+                  <CharterAttackerProfilesField
+                    value={profileIds}
+                    onChange={setProfileIds}
+                    editable={editable}
+                  />
+                  <LegacyThreatScenarios control={control} editable={editable} />
+                </div>
                 <ListField
                   control={control}
                   name="objectives"
@@ -348,71 +369,22 @@ export function CharterEditorSheet({
               <CardHeader>
                 <CardTitle className="text-base">Exclusions</CardTitle>
                 <CardDescription>
-                  What is deliberately out of scope — and the reason, so a deferral is a decision,
-                  not a silent gap.
+                  What is deliberately out of scope, picked from the exclusions scans enforce, and
+                  the reason, so a deferral is a decision, not a silent gap.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {editable ? (
-                  <div className="space-y-3">
-                    {exclusions.fields.map((row, index) => (
-                      <div
-                        key={row.id}
-                        className="grid grid-cols-1 gap-2 rounded-md border border-border p-3 sm:grid-cols-[1fr_1.5fr_auto]"
-                      >
-                        <Controller
-                          control={control}
-                          name={`exclusions.${index}.item`}
-                          render={({ field }) => (
-                            <Input placeholder="Excluded item (e.g. Legacy VPN)" {...field} />
-                          )}
-                        />
-                        <Controller
-                          control={control}
-                          name={`exclusions.${index}.reason`}
-                          render={({ field }) => (
-                            <Input
-                              placeholder="Reason (e.g. Decommissioned next quarter)"
-                              {...field}
-                            />
-                          )}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0"
-                          onClick={() => exclusions.remove(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="w-fit"
-                      onClick={() => exclusions.append({ item: '', reason: '' })}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add exclusion
-                    </Button>
-                  </div>
-                ) : watched.exclusions.filter((e) => e.item || e.reason).length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Not set</p>
-                ) : (
-                  <ul className="space-y-1 text-sm">
-                    {watched.exclusions
-                      .filter((e) => e.item || e.reason)
-                      .map((e, i) => (
-                        <li key={i}>
-                          <span className="font-medium">{e.item || 'Untitled'}</span>
-                          {e.reason && <span className="text-muted-foreground"> — {e.reason}</span>}
-                        </li>
-                      ))}
-                  </ul>
-                )}
+                <Controller
+                  control={control}
+                  name="exclusions"
+                  render={({ field }) => (
+                    <CharterExclusionsField
+                      value={field.value}
+                      onChange={field.onChange}
+                      editable={editable}
+                    />
+                  )}
+                />
               </CardContent>
             </Card>
 
@@ -508,6 +480,54 @@ export function CharterEditorSheet({
   )
 }
 
+/**
+ * Threat scenarios typed as free text before the attacker-profile picker.
+ * Shown so they are not lost, removable while the charter is editable, never
+ * added to: pick an attacker profile instead.
+ */
+function LegacyThreatScenarios({
+  control,
+  editable,
+}: {
+  control: ReturnType<typeof useForm<CharterFormData>>['control']
+  editable: boolean
+}) {
+  return (
+    <Controller
+      control={control}
+      name="threat_scenarios"
+      render={({ field }) => {
+        const items = field.value.filter((s) => s.trim())
+        if (items.length === 0) return <></>
+        return (
+          <div className="space-y-1 rounded-md border bg-muted/40 p-2 text-sm">
+            <p className="text-muted-foreground">Earlier free-text scenarios</p>
+            <ul className="space-y-1">
+              {items.map((item) => (
+                <li key={item} className="flex items-center justify-between gap-2">
+                  <span className="truncate">{item}</span>
+                  {editable && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      aria-label={`Remove ${item}`}
+                      onClick={() => field.onChange(field.value.filter((v) => v !== item))}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }}
+    />
+  )
+}
+
 /** String-list field: editable via DynamicListInput, read-only as a bullet list. */
 function ListField({
   control,
@@ -520,7 +540,7 @@ function ListField({
   numbered,
 }: {
   control: ReturnType<typeof useForm<CharterFormData>>['control']
-  name: 'threat_scenarios' | 'objectives' | 'business_priorities'
+  name: 'objectives' | 'business_priorities'
   label: string
   description?: string
   placeholder: string
