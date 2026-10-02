@@ -212,3 +212,10 @@
 .w-md-editor-toolbar ul {
   flex-wrap: nowrap;
 }
+
+/* Toasts stay clickable while a modal (Dialog, Sheet) is open: Radix sets
+   pointer-events: none on everything outside the modal, toaster included.
+   The modals ignore interactions on toasts (components/ui/toaster-guard.ts). */
+[data-sonner-toaster] {
+  pointer-events: auto;
+}
