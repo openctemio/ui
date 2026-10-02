@@ -1,5 +1,7 @@
 'use client'
 
+import { AlertTriangle, CheckCircle2, Circle, MinusCircle } from 'lucide-react'
+
 import { useTranslation } from '@/context/i18n-provider'
 import { cn } from '@/lib/utils'
 import type { Sensor, SensorSdkStatus, SensorVersionStatus } from '@/lib/api/sensor-types'
@@ -409,25 +411,48 @@ export function SensorToolsCell({
   )
 }
 
-/** A sensor's tools with versions and their status, for the drawer. */
+const TOOL_STATUS: Record<
+  SensorToolRow['status'],
+  { icon: typeof CheckCircle2; className: string; label: string }
+> = {
+  ready: { icon: CheckCircle2, className: 'text-success', label: 'installed' },
+  declared: { icon: Circle, className: muted, label: 'not reported by the sensor' },
+  not_installed: { icon: AlertTriangle, className: 'text-warning', label: 'not installed' },
+  excluded: { icon: MinusCircle, className: muted, label: 'left out by the tool limit' },
+}
+
+/**
+ * A sensor's tools for the drawer: one chip per tool with its version and
+ * whether it is installed (an icon, and a tag when it is not usable).
+ */
 export function SensorToolList({ rows }: { rows: SensorToolRow[] }) {
   if (rows.length === 0) return <span className={cn('text-sm', muted)}>none</span>
   return (
-    <ul className="flex flex-wrap gap-x-3 gap-y-1">
-      {rows.map((r) => (
-        <li key={r.name} className="inline-flex items-center gap-1.5 text-sm">
-          <span className={cn(r.status === 'ready' || r.status === 'declared' ? '' : muted)}>
-            {r.name}
-          </span>
-          {r.version && <span className={cn('font-mono text-xs', muted)}>{r.version}</span>}
-          {r.status === 'not_installed' && <SensorTag tone="warning">not installed</SensorTag>}
-          {r.status === 'excluded' && (
-            <SensorTag title="Installed, but the sensor's tool limit leaves it out">
-              not allowed
-            </SensorTag>
-          )}
-        </li>
-      ))}
+    <ul className="flex flex-wrap gap-1.5" aria-label="Tools">
+      {rows.map((r) => {
+        const s = TOOL_STATUS[r.status]
+        const Icon = s.icon
+        return (
+          <li
+            key={r.name}
+            data-tool={r.name}
+            data-status={r.status}
+            className="inline-flex h-7 items-center gap-1.5 rounded-md border bg-card px-2 text-sm"
+          >
+            <Icon className={cn('h-3.5 w-3.5 shrink-0', s.className)} aria-label={s.label} />
+            <span className={cn(r.status === 'ready' || r.status === 'declared' ? '' : muted)}>
+              {r.name}
+            </span>
+            {r.version && <span className={cn('text-xs tabular-nums', muted)}>{r.version}</span>}
+            {r.status === 'not_installed' && <SensorTag tone="warning">not installed</SensorTag>}
+            {r.status === 'excluded' && (
+              <SensorTag title="Installed, but the sensor's tool limit leaves it out">
+                not allowed
+              </SensorTag>
+            )}
+          </li>
+        )
+      })}
     </ul>
   )
 }

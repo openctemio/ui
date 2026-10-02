@@ -10,7 +10,9 @@ import {
   contentLabel,
   contentProblemText,
   contentState,
+  contentVersionDate,
   formatHours,
+  shortContentError,
   shortDigest,
   worstContentState,
 } from '../content'
@@ -92,6 +94,26 @@ describe('formatting', () => {
       ['trivy', 2],
       ['nuclei', 1],
     ])
+  })
+})
+
+describe('shortContentError / contentVersionDate', () => {
+  it('turns URLs into their host and caps the length', () => {
+    expect(
+      shortContentError(
+        'resolve: checksums: Get "https://release-assets.githubusercontent.com/x/y?sig=abc&se=2026"'
+      )
+    ).toBe('resolve: checksums: Get release-assets.githubusercontent.com')
+    expect(shortContentError('a'.repeat(200), 20)).toHaveLength(20)
+    expect(shortContentError(undefined)).toBe('')
+  })
+
+  it('reads a timestamp version as a date, a release tag as none', () => {
+    expect(contentVersionDate('2026-10-02T06:55:51Z')?.toISOString()).toBe(
+      '2026-10-02T06:55:51.000Z'
+    )
+    expect(contentVersionDate('v10.4.9')).toBeNull()
+    expect(contentVersionDate('')).toBeNull()
   })
 })
 

@@ -222,7 +222,10 @@ describe('SensorActivity', () => {
     const onAll = vi.fn()
     renderActivity(<SensorRecentActivity sensorId="s1" onAll={onAll} />)
     expect(await screen.findByText('Sensor settings changed')).toBeInTheDocument()
-    expect(screen.getByText('· admin@example.com')).toBeInTheDocument()
+    // The compact shared timeline: who did an administrator action, no other detail.
+    expect(screen.getByText('by admin@example.com')).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Activity' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: /Recent activity/ })).toBeInTheDocument()
     expect(query(0).get('limit')).toBe('5')
     await userEvent.click(screen.getByRole('button', { name: 'All activity' }))
     expect(onAll).toHaveBeenCalled()
