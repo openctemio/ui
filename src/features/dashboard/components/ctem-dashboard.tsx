@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useTenant } from '@/context/tenant-provider'
 import { useDashboardStats } from '@/features/dashboard'
 import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
@@ -24,6 +25,9 @@ import {
   CtemMaturityCard,
 } from '@/features/dashboard/components/ctem'
 import { AnalystDetail } from '@/features/dashboard/components/analyst-detail'
+import { useScopingSummary } from '@/features/scoping/api'
+import { readinessRows, readinessScore, visibleReadiness } from '@/features/scoping/readiness'
+import { useNavItemAccess } from '@/lib/permissions'
 
 /**
  * The CTEM action-first main dashboard. Self-contained: it fetches its own
@@ -44,6 +48,15 @@ export function CtemDashboard() {
   const { data: attackPaths, isLoading: pathsLoading } = useAttackPaths(tenantId)
   const { data: scanCoverage, isLoading: scanLoading } = useScanCoverage(tenantId)
   const { data: validationCoverage, isLoading: validationLoading } = useValidationCoverage(tenantId)
+  // Scoping readiness for the loop's Scoping tile; rows about a module that is
+  // off are left out, the same as the Scoping overview.
+  const { data: scopingSummary } = useScopingSummary()
+  const allowed = useNavItemAccess()
+  const scoping = useMemo(() => {
+    if (!scopingSummary) return undefined
+    const rows = visibleReadiness(readinessRows(scopingSummary), (module) => allowed({ module }))
+    return { ...readinessScore(rows), crownJewels: scopingSummary.crown_jewels.total }
+  }, [scopingSummary, allowed])
 
   // Maturity is module-gated — skip the fetch entirely when disabled so it 403s nothing.
   const ctemCyclesEnabled = useModuleEnabled('ctem_cycles')
@@ -78,6 +91,7 @@ export function CtemDashboard() {
           scanCoverage={scanCoverage}
           validationCoverage={validationCoverage}
           threatIntel={threatIntel}
+          scoping={scoping}
           isLoading={summaryLoading || scanLoading || validationLoading || threatLoading}
         />
       </section>
@@ -92,6 +106,7 @@ export function CtemDashboard() {
         <AttackPathsCard
           attackPaths={attackPaths}
           chains={chains}
+          crownJewelsTotal={scopingSummary?.crown_jewels.total}
           isLoading={pathsLoading || exposureLoading}
         />
       </section>
