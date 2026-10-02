@@ -287,8 +287,8 @@ export function SensorJobsCell({ sensor }: { sensor: Sensor }) {
     return <span className={muted}>—</span>
   }
   const current = sensor.current_jobs ?? 0
-  // The capacity dispatch uses: the sensor's reported cap narrowed by the
-  // limit set on it.
+  // The capacity dispatch uses: the smallest of the sensor's slots, its
+  // operator's cap and the limit set on it.
   const max = sensorCapacity(sensor).effective || 0
   const pct = max > 0 ? Math.min(100, (current / max) * 100) : 0
   return (
@@ -462,6 +462,15 @@ export function SensorToolList({ rows }: { rows: SensorToolRow[] }) {
               {r.name}
             </span>
             {r.version && <span className={cn('text-xs tabular-nums', muted)}>{r.version}</span>}
+            {r.capabilities && r.capabilities.length > 0 && (
+              <span
+                className={cn('max-w-48 truncate text-xs', muted)}
+                title={`Serves ${r.capabilities.join(', ')}`}
+                aria-label={`Serves ${r.capabilities.join(', ')}`}
+              >
+                {r.capabilities.join(' · ')}
+              </span>
+            )}
             {r.status === 'not_installed' && <SensorTag tone="warning">not installed</SensorTag>}
             {r.status === 'excluded' && (
               <SensorTag title="Installed, but the sensor's tool limit leaves it out">

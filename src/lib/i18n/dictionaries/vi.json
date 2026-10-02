@@ -312,6 +312,7 @@
   "sensors.review.narrowedHint": "Chỉ các công cụ được chọn mới nhận tác vụ. Bạn có thể đổi lại trong Sửa sensor.",
   "sensors.review.reportedTools": "Công cụ sensor báo cáo",
   "sensors.review.notInstalled": "chưa cài đặt",
+  "sensors.review.serves": "Phục vụ {caps}",
   "sensors.review.pickOne": "Hãy cho phép ít nhất một công cụ.",
   "sensors.review.noTools": "Sensor không báo cáo công cụ quét nào.",
   "sensors.review.noToolsHint": "Điều này bình thường với collector hoặc sensor tùy chỉnh. Không có gì để chọn.",
