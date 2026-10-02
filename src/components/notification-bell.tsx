@@ -31,8 +31,9 @@ import {
   invalidateNotificationsCache,
   type UserNotification,
 } from '@/features/notifications/api/use-notification-api'
-import { useTenantChannel } from '@/hooks/use-websocket'
+import { useUserNotificationChannel } from '@/hooks/use-websocket'
 import { useTenant } from '@/context/tenant-provider'
+import { useDisplayUser } from '@/hooks/use-display-user'
 
 const severityColors: Record<string, string> = { ...SEVERITY_TEXT_COLORS }
 
@@ -138,6 +139,9 @@ function NotificationItem({ notification, onMarkAsRead, onClose }: NotificationI
 export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const { currentTenant } = useTenant()
+  // The profile API is the reliable source of the user id: the auth store is
+  // only filled by a client-side login or token refresh, not on a fresh tab.
+  const user = useDisplayUser()
 
   // Fetch notifications and unread count from API
   const {
@@ -150,9 +154,11 @@ export function NotificationBell() {
   const notifications = notificationsData?.data ?? []
   const unreadCount = unreadData?.count ?? 0
 
-  // Subscribe to tenant-wide WebSocket channel for real-time updates
-  // This catches audience=all notifications broadcast to the tenant channel
-  useTenantChannel(currentTenant?.id ?? null, {
+  // Real-time updates arrive on the user's own channel (user:{tenant}:{user}).
+  // The server pushes every notification there that this user's inbox would
+  // show (addressed to them, their groups, or everyone, minus what their
+  // preferences filter out) and nothing addressed to anyone else.
+  useUserNotificationChannel(currentTenant?.id, user?.id, {
     onData: useCallback(
       (data: Record<string, unknown>) => {
         // Only revalidate when the WebSocket event is a notification
