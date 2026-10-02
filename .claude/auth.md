@@ -5,6 +5,7 @@
 ## Overview
 
 OpenCTEM uses a **multi-tenant authentication system** with:
+
 - **Local Auth**: Email/password via backend API
 - **Social Auth**: Google, GitHub, Microsoft (OAuth2)
 - **OIDC**: Keycloak for enterprise SSO
@@ -29,6 +30,8 @@ OpenCTEM uses a **multi-tenant authentication system** with:
 │  Has: refresh_token cookie                                  │
 │  Missing: app_tenant cookie, auth_token         │
 │  Redirect to: /onboarding/create-team                       │
+│  (form if tenant_creation_mode=self_service; under          │
+│   admin_only: "ask your administrator" notice + sign out)   │
 └─────────────────────────────────────────────────────────────┘
                               │
                       Create/Select Team
@@ -44,16 +47,17 @@ OpenCTEM uses a **multi-tenant authentication system** with:
 
 ## Cookies
 
-| Cookie | HttpOnly | Purpose | Set By |
-|--------|----------|---------|--------|
-| `auth_token` | Yes | Access token (JWT, 15min) | Server Action |
-| `refresh_token` | Yes | Refresh token (7 days) | Server Action |
-| `app_tenant` | No | Current tenant info | Server Action |
-| `app_user_info` | No | User info for onboarding | Server Action |
-| `app_pending_tenants` | No | Multi-tenant selection | Server Action |
-| `app_permissions` | No | User's permissions array (JSON) | Server Action after token exchange |
+| Cookie                | HttpOnly | Purpose                         | Set By                             |
+| --------------------- | -------- | ------------------------------- | ---------------------------------- |
+| `auth_token`          | Yes      | Access token (JWT, 15min)       | Server Action                      |
+| `refresh_token`       | Yes      | Refresh token (7 days)          | Server Action                      |
+| `app_tenant`          | No       | Current tenant info             | Server Action                      |
+| `app_user_info`       | No       | User info for onboarding        | Server Action                      |
+| `app_pending_tenants` | No       | Multi-tenant selection          | Server Action                      |
+| `app_permissions`     | No       | User's permissions array (JSON) | Server Action after token exchange |
 
 **Permission Cookie Flow:**
+
 ```
 Login/Token Exchange → Extract permissions from JWT → Store in app_permissions cookie
     → Client reads cookie via usePermissions() hook → Permission checks without API calls
@@ -153,9 +157,9 @@ Guards dashboard routes, ensuring user has selected a tenant:
 // src/components/layout/tenant-gate.tsx
 export function TenantGate({ children }) {
   useEffect(() => {
-    const tenantCookie = getCookie("app_tenant")
+    const tenantCookie = getCookie('app_tenant')
     if (!tenantCookie) {
-      window.location.href = "/onboarding/create-team"
+      window.location.href = '/onboarding/create-team'
       return
     }
     setHasCheckedTenant(true)
@@ -169,14 +173,14 @@ export function TenantGate({ children }) {
 
 All auth operations use Server Actions for security:
 
-| Action | Purpose | File |
-|--------|---------|------|
-| `loginAction` | Email/password login | `local-auth-actions.ts` |
-| `registerAction` | User registration | `local-auth-actions.ts` |
-| `selectTenantAction` | Multi-tenant selection | `local-auth-actions.ts` |
-| `createFirstTeamAction` | Onboarding team creation | `local-auth-actions.ts` |
-| `localLogoutAction` | Logout + clear cookies | `local-auth-actions.ts` |
-| `refreshLocalTokenAction` | Token refresh | `local-auth-actions.ts` |
+| Action                    | Purpose                  | File                    |
+| ------------------------- | ------------------------ | ----------------------- |
+| `loginAction`             | Email/password login     | `local-auth-actions.ts` |
+| `registerAction`          | User registration        | `local-auth-actions.ts` |
+| `selectTenantAction`      | Multi-tenant selection   | `local-auth-actions.ts` |
+| `createFirstTeamAction`   | Onboarding team creation | `local-auth-actions.ts` |
+| `localLogoutAction`       | Logout + clear cookies   | `local-auth-actions.ts` |
+| `refreshLocalTokenAction` | Token refresh            | `local-auth-actions.ts` |
 
 ## Important: Full Page Reload After Auth Changes
 

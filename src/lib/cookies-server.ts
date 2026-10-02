@@ -79,8 +79,11 @@ export async function setServerCookie(
     ...options,
   })
   // Whenever a session is established or renewed, make sure the browser has
-  // the JS-readable CSRF cookie its state-changing calls must echo back.
-  if (name === env.auth.cookieName && !cookieStore.get(CSRF_COOKIE)?.value) {
+  // the JS-readable CSRF cookie its state-changing calls must echo back. A
+  // user with no organization gets only the refresh cookie at login, and the
+  // calls it makes (accept-with-refresh) are cookie-authenticated too.
+  const isSessionCookie = name === env.auth.cookieName || name === env.auth.refreshCookieName
+  if (isSessionCookie && !cookieStore.get(CSRF_COOKIE)?.value) {
     cookieStore.set(CSRF_COOKIE, newCsrfToken(), csrfCookieOptions())
   }
 }
