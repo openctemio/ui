@@ -679,7 +679,7 @@ export default function EcosystemsPage() {
           {selectedEcosystem && (
             <>
               {/* Header */}
-              <div className="px-6 py-4 border-b bg-muted/30">
+              <div className="px-6 py-4 pe-14 border-b">
                 <SheetHeader>
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">

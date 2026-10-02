@@ -38,12 +38,29 @@ function DialogOverlay({
   )
 }
 
+/** The close button's look: a 44px hit area, visible focus ring. */
+const dialogCloseClassName =
+  'ring-offset-background focus-visible:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground rounded-md opacity-70 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 focus:outline-hidden disabled:pointer-events-none flex items-center justify-center h-10 w-10 min-h-[44px] min-w-[44px]'
+
+function DialogCloseButton({ className }: { className?: string }) {
+  return (
+    <DialogPrimitive.Close data-slot="dialog-close" className={cn(dialogCloseClassName, className)}>
+      <XIcon className="size-5" aria-hidden />
+      <span className="sr-only">Close</span>
+    </DialogPrimitive.Close>
+  )
+}
+
 function DialogContent({
   className,
   children,
   showCloseButton = true,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
+  /**
+   * The default close button, absolute in the top-right corner. Turn it off
+   * when the dialog draws a DialogHeaderBar (which has its own).
+   */
   showCloseButton?: boolean
 }) {
   return (
@@ -58,17 +75,47 @@ function DialogContent({
         {...props}
       >
         {children}
-        {showCloseButton && (
-          <DialogPrimitive.Close
-            data-slot="dialog-close"
-            className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-3 right-3 rounded-md opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none flex items-center justify-center h-10 w-10 min-h-[44px] min-w-[44px]"
-          >
-            <XIcon className="size-5" />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
-        )}
+        {showCloseButton && <DialogCloseButton className="absolute top-3 right-3" />}
       </DialogPrimitive.Content>
     </DialogPortal>
+  )
+}
+
+/**
+ * The chrome row of a dialog whose body is laid out edge to edge (split
+ * panes, a tinted aside, a scrolling body with a sticky footer): title and
+ * description on the left, the close button on the right, on the dialog's
+ * own surface, above everything else. The body then starts below it, so the
+ * close button never lands on a tinted region of the body.
+ *
+ * Use with `<DialogContent showCloseButton={false} className="flex flex-col gap-0 p-0 sm:p-0 …">`
+ * (`sm:p-0` too: DialogContent pads `sm:p-6`)
+ * and put DialogTitle / DialogDescription inside.
+ */
+function DialogHeaderBar({
+  className,
+  children,
+  actions,
+  showCloseButton = true,
+  ...props
+}: React.ComponentProps<'div'> & {
+  /** Rendered before the close button (e.g. a status badge). */
+  actions?: React.ReactNode
+  showCloseButton?: boolean
+}) {
+  return (
+    <div
+      data-slot="dialog-header-bar"
+      className={cn(
+        'bg-background flex shrink-0 items-start gap-3 border-b py-3 ps-4 pe-2 sm:ps-6 sm:pe-3',
+        className
+      )}
+      {...props}
+    >
+      <div className="flex min-w-0 flex-1 flex-col gap-1 py-1.5 text-start">{children}</div>
+      {actions && <div className="flex shrink-0 items-center gap-2 py-1">{actions}</div>}
+      {showCloseButton && <DialogCloseButton className="shrink-0" />}
+    </div>
   )
 }
 
@@ -122,6 +169,7 @@ export {
   DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogHeaderBar,
   DialogOverlay,
   DialogPortal,
   DialogTitle,

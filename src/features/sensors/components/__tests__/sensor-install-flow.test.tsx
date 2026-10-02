@@ -46,7 +46,7 @@ vi.mock('../sensor-install-snippets', () => ({
   ),
 }))
 
-import { SensorInstallFlow } from '../sensor-install-flow'
+import { SensorInstallFlow, installStepLabel } from '../sensor-install-flow'
 
 const created = {
   sensor: { id: 'new-1', name: 'dmz-scanner-01', last_seen_at: undefined },
@@ -135,5 +135,16 @@ describe('SensorInstallFlow', () => {
   it('has no zone picker without zones', () => {
     render(<SensorInstallFlow />)
     expect(screen.queryByRole('combobox', { name: 'Zone' })).toBeNull()
+  })
+
+  it('in a dialog: no own title (the header bar has it) and reports the step', async () => {
+    const onStepChange = vi.fn()
+    render(<SensorInstallFlow variant="dialog" onStepChange={onStepChange} />)
+    expect(screen.queryByRole('heading', { name: 'Install a sensor' })).toBeNull()
+    expect(screen.getByRole('list', { name: 'Steps' })).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Name'), 'dmz-scanner-01')
+    await userEvent.click(screen.getByRole('button', { name: /Create and show the command/ }))
+    await waitFor(() => expect(onStepChange).toHaveBeenCalledWith('install'))
+    expect(installStepLabel('install')).toBe('Step 2 of 4: Run the command on the host')
   })
 })
