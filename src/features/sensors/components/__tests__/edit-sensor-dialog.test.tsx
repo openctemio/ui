@@ -68,6 +68,7 @@ const sensor: Sensor = {
   total_scans: 0,
   error_count: 0,
   version: 'v0.6.0',
+  sdk_version: 'v0.9.0',
   created_at: '2026-09-01T00:00:00Z',
   updated_at: '2026-09-01T00:00:00Z',
   last_seen_at: new Date().toISOString(),
@@ -112,6 +113,7 @@ describe('EditSensorDialog', () => {
     const about = within(dialog).getByLabelText('About this sensor')
     expect(about).toHaveTextContent('v0.6.0')
     expect(about).toHaveTextContent('v2')
+    expect(about).toHaveTextContent('v0.9.0')
     expect(about).toHaveTextContent('linux/amd64')
     expect(within(dialog).getByText(/reports 4 slots/)).toBeInTheDocument()
   })

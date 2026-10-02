@@ -146,6 +146,7 @@ function AboutSensor({ sensor }: { sensor: Sensor }) {
   const platform = [sensor.reported?.os, sensor.reported?.arch].filter(Boolean).join('/')
   const facts: { label: string; value: string }[] = [
     { label: 'Version', value: version ?? 'Not reported' },
+    { label: 'SDK', value: normalizeSensorVersion(sensor.sdk_version) ?? '—' },
     {
       label: 'Protocol',
       value: p ? `v${p.version}${p.deprecated || p.version < 2 ? ' (deprecated)' : ''}` : '—',
@@ -159,14 +160,12 @@ function AboutSensor({ sensor }: { sensor: Sensor }) {
   return (
     <dl
       aria-label="About this sensor"
-      className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border px-4 py-3 sm:grid-cols-4"
+      className="flex flex-wrap gap-x-8 gap-y-3 rounded-lg border px-4 py-3"
     >
       {facts.map((f) => (
         <div key={f.label} className="min-w-0">
           <dt className="text-xs text-muted-foreground">{f.label}</dt>
-          <dd className="truncate text-sm font-medium" title={f.value}>
-            {f.value}
-          </dd>
+          <dd className="text-sm font-medium break-words">{f.value}</dd>
         </div>
       ))}
     </dl>
