@@ -188,19 +188,19 @@ export default function CampaignDetailPage() {
   const { trigger: updateCampaign, isMutating: isUpdating } = useUpdateRemediationCampaign(id)
   const { trigger: updateStatus, isMutating: isStatusUpdating } = useUpdateCampaignStatus(id)
 
-  // The campaign's explicitly-linked findings (one fix → many findings). Always
-  // pass a finding_ids filter (a nil-UUID sentinel when none) so the hook never
-  // degrades to fetching every finding in the tenant.
+  // The campaign's explicitly-linked findings (one fix → many findings). Only
+  // fetched when there are some: without a finding_ids filter the hook would
+  // fetch every finding in the tenant, and a campaign with none (or one still
+  // loading) needs no request at all.
   const linkedFindingIds = (campaign?.finding_filter?.finding_ids as string[] | undefined) ?? []
   const {
     data: linkedFindingsData,
     isLoading: findingsLoading,
     mutate: mutateFindings,
-  } = useFindingsApi({
-    finding_ids:
-      linkedFindingIds.length > 0 ? linkedFindingIds : ['00000000-0000-0000-0000-000000000000'],
-    per_page: 100,
-  })
+  } = useFindingsApi(
+    { finding_ids: linkedFindingIds, per_page: 100 },
+    { enabled: linkedFindingIds.length > 0 }
+  )
   const linkedFindings = linkedFindingIds.length > 0 ? (linkedFindingsData?.data ?? []) : []
   const [ticketFinding, setTicketFinding] = useState<{ id: string; title: string } | null>(null)
 

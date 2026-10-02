@@ -203,3 +203,23 @@ describe('use-findings-api exports', () => {
     })
   })
 })
+
+describe('useFindingsApi enabled option', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('passes a null key (no request) while disabled, and the endpoint once enabled', async () => {
+    const useSWR = (await import('swr')).default
+    const { useFindingsApi } = await import('../use-findings-api')
+    const { rerender } = renderHook(
+      ({ enabled }) => useFindingsApi({ per_page: 100 }, { enabled }),
+      {
+        initialProps: { enabled: false },
+      }
+    )
+    expect(vi.mocked(useSWR).mock.calls.at(-1)?.[0]).toBeNull()
+    rerender({ enabled: true })
+    expect(vi.mocked(useSWR).mock.calls.at(-1)?.[0]).toContain('per_page=100')
+    // `enabled` is ours, not an SWR option
+    expect(vi.mocked(useSWR).mock.calls.at(-1)?.[2]).not.toHaveProperty('enabled')
+  })
+})
