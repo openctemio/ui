@@ -134,14 +134,14 @@ describe('SensorDetailSheet', () => {
     vi.clearAllMocks()
   })
 
-  it('has four tabs and the health checklist one click away', async () => {
+  it('has five tabs and the health checklist one click away', async () => {
     open()
     const dialog = screen.getByRole('dialog')
     expect(
       within(dialog)
         .getAllByRole('tab')
         .map((t) => t.textContent)
-    ).toEqual(['Overview', 'Jobs', 'Activity', 'Config'])
+    ).toEqual(['Overview', 'Jobs', 'Activity', 'Manifest', 'Config'])
     expect(screen.queryByRole('list', { name: 'Health' })).toBeNull()
     await userEvent.click(screen.getByRole('button', { name: /Health checks/ }))
     const health = screen.getByRole('list', { name: 'Health' })

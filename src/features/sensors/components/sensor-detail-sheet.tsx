@@ -64,6 +64,7 @@ import { cn } from '@/lib/utils'
 
 import { SensorActivity, SensorRecentActivity } from './sensor-activity'
 import { requestSensorContentRefresh, SensorContentSection } from './sensor-content-section'
+import { SensorManifestTab } from './sensor-manifest-tab'
 import { SensorStateBadge } from './sensor-state-badge'
 import {
   distinctHostname,
@@ -84,7 +85,7 @@ import {
   sensorCapacity,
   sensorToolRows,
 } from '../lib/capabilities'
-import { formatDurationShort } from '../lib/format'
+import { agoShort, exactTime, formatDurationShort } from '../lib/format'
 import type { ReleaseChannel } from '../lib/fleet'
 import {
   sensorHealthChecks,
@@ -126,7 +127,7 @@ interface SensorDetailSheetProps {
   fleet?: Sensor[]
 }
 
-type DrawerTab = 'overview' | 'jobs' | 'activity' | 'config'
+type DrawerTab = 'overview' | 'jobs' | 'activity' | 'manifest' | 'config'
 
 // ---------------------------------------------------------------------------
 // Health: the callout (what is wrong) and the full checklist behind a toggle
@@ -378,19 +379,6 @@ function HealthSummary({
 // ---------------------------------------------------------------------------
 // Overview: stat strip, tools & capacity, identity
 // ---------------------------------------------------------------------------
-
-function agoShort(iso: string, now: number): string {
-  const t = new Date(iso).getTime()
-  if (Number.isNaN(t)) return '—'
-  if (t >= now - 1000) return 'just now'
-  return `${formatDurationShort((now - t) / 1000)} ago`
-}
-
-function exactTime(iso: string | null | undefined): string | undefined {
-  if (!iso) return undefined
-  const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? undefined : d.toLocaleString()
-}
 
 /** "at 15:09" today, "on 1 Oct" before: a short anchor for a relative time. */
 function clockAnchor(ms: number, now: number): string {
@@ -1026,6 +1014,7 @@ export function SensorDetailSheet({
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="jobs">Jobs</TabsTrigger>
               <TabsTrigger value="activity">Activity</TabsTrigger>
+              <TabsTrigger value="manifest">Manifest</TabsTrigger>
               <TabsTrigger value="config">Config</TabsTrigger>
             </TabsList>
           </Tabs>
@@ -1076,6 +1065,8 @@ export function SensorDetailSheet({
           {tab === 'jobs' && <SensorJobs sensor={sensor} />}
 
           {tab === 'activity' && <SensorActivity sensorId={sensor.id} />}
+
+          {tab === 'manifest' && <SensorManifestTab sensor={sensor} now={now} />}
 
           {tab === 'config' && (
             <div className="space-y-3">

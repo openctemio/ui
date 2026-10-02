@@ -354,5 +354,11 @@
   "nav.item.cycles": "Cycles",
   "nav.item.business-context": "Business context",
   "nav.item.boundaries": "Boundaries",
-  "nav.item.threat-model": "Threat model"
+  "nav.item.threat-model": "Threat model",
+  "sensors.activity.manifestChanged": "Manifest changed",
+  "sensors.manifest.toolsAdded": "Added: {list}",
+  "sensors.manifest.toolsRemoved": "Removed: {list}",
+  "sensors.manifest.toolCapabilities": "{tool} capabilities: {changes}",
+  "sensors.manifest.sensorWide": "Sensor-wide capabilities: {changes}",
+  "sensors.manifest.otherChanged": "Changed: {list}"
 }

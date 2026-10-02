@@ -354,5 +354,11 @@
   "nav.item.cycles": "Chu kỳ",
   "nav.item.business-context": "Bối cảnh kinh doanh",
   "nav.item.boundaries": "Ranh giới",
-  "nav.item.threat-model": "Mô hình mối đe dọa"
+  "nav.item.threat-model": "Mô hình mối đe dọa",
+  "sensors.activity.manifestChanged": "Manifest đã thay đổi",
+  "sensors.manifest.toolsAdded": "Đã thêm: {list}",
+  "sensors.manifest.toolsRemoved": "Đã gỡ: {list}",
+  "sensors.manifest.toolCapabilities": "Khả năng của {tool}: {changes}",
+  "sensors.manifest.sensorWide": "Khả năng chung của sensor: {changes}",
+  "sensors.manifest.otherChanged": "Đã thay đổi: {list}"
 }
