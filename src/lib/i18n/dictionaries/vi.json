@@ -143,7 +143,7 @@
   "settings.item.roles": "Vai trò",
   "settings.desc.roles": "Vai trò tùy chỉnh và các quyền đi kèm.",
   "settings.item.authentication": "Xác thực",
-  "settings.desc.authentication": "Xác thực hai lớp, thời lượng phiên, giới hạn đăng nhập và phạm vi dữ liệu.",
+  "settings.desc.authentication": "Xác thực hai lớp, thời lượng phiên và giới hạn đăng nhập.",
   "settings.item.scim": "Đồng bộ thư mục (SCIM)",
   "settings.desc.scim": "Cấp tài khoản thành viên từ nhà cung cấp định danh của bạn.",
   "settings.item.api-keys": "Khóa API",
