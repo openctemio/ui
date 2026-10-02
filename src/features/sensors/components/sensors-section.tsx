@@ -64,7 +64,12 @@ import {
   sensorState,
   type FleetThresholds,
 } from '../lib/sensor-state'
-import { normalizeSensorVersion, sensorVersionStatus } from '../lib/sensor-version'
+import {
+  normalizeSensorVersion,
+  sensorSdkStatus,
+  sensorSdkVersion,
+  sensorVersionStatus,
+} from '../lib/sensor-version'
 import {
   activeFilterCount,
   filterSensors,
@@ -163,6 +168,8 @@ export function SensorsSection({
   const [versionParam, setVersionParam] = useUrlFilterList('version')
   const [modeParam, setModeParam] = useUrlFilterList('mode')
   const [protocolParam, setProtocolParam] = useUrlFilterList('protocol')
+  // The same name and values as the API's GET /sensors?sdk_version= filter.
+  const [sdkVersionParam, setSdkVersionParam] = useUrlFilterList('sdk_version')
   const [attentionParam, setAttentionParam] = useUrlFilter('attention', '')
   const [groupParam, setGroupParam] = useUrlFilter('group', '')
   // Pre-redesign links: ?status=online, ?tab=scanners|collectors, ?mode=collector.
@@ -195,10 +202,12 @@ export function SensorsSection({
       protocols: protocolParam.filter((p): p is SensorProtocolFilter =>
         (PROTOCOLS as string[]).includes(p)
       ),
+      sdkVersions: sdkVersionParam.filter(Boolean),
       attention: attentionParam === '1',
     }
   }, [
     protocolParam,
+    sdkVersionParam,
     roleParam,
     stateParam,
     versionParam,
@@ -223,6 +232,7 @@ export function SensorsSection({
       setVersionParam(next.versions)
       setModeParam(next.modes)
       setProtocolParam(next.protocols)
+      setSdkVersionParam(next.sdkVersions)
       setAttentionParam(next.attention ? '1' : '')
     },
     [
@@ -232,6 +242,7 @@ export function SensorsSection({
       setVersionParam,
       setModeParam,
       setProtocolParam,
+      setSdkVersionParam,
       setAttentionParam,
     ]
   )
@@ -275,8 +286,15 @@ export function SensorsSection({
     () => ({
       latest: normalizeSensorVersion(tenantSensorStats?.latest_version),
       min: normalizeSensorVersion(tenantSensorStats?.min_version),
+      sdkLatest: normalizeSensorVersion(tenantSensorStats?.sdk_latest_version),
+      sdkMin: normalizeSensorVersion(tenantSensorStats?.sdk_min_version),
     }),
-    [tenantSensorStats?.latest_version, tenantSensorStats?.min_version]
+    [
+      tenantSensorStats?.latest_version,
+      tenantSensorStats?.min_version,
+      tenantSensorStats?.sdk_latest_version,
+      tenantSensorStats?.sdk_min_version,
+    ]
   )
 
   // Zones, for grouping and the coverage metric.
@@ -499,6 +517,9 @@ export function SensorsSection({
           header: 'Version status',
           accessor: (s) => sensorVersionStatus(s, channel.latest, channel.min),
         },
+        { header: 'SDK', accessor: (s) => s.sdk_name ?? '' },
+        { header: 'SDK version', accessor: (s) => sensorSdkVersion(s) ?? '' },
+        { header: 'SDK status', accessor: (s) => sensorSdkStatus(s) },
         { header: 'Hostname', accessor: (s) => s.hostname ?? '' },
         { header: 'IP address', accessor: (s) => s.ip_address ?? '' },
         { header: 'Current jobs', accessor: (s) => s.current_jobs ?? 0 },
@@ -537,6 +558,7 @@ export function SensorsSection({
       activeCount={filterCount}
       hasChannel={!!channel.latest || !!channel.min}
       hasProtocolInfo={summary.hasProtocolInfo}
+      sdkVersions={tenantSensorStats?.by_sdk_version}
     />
   )
 

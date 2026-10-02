@@ -10,6 +10,7 @@ const ATTENTION_WORDS: Record<AttentionKind, string> = {
   backlog: 'backlog',
   key: 'key',
   version: 'version',
+  sdk: 'SDK',
   tools: 'tools',
   content: 'scanner content',
   error: 'errors',

@@ -991,7 +991,7 @@ export const auditLogEndpoints = {
 // SENSOR ENDPOINTS
 // ============================================
 
-import type { SensorListFilters } from './sensor-types'
+import type { SensorActivityQuery, SensorListFilters } from './sensor-types'
 
 /**
  * Sensor endpoints for managing sensors (runners, workers, collectors, sensors)
@@ -1070,6 +1070,18 @@ export const sensorEndpoints = {
    */
   commands: (sensorId: string, perPage = 20) =>
     `${API_BASE.COMMANDS}${buildQueryString({ sensor_id: sensorId, per_page: perPage })}`,
+
+  /**
+   * A sensor's activity timeline, newest first (sensors:read): connection
+   * changes, restarts, upgrades, tool and content changes, jobs and, with
+   * audit:read, administrator actions.
+   */
+  activity: (sensorId: string, query: SensorActivityQuery = {}) =>
+    `${API_BASE.SENSORS}/${sensorId}/activity${buildQueryString({
+      types: query.types?.length ? query.types.join(',') : undefined,
+      cursor: query.cursor,
+      limit: query.limit,
+    })}`,
 
   /** The tenant's scanner content policy (RFC-031): GET, PUT with sensors:write. */
   contentPolicy: () => `${API_BASE.SENSORS}/content-policy`,

@@ -1,4 +1,4 @@
-import type { Sensor, SensorVersionStatus } from '@/lib/api/sensor-types'
+import type { Sensor, SensorSdkStatus, SensorVersionStatus } from '@/lib/api/sensor-types'
 
 /**
  * One display form for a sensor version, the same rule the API applies: a
@@ -72,4 +72,19 @@ export function sensorVersionStatus(
   const c = compareSensorVersions(sensor.version, latest)
   if (c === null) return 'unknown'
   return c < 0 ? 'update_available' : 'latest'
+}
+
+/** The SDK status the API sent; "unknown" from an older API. */
+export function sensorSdkStatus(sensor: Pick<Sensor, 'sdk_status'>): SensorSdkStatus {
+  return sensor.sdk_status ?? 'unknown'
+}
+
+/** The SDK version in display form ("v0.9.0"), or null when not reported. */
+export function sensorSdkVersion(sensor: Pick<Sensor, 'sdk_version'>): string | null {
+  return normalizeSensorVersion(sensor.sdk_version)
+}
+
+/** The key a sensor files under in the SDK version filter (the API's `sdk_version`). */
+export function sensorSdkVersionKey(sensor: Pick<Sensor, 'sdk_version'>): string {
+  return sensorSdkVersion(sensor) ?? 'unknown'
 }

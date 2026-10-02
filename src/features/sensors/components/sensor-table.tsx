@@ -162,7 +162,13 @@ export function SensorTable({
         accessorFn: (a) => normalizeSensorVersion(a.version) ?? '',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Version" />,
         cell: ({ row }) => (
-          <SensorVersionCell sensor={row.original} latest={channel.latest} min={channel.min} />
+          <SensorVersionCell
+            sensor={row.original}
+            latest={channel.latest}
+            min={channel.min}
+            sdkLatest={channel.sdkLatest}
+            sdkMin={channel.sdkMin}
+          />
         ),
       },
       {
@@ -314,6 +320,8 @@ export function SensorTable({
       now,
       channel.latest,
       channel.min,
+      channel.sdkLatest,
+      channel.sdkMin,
     ]
   )
 
