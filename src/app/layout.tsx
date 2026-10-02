@@ -4,6 +4,7 @@ import { headers } from 'next/headers'
 import './globals.css'
 import { Providers } from './providers'
 import { getDirFromLocale, defaultLocale } from '@/lib/i18n'
+import { NavProgressBar } from '@/components/layout/nav-progress'
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME || 'OpenCTEM'
 const appDescription =
@@ -42,6 +43,9 @@ export default async function RootLayout({
         <Providers dir={dir} locale={locale}>
           {children}
         </Providers>
+        {/* Page-wide navigation progress bar, shown while a nav link waits for
+            its route (NavPendingHint). */}
+        <NavProgressBar />
       </body>
     </html>
   )

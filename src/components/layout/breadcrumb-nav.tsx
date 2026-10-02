@@ -15,6 +15,7 @@ import { Fragment } from 'react'
 import { cn } from '@/lib/utils'
 import { breadcrumbLabel } from './breadcrumb-labels'
 import { breadcrumbHasPage, isIdSegment } from './breadcrumb-routes'
+import { NavPendingHint } from './sidebar-link'
 
 interface BreadcrumbNavProps {
   /** Override the auto-generated page title */
@@ -90,6 +91,7 @@ export function BreadcrumbNav({ pageTitle, className, hideIdSegment = true }: Br
             <Link href="/" className="flex items-center gap-1">
               <Home className="h-4 w-4" />
               <span className="sr-only">Dashboard</span>
+              <NavPendingHint quiet />
             </Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
@@ -120,6 +122,7 @@ export function BreadcrumbNav({ pageTitle, className, hideIdSegment = true }: Br
                   <BreadcrumbLink asChild>
                     <Link href={item.path} className="truncate">
                       {item.label}
+                      <NavPendingHint quiet />
                     </Link>
                   </BreadcrumbLink>
                 )}
