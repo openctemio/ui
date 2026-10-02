@@ -6,8 +6,10 @@
 
 'use client'
 
+import { useMemo } from 'react'
 import useSWR, { type SWRConfiguration } from 'swr'
 import useSWRMutation from 'swr/mutation'
+import useSWRInfinite from 'swr/infinite'
 import { get, post, put, del } from './client'
 import { handleApiError } from './error-handler'
 import { useTenant } from '@/context/tenant-provider'
@@ -22,6 +24,9 @@ import type {
   RegenerateAPIKeyResponse,
   AvailableCapabilitiesResponse,
   SensorCommandListResponse,
+  SensorActivityCategory,
+  SensorActivityItem,
+  SensorActivityResponse,
 } from './sensor-types'
 
 // ============================================
@@ -181,6 +186,12 @@ export interface TenantSensorStats {
   /** State ladder thresholds. */
   online_window_seconds?: number
   offline_after_seconds?: number
+  /** Supported SDK range: "" when not configured. */
+  sdk_min_version?: string
+  sdk_latest_version?: string
+  /** Sensors per normalized SDK version ("v0.9.0", or "unknown"). */
+  by_sdk_version?: Record<string, number>
+  by_sdk_status?: Partial<Record<'current' | 'outdated' | 'unsupported' | 'unknown', number>>
 }
 
 export function useTenantSensorStats(config?: SWRConfiguration) {
@@ -206,6 +217,68 @@ export function useSensorCommands(sensorId: string | null, enabled = true) {
     (url: string) => get<SensorCommandListResponse>(url),
     { ...defaultConfig, refreshInterval: SENSOR_REFRESH_MS }
   )
+}
+
+/** Default page size of a sensor's activity timeline (the API's default). */
+export const SENSOR_ACTIVITY_PAGE_SIZE = 30
+
+/**
+ * A sensor's activity timeline (GET /sensors/{id}/activity), newest first,
+ * one cursor page at a time: `loadMore()` appends the next page. Changing
+ * `types` starts over from the newest. Errors are shown in place (no toast).
+ */
+export function useSensorActivity(
+  sensorId: string | null,
+  types: SensorActivityCategory[] = [],
+  options: { limit?: number; refreshInterval?: number } = {}
+) {
+  const { currentTenant } = useTenant()
+  const { limit = SENSOR_ACTIVITY_PAGE_SIZE, refreshInterval = SENSOR_REFRESH_MS * 2 } = options
+  const enabled = !!currentTenant && !!sensorId
+  const swr = useSWRInfinite<SensorActivityResponse>(
+    (index, previous: SensorActivityResponse | null) => {
+      if (!enabled || !sensorId) return null
+      if (index === 0) return sensorEndpoints.activity(sensorId, { types, limit })
+      if (!previous?.next_cursor) return null
+      return sensorEndpoints.activity(sensorId, { types, limit, cursor: previous.next_cursor })
+    },
+    (url: string) => get<SensorActivityResponse>(url),
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: defaultConfig.shouldRetryOnError,
+      errorRetryCount: 2,
+      refreshInterval,
+    }
+  )
+  const pages = useMemo(() => swr.data ?? [], [swr.data])
+  const items = useMemo(() => {
+    const out: SensorActivityItem[] = []
+    const seen = new Set<string>()
+    for (const p of pages) {
+      for (const it of p.items ?? []) {
+        // A refresh can shift a coalesced row across a page edge; show it once.
+        if (seen.has(it.id)) continue
+        seen.add(it.id)
+        out.push(it)
+      }
+    }
+    return out
+  }, [pages])
+  const last = pages[pages.length - 1]
+  const hasMore = !!last?.next_cursor
+  const isLoadingMore =
+    swr.size > 0 && pages.length > 0 && typeof swr.data?.[swr.size - 1] === 'undefined'
+  return {
+    items,
+    /** false when any page says administrator actions were left out. */
+    auditIncluded: pages.length === 0 ? true : pages.every((p) => p.audit_included !== false),
+    hasMore,
+    isLoading: enabled && !swr.data && !swr.error,
+    isLoadingMore,
+    error: swr.error as unknown,
+    loadMore: () => swr.setSize(swr.size + 1),
+    retry: () => swr.mutate(),
+  }
 }
 
 /**

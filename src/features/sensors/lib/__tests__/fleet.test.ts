@@ -4,6 +4,7 @@ import type { Sensor } from '@/lib/api/sensor-types'
 import type { ScanZone } from '@/lib/api/scan-zone-types'
 
 import {
+  activeFilterCount,
   EMPTY_FLEET_FILTERS,
   filterSensors,
   groupSensors,
@@ -115,6 +116,17 @@ describe('summarizeFleet', () => {
     expect(s.attentionKinds).toContain('content')
   })
 
+  it('an unsupported SDK (sdk_unsupported) counts as SDK attention', () => {
+    const f = fleet()
+    f[1] = {
+      ...f[1],
+      health_reasons: [{ code: 'sdk_unsupported', severity: 'warning', message: 'm' }],
+    }
+    const s = summarizeFleet(f, NOW, undefined, channel)
+    expect(s.needsAttention).toBe(3)
+    expect(s.attentionKinds).toContain('sdk')
+  })
+
   it('updates: below latest, with the unsupported ones counted apart', () => {
     const s = summarizeFleet(fleet(), NOW, undefined, channel)
     expect(s.updates).toBe(3) // v0.4.0, v0.3.0, v0.4.1
@@ -176,6 +188,22 @@ describe('filterSensors', () => {
     expect(s.protocolV1).toBe(1)
     expect(s.hasProtocolInfo).toBe(true)
     expect(summarizeFleet(fleet(), NOW, undefined, channel).hasProtocolInfo).toBe(false)
+  })
+
+  it('SDK version: the exact normalized version, or "unknown" when not reported', () => {
+    const f = fleet()
+    f[0].sdk_version = '0.9.0'
+    f[1].sdk_version = 'v0.8.1'
+    const names = (v: string[]) =>
+      filterSensors(f, { ...EMPTY_FLEET_FILTERS, sdkVersions: v }, NOW, undefined, channel).map(
+        (s) => s.name
+      )
+    expect(names(['v0.9.0'])).toEqual(['dmz-scanner-01'])
+    expect(names(['v0.9.0', 'v0.8.1'])).toEqual(['dmz-scanner-01', 'k8s-scanner-a'])
+    expect(names(['unknown'])).toHaveLength(4)
+    expect(activeFilterCount({ ...EMPTY_FLEET_FILTERS, sdkVersions: ['v0.9.0', 'unknown'] })).toBe(
+      2
+    )
   })
 
   it('filters combine (AND across facets)', () => {

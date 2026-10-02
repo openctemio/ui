@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslation } from '@/context/i18n-provider'
 import { FacetOption, FacetPanel, FacetSection, FacetToggle } from '@/features/shared'
 import type { SensorRole, SensorState, SensorVersionStatus } from '@/lib/api/sensor-types'
 
@@ -10,6 +11,7 @@ import {
   type SensorProtocolFilter,
 } from '../lib/fleet'
 import { SENSOR_STATE_META, SENSOR_STATES } from '../lib/sensor-state'
+import { compareSensorVersions } from '../lib/sensor-version'
 
 const ROLE_LABELS: Record<SensorRole, string> = { scanner: 'Scanner', collector: 'Collector' }
 const VERSION_LABELS: Record<SensorVersionStatus, string> = {
@@ -28,6 +30,27 @@ const MODE_LABELS: Record<SensorModeFilter, string> = {
   ci: 'CI (one-shot)',
 }
 
+/**
+ * The SDK version options from GET /sensors/stats by_sdk_version, newest first
+ * and "unknown" last; a selected version the stats no longer list stays
+ * visible so it can be cleared.
+ */
+export function sdkVersionOptions(
+  bySdkVersion: Record<string, number> | undefined,
+  selected: string[] = []
+): { value: string; count: number | null }[] {
+  const counts = new Map<string, number | null>(Object.entries(bySdkVersion ?? {}))
+  for (const v of selected) if (!counts.has(v)) counts.set(v, null)
+  return [...counts.entries()]
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => {
+      if (a.value === 'unknown') return 1
+      if (b.value === 'unknown') return -1
+      const c = compareSensorVersions(b.value, a.value)
+      return c === null ? a.value.localeCompare(b.value) : c
+    })
+}
+
 function toggle<T>(list: T[], value: T, on: boolean): T[] {
   return on ? [...list.filter((v) => v !== value), value] : list.filter((v) => v !== value)
 }
@@ -42,6 +65,7 @@ export function SensorFacetPanel({
   activeCount,
   hasChannel,
   hasProtocolInfo,
+  sdkVersions,
 }: {
   filters: FleetFilters
   onChange: (next: FleetFilters) => void
@@ -50,7 +74,11 @@ export function SensorFacetPanel({
   hasChannel: boolean
   /** Whether the API reports protocol telemetry (RFC-029). */
   hasProtocolInfo: boolean
+  /** Sensors per SDK version (GET /sensors/stats by_sdk_version); absent on older APIs. */
+  sdkVersions?: Record<string, number>
 }) {
+  const { t } = useTranslation()
+  const sdkOptions = sdkVersionOptions(sdkVersions, filters.sdkVersions)
   return (
     <FacetPanel
       activeCount={activeCount}
@@ -109,6 +137,34 @@ export function SensorFacetPanel({
               checked={filters.protocols.includes(p)}
               onCheckedChange={(on) =>
                 onChange({ ...filters, protocols: toggle(filters.protocols, p, on) })
+              }
+            />
+          ))}
+        </FacetSection>
+      )}
+      {sdkOptions.length > 0 && (
+        <FacetSection
+          title={t('sensors.filters.sdkVersion', 'SDK version')}
+          selectedCount={filters.sdkVersions.length}
+        >
+          {sdkOptions.map((o) => (
+            <FacetOption
+              key={o.value}
+              label={
+                <span className="flex items-center justify-between gap-2">
+                  <span className={o.value === 'unknown' ? undefined : 'font-mono text-xs'}>
+                    {o.value === 'unknown'
+                      ? t('sensors.filters.sdkUnknown', 'Not reported')
+                      : o.value}
+                  </span>
+                  {o.count !== null && (
+                    <span className="text-xs text-muted-foreground tabular-nums">{o.count}</span>
+                  )}
+                </span>
+              }
+              checked={filters.sdkVersions.includes(o.value)}
+              onCheckedChange={(on) =>
+                onChange({ ...filters, sdkVersions: toggle(filters.sdkVersions, o.value, on) })
               }
             />
           ))}

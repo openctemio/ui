@@ -7,6 +7,8 @@ import { canTakeJobs, sensorState, SENSOR_STATES, type FleetThresholds } from '.
 import {
   compareSensorVersions,
   normalizeSensorVersion,
+  sensorSdkVersion,
+  sensorSdkVersionKey,
   sensorVersionStatus,
 } from './sensor-version'
 
@@ -14,10 +16,13 @@ import {
 export interface ReleaseChannel {
   latest?: string | null
   min?: string | null
+  /** The supported SDK range ("" / null when not configured). */
+  sdkLatest?: string | null
+  sdkMin?: string | null
 }
 
 /** What a health reason is about, for the "Needs attention" caption. */
-export type AttentionKind = 'backlog' | 'key' | 'version' | 'tools' | 'content' | 'error'
+export type AttentionKind = 'backlog' | 'key' | 'version' | 'sdk' | 'tools' | 'content' | 'error'
 
 function attentionKindsOf(sensor: Sensor, channel: ReleaseChannel): AttentionKind[] {
   const kinds: AttentionKind[] = []
@@ -28,13 +33,15 @@ function attentionKindsOf(sensor: Sensor, channel: ReleaseChannel): AttentionKin
         ? 'key'
         : r.code === 'version_unsupported'
           ? 'version'
-          : r.code === 'no_tools'
-            ? 'tools'
-            : r.code.startsWith('content_')
-              ? 'content'
-              : r.code === 'error_reported'
-                ? 'error'
-                : null
+          : r.code === 'sdk_unsupported'
+            ? 'sdk'
+            : r.code === 'no_tools'
+              ? 'tools'
+              : r.code.startsWith('content_')
+                ? 'content'
+                : r.code === 'error_reported'
+                  ? 'error'
+                  : null
     if (kind && !kinds.includes(kind)) kinds.push(kind)
   }
   // Older APIs send no reasons: derive what the page can see itself.
@@ -180,6 +187,8 @@ export interface FleetFilters {
   versions: SensorVersionStatus[]
   modes: SensorModeFilter[]
   protocols: SensorProtocolFilter[]
+  /** Exact SDK versions ("v0.9.0") or "unknown", as GET /sensors?sdk_version= takes them. */
+  sdkVersions: string[]
   /** The "Needs attention" metric. */
   attention: boolean
 }
@@ -191,6 +200,7 @@ export const EMPTY_FLEET_FILTERS: FleetFilters = {
   versions: [],
   modes: [],
   protocols: [],
+  sdkVersions: [],
   attention: false,
 }
 
@@ -202,6 +212,7 @@ export function activeFilterCount(f: FleetFilters): number {
     f.versions.length +
     f.modes.length +
     f.protocols.length +
+    f.sdkVersions.length +
     (f.attention ? 1 : 0)
   )
 }
@@ -213,6 +224,7 @@ function searchText(s: Sensor): string {
     s.hostname,
     s.ip_address,
     normalizeSensorVersion(s.version),
+    sensorSdkVersion(s),
     ...(s.tools ?? []),
     ...dispatchTools(s),
   ]
@@ -246,6 +258,7 @@ export function filterSensors(
       if (!f.modes.includes(mode)) return false
     }
     if (f.protocols.length && !f.protocols.includes(sensorProtocolOf(s))) return false
+    if (f.sdkVersions.length && !f.sdkVersions.includes(sensorSdkVersionKey(s))) return false
     if (f.attention && !needsAttention(s, now, thresholds, channel)) return false
     return true
   })

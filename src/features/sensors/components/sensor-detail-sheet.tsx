@@ -36,8 +36,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmptyState, RelativeTime } from '@/features/shared'
 import { useNow } from '@/hooks/use-now'
 import { useIsMobile } from '@/hooks/use-mobile'
-import { useResourceAuditHistory } from '@/lib/api/audit-hooks'
-import { canonicalAuditAction, getActionLabel } from '@/lib/api/audit-types'
 import type { ScanZone } from '@/lib/api/scan-zone-types'
 import { useSensor, useSensorCommands, SENSOR_REFRESH_MS } from '@/lib/api/sensor-hooks'
 import type { Sensor, SensorCommand } from '@/lib/api/sensor-types'
@@ -46,7 +44,7 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { Permission, useHasPermission } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 
-import { SensorAuditLog } from './sensor-audit-log'
+import { SensorActivity, SensorRecentActivity } from './sensor-activity'
 import { SensorContentSection } from './sensor-content-section'
 import { SensorStateBadge } from './sensor-state-badge'
 import {
@@ -54,6 +52,7 @@ import {
   PROTOCOL_V1_SUNSET,
   PROTOCOL_V2_SENSOR_VERSION,
   SensorToolList,
+  SensorVersionCell,
 } from './sensor-cells'
 import { SensorInstallSnippets } from './sensor-install-snippets'
 import { SENSOR_TYPE_LABELS } from './sensor-type-icon'
@@ -171,51 +170,6 @@ function Kv({ label, children }: { label: string; children: React.ReactNode }) {
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="min-w-0 break-words">{children}</dd>
     </>
-  )
-}
-
-/** The latest audit entries for the sensor, on the Overview tab. */
-function RecentActivity({ sensorId, onAll }: { sensorId: string; onAll: () => void }) {
-  const canRead = useHasPermission(Permission.AuditRead)
-  const { data, isLoading } = useResourceAuditHistory(canRead ? 'sensor' : null, sensorId, {
-    refreshInterval: SENSOR_REFRESH_MS * 2,
-  })
-  if (!canRead) return null
-  const items = data?.items?.slice(0, 4) ?? []
-  return (
-    <section>
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Recent activity</h3>
-        <Button
-          type="button"
-          variant="link"
-          size="sm"
-          className="h-auto p-0 text-xs"
-          onClick={onAll}
-        >
-          All activity
-        </Button>
-      </div>
-      {isLoading ? (
-        <Skeleton className="mt-2 h-16 w-full" />
-      ) : items.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">Nothing recorded yet.</p>
-      ) : (
-        <ul className="mt-2 space-y-1.5">
-          {items.map((log) => (
-            <li key={log.id} className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="min-w-0 truncate">
-                {getActionLabel(canonicalAuditAction(log.action))}
-                {log.actor_email ? (
-                  <span className="text-muted-foreground"> · {log.actor_email}</span>
-                ) : null}
-              </span>
-              <RelativeTime date={log.timestamp} className="shrink-0 text-xs" />
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
   )
 }
 
@@ -349,8 +303,6 @@ export function SensorDetailSheet({
   const isPhone = useIsMobile()
   const canWrite = useHasPermission(Permission.SensorsWrite)
   const canDelete = useHasPermission(Permission.SensorsDelete)
-  // The activity log reads the organization audit log (owners and admins).
-  const canReadAudit = useHasPermission(Permission.AuditRead)
   const [tab, setTab] = useState<DrawerTab>('overview')
   const [shownId, setShownId] = useState<string | null>(null)
   if (sensorProp && sensorProp.id !== shownId) {
@@ -517,7 +469,7 @@ export function SensorDetailSheet({
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="jobs">Jobs</TabsTrigger>
-              {canReadAudit && <TabsTrigger value="activity">Activity</TabsTrigger>}
+              <TabsTrigger value="activity">Activity</TabsTrigger>
               <TabsTrigger value="config">Config</TabsTrigger>
             </TabsList>
           </Tabs>
@@ -539,6 +491,15 @@ export function SensorDetailSheet({
               <section>
                 <h3 className="text-sm font-semibold">Runtime</h3>
                 <dl className="mt-2 grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-sm">
+                  <Kv label="Version">
+                    <SensorVersionCell
+                      sensor={sensor}
+                      latest={channel?.latest}
+                      min={channel?.min}
+                      sdkLatest={channel?.sdkLatest}
+                      sdkMin={channel?.sdkMin}
+                    />
+                  </Kv>
                   <Kv label="Jobs">
                     <span className="tabular-nums">
                       {isOneShotSensor(sensor)
@@ -626,13 +587,13 @@ export function SensorDetailSheet({
                 </dl>
               </section>
 
-              <RecentActivity sensorId={sensor.id} onAll={() => setTab('activity')} />
+              <SensorRecentActivity sensorId={sensor.id} onAll={() => setTab('activity')} />
             </div>
           )}
 
           {tab === 'jobs' && <SensorJobs sensor={sensor} />}
 
-          {tab === 'activity' && canReadAudit && <SensorAuditLog sensorId={sensor.id} />}
+          {tab === 'activity' && <SensorActivity sensorId={sensor.id} />}
 
           {tab === 'config' && (
             <div className="space-y-3">
