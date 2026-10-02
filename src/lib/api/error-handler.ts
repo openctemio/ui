@@ -103,6 +103,25 @@ export class ApiClientError extends Error {
 // ERROR HANDLER
 // ============================================
 
+/** The HTTP status an error carries, if any (statusCode or status). */
+function statusOf(error: unknown): number | undefined {
+  if (error && typeof error === 'object') {
+    const e = error as { statusCode?: unknown; status?: unknown }
+    if (typeof e.statusCode === 'number') return e.statusCode
+    if (typeof e.status === 'number') return e.status
+  }
+  return undefined
+}
+
+/**
+ * A server error, rate limit or network failure: usually transient (the API
+ * restarting during a deploy) and retried by SWR.
+ */
+export function isTransientApiError(error: ApiClientError): boolean {
+  const s = error.statusCode
+  return !s || s >= 500 || s === 429 || error.code === 'NETWORK_ERROR' || error.code === 'TIMEOUT'
+}
+
 /**
  * Handle API errors with user-friendly messages
  *
@@ -159,27 +178,31 @@ export function handleApiError(
     fallbackMessage = 'An unexpected error occurred',
   } = options
 
-  // Convert to ApiClientError if needed
+  // Convert to ApiClientError if needed, keeping the HTTP status when the
+  // error carries one (fetch wrappers use statusCode or status).
   const apiError =
     error instanceof ApiClientError
       ? error
       : new ApiClientError(
           error instanceof Error ? error.message : fallbackMessage,
-          'UNKNOWN_ERROR'
+          'UNKNOWN_ERROR',
+          statusOf(error)
         )
 
   // Get user-friendly message
   const message = getUserFriendlyMessage(apiError, customMessages, fallbackMessage)
 
-  // Log error if enabled
+  // Log error if enabled: one readable line (the dev overlay printed the
+  // object as "{}"). A 5xx/429 or network failure is usually transient (the
+  // API restarting during a deploy) and SWR retries it, so it is a warning;
+  // anything else is an error worth the overlay.
   if (logError) {
-    devLog.error('[API Error]', {
-      code: apiError.code,
-      message: apiError.message,
-      statusCode: apiError.statusCode,
-      details: apiError.details,
-      stack: apiError.stack,
-    })
+    const line = `[API Error] ${apiError.statusCode || 'network'} ${apiError.code}: ${apiError.message}`
+    if (isTransientApiError(apiError)) {
+      devLog.warn(`${line} (will retry)`)
+    } else {
+      devLog.error(line, apiError.details ?? '')
+    }
   }
 
   // Show toast if enabled
