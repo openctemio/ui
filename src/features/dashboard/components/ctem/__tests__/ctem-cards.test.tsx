@@ -157,13 +157,14 @@ describe('CtemLoop', () => {
 })
 
 describe('AttackPathsCard', () => {
-  it('shows the designate-crown-jewels empty state when none are at risk', () => {
+  it('shows the designate-crown-jewels empty state when none are designated', () => {
     render(
       <AttackPathsCard
         attackPaths={{
           summary: { reachable_assets: 4, critical_reachable: 2, crown_jewels_at_risk: 0 },
         }}
         chains={chains}
+        crownJewelsTotal={0}
       />
     )
     expect(screen.getByText(/No crown jewels designated/i)).toBeInTheDocument()

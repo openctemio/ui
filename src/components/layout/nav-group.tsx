@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
 import {
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -204,7 +205,7 @@ export function NavClusterLabel({ label }: { label?: string }) {
  * through here, so the rows share one compact `gap-1` rhythm (no per-section
  * padding / labels that would open big vertical gaps).
  */
-function NavGroupComponent({ title, icon, items }: NavGroupProps) {
+function NavGroupComponent({ title, icon, url, items }: NavGroupProps) {
   const dynamicBadges = useDynamicBadges()
 
   // Ungrouped rows (Dashboard) — plain top-level links, no group heading.
@@ -232,7 +233,7 @@ function NavGroupComponent({ title, icon, items }: NavGroupProps) {
   // the whole tree is still reachable from the icon.
   return (
     <SidebarMenu>
-      <NavSection title={title} icon={icon} items={items} dynamicBadges={dynamicBadges} />
+      <NavSection title={title} icon={icon} url={url} items={items} dynamicBadges={dynamicBadges} />
     </SidebarMenu>
   )
 }
@@ -378,14 +379,18 @@ SidebarMenuLink.displayName = 'SidebarMenuLink'
 const NavSection = memo(function NavSection({
   title,
   icon: SectionIcon,
+  url,
   items,
   dynamicBadges,
 }: {
   title: string
   icon?: ElementType
+  /** The section overview: the header label links to it (see NavGroup.url). */
+  url?: string
   items: NavItem[]
   dynamicBadges: DynamicBadges
 }) {
+  const { setOpenMobile } = useSidebarActions()
   const { state, isMobile } = useSidebar()
   const rail = state === 'collapsed' && !isMobile
   const pathname = usePathname()
@@ -418,10 +423,48 @@ const NavSection = memo(function NavSection({
         <NavSectionRailMenu
           label={label}
           icon={SectionIcon}
+          url={url}
           items={items}
           sectionActive={sectionActive}
           dynamicBadges={dynamicBadges}
         />
+      ) : url ? (
+        // Split header: the label opens the section overview (and unfolds the
+        // section), the chevron beside it folds and unfolds without navigating.
+        <>
+          <SidebarMenuButton
+            asChild
+            tooltip={label}
+            data-current={sectionActive}
+            className={cn(NAV_BUTTON_CLASS, 'pe-8')}
+          >
+            <Link
+              href={url}
+              prefetch={false}
+              onClick={() => {
+                setOpen(true)
+                setOpenMobile(false)
+              }}
+            >
+              {SectionIcon && <SectionIcon />}
+              <span>{label}</span>
+            </Link>
+          </SidebarMenuButton>
+          <SidebarMenuAction
+            aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
+            aria-expanded={open}
+            aria-controls={contentId}
+            onClick={() => setOpen((o) => !o)}
+            className="in-data-[mobile=true]:top-3!"
+          >
+            <ChevronRight
+              className={cn(
+                'text-muted-foreground transition-transform duration-200 motion-reduce:transition-none rtl:rotate-180',
+                open && 'rotate-90 rtl:rotate-90'
+              )}
+            />
+          </SidebarMenuAction>
+        </>
       ) : (
         <SidebarMenuButton
           tooltip={label}
@@ -622,12 +665,14 @@ NavSubCollapsible.displayName = 'NavSubCollapsible'
 const NavSectionRailMenu = memo(function NavSectionRailMenu({
   label,
   icon: SectionIcon,
+  url,
   items,
   sectionActive,
   dynamicBadges,
 }: {
   label: string
   icon?: ElementType
+  url?: string
   items: NavItem[]
   sectionActive: boolean
   dynamicBadges: DynamicBadges
@@ -651,9 +696,18 @@ const NavSectionRailMenu = memo(function NavSectionRailMenu({
         </SidebarMenuButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="right" align="start" sideOffset={8} className="min-w-52">
-        <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
-          {label}
-        </DropdownMenuLabel>
+        {url ? (
+          // The flyout's heading opens the section overview, like the header.
+          <DropdownMenuItem asChild className="text-xs font-medium text-muted-foreground">
+            <Link href={url} prefetch={false}>
+              {label}
+            </Link>
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
+            {label}
+          </DropdownMenuLabel>
+        )}
         <DropdownMenuSeparator />
         {items.map((item) =>
           'items' in item ? (
@@ -768,6 +822,7 @@ export const NavGroup = memo(NavGroupComponent, (prevProps, nextProps) => {
   // This prevents re-render when only pathname changes (which is handled internally)
   return (
     prevProps.title === nextProps.title &&
+    prevProps.url === nextProps.url &&
     prevProps.items === nextProps.items &&
     prevProps.icon === nextProps.icon
   )

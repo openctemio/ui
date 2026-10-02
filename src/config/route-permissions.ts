@@ -120,6 +120,11 @@ export const routePermissions: Record<string, RoutePermissionConfig> = {
   // ========================================
   // Scoping Phase — each scoping feature is its own module post-000161
   // ========================================
+  // The Scoping overview: one summary call gated on assets:read, no module
+  // (each checklist row hides when its own module is off).
+  '/scoping': {
+    permission: Permission.AssetsRead,
+  },
   '/attack-surface': {
     permission: Permission.AssetsRead,
     module: Module.AttackSurface,

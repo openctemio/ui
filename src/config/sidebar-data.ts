@@ -62,6 +62,7 @@ import {
   ShieldQuestion,
   Database,
   Fence,
+  ListChecks,
 } from 'lucide-react'
 import { type SidebarData } from '@/components/types'
 import { Permission, Role } from '@/lib/permissions'
@@ -139,7 +140,19 @@ export const sidebarData: SidebarData = {
       title: 'Scoping',
       icon: Goal,
       cluster: 'cycle',
+      // The header opens the overview (D7).
+      url: '/scoping',
       items: [
+        {
+          // Is scope ready for this cycle? A readiness checklist over every
+          // scoping artifact plus the active cycle, from one summary call.
+          // Same gate as the API (assets:read) and no module, like Program
+          // Health: each checklist row hides when its own module is off.
+          title: 'Overview',
+          url: '/scoping',
+          icon: ListChecks,
+          permission: Permission.AssetsRead,
+        },
         {
           // The program anchor: charter, scope snapshot, outcome. First,
           // because every other Scoping object exists to fill a cycle.
@@ -375,6 +388,7 @@ export const sidebarData: SidebarData = {
       title: 'Validation',
       icon: FlaskConical,
       cluster: 'cycle',
+      url: '/validation',
       items: [
         {
           // Coverage KPI (findings:read) plus per-module sections, each shown
