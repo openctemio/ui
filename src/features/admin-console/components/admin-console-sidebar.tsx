@@ -5,7 +5,6 @@ import { LogOut, ShieldCheck } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -20,7 +19,8 @@ import {
 } from '@/components/layout/sidebar-brand'
 import { cn } from '@/lib/utils'
 import { GroupedNav, type GroupedNavSection } from '@/components/layout/grouped-nav'
-import { NAV_COLUMN_CLASS } from '@/components/layout/nav-group'
+import { NAV_BUTTON_CLASS, NAV_COLUMN_CLASS } from '@/components/layout/nav-group'
+import { SidebarFooterLinks } from '@/components/layout/sidebar-footer-links'
 import { adminNav } from '../config/admin-nav'
 import { adminCan, type AdminIdentity } from '../types'
 
@@ -91,23 +91,22 @@ export function AdminConsoleSidebar({ admin, onSignOut }: AdminConsoleSidebarPro
         </div>
       </SidebarContent>
 
-      <SidebarFooter>
-        <Separator orientation="horizontal" />
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <div className="grid px-2 py-1 text-sm leading-tight group-data-[collapsible=icon]:hidden">
-              <span className="truncate font-medium">{admin.name}</span>
-              <span className="truncate text-xs text-muted-foreground">{admin.email}</span>
-            </div>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={onSignOut} tooltip="Sign out">
-              <LogOut />
-              <span>Sign out</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+      {/* The tenant app's footer (Help; an admin has no tenant Settings), with
+          the signed-in admin and sign-out under it. */}
+      <SidebarFooterLinks shell="admin">
+        <SidebarMenuItem>
+          <div className="grid px-2 py-1 text-sm leading-tight group-data-[collapsible=icon]:hidden">
+            <span className="truncate font-medium">{admin.name}</span>
+            <span className="truncate text-xs text-muted-foreground">{admin.email}</span>
+          </div>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton onClick={onSignOut} tooltip="Sign out" className={NAV_BUTTON_CLASS}>
+            <LogOut />
+            <span>Sign out</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarFooterLinks>
       <SidebarRail />
     </Sidebar>
   )
