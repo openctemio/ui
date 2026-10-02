@@ -43,8 +43,10 @@ const URL = '/api/v1/auth/providers'
 const defaultConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
-  // Public endpoint; don't hammer it on 4xx
+  // Public endpoint; don't hammer it on 4xx. 429 (rate limited) is transient:
+  // retry it, or the policy it carries stays unknown for the session.
   shouldRetryOnError: (error: { statusCode?: number }) => {
+    if (error?.statusCode === 429) return true
     if (error?.statusCode && error.statusCode >= 400 && error.statusCode < 500) return false
     return true
   },
