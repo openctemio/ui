@@ -31,7 +31,6 @@ import {
   FileText,
   Command,
   AudioWaveform,
-  Building,
   Crosshair,
   ClipboardList,
   RotateCcw,
@@ -65,10 +64,16 @@ import {
   BarChart3,
   ShieldQuestion,
   Database,
+  Fence,
 } from 'lucide-react'
 import { type SidebarData } from '@/components/types'
 import { Permission, Role } from '@/lib/permissions'
-import { EXPOSURES_SECTION_TABS, REMEDIATION_SECTION_TABS } from './section-tabs'
+import {
+  BUSINESS_CONTEXT_SECTION_TABS,
+  EXPOSURES_SECTION_TABS,
+  REMEDIATION_SECTION_TABS,
+  THREAT_MODEL_SECTION_TABS,
+} from './section-tabs'
 
 // Re-export Permission and Role for convenience
 export { Permission, Role }
@@ -126,8 +131,11 @@ export const sidebarData: SidebarData = {
 
     // ========================================
     // PHASE 1: SCOPING
-    // Define attack surface, business context, and objectives
-    // Module: assets (core - available in all plans)
+    // What the program decides: what matters, how far the boundary goes, what
+    // threats it assumes, and the cycle that binds them. One row per ctem.org
+    // scoping artifact (docs/ui/scoping-ia-2026-10.md); what Discovery found
+    // (attack surface, groups, relationships) lives in Discovery, and
+    // framework reporting (Compliance) in Insights.
     // ========================================
     {
       title: 'Scoping',
@@ -135,83 +143,40 @@ export const sidebarData: SidebarData = {
       cluster: 'cycle',
       items: [
         {
-          title: 'Attack Surface',
-          url: '/attack-surface',
-          icon: Target,
-          permission: Permission.AssetsRead,
-          module: 'attack_surface',
-        },
-        {
-          title: 'Asset Groups',
-          url: '/asset-groups',
-          icon: FolderKanban,
-          permission: Permission.AssetGroupsRead,
-          module: 'assets',
-        },
-        {
-          title: 'Scope Config',
-          url: '/scope-config',
-          icon: Settings2,
-          permission: Permission.ScopeRead,
-          module: 'scope_config',
-        },
-        {
-          title: 'Business Services',
-          url: '/business-services',
-          icon: Building,
-          permission: Permission.BusinessServicesRead,
-          module: 'business_services',
-        },
-        // Business Units and Crown Jewels check assets:read, the permission the
-        // API enforces on /api/v1/business-units and PATCH /assets/{id}/crown-jewel.
-        {
-          title: 'Business Units',
-          url: '/business-units',
-          icon: Building2,
-          permission: Permission.AssetsRead,
-          module: 'business_units',
-        },
-        {
-          title: 'Crown Jewels',
-          url: '/crown-jewels',
-          icon: Crown,
-          permission: Permission.AssetsRead,
-          module: 'crown_jewels',
-        },
-        {
-          title: 'CTEM Cycles',
+          // The program anchor: charter, scope snapshot, outcome. First,
+          // because every other Scoping object exists to fill a cycle.
+          title: 'Cycles',
           url: '/cycles',
           icon: RotateCcw,
           permission: Permission.CTEMCyclesRead,
           module: 'ctem_cycles',
         },
         {
-          title: 'Attacker Profiles',
-          url: '/attacker-profiles',
-          icon: Swords,
-          permission: Permission.AttackerProfilesRead,
-          module: 'attacker_profiles',
+          // The Critical Asset Register: crown jewels, the services they
+          // serve, the units that own them. Three modules behind one row; the
+          // row shows while any tab is open to the user and links to the
+          // first such tab (BUSINESS_CONTEXT_SECTION_TABS carries the gates).
+          title: 'Business context',
+          url: '/crown-jewels',
+          icon: Crown,
+          sections: BUSINESS_CONTEXT_SECTION_TABS,
         },
         {
-          title: 'Threat Model',
+          // Was "Scope Config": in-scope targets and the exclusions scans
+          // enforce. Its old Schedules tab never ran; Scans owns scheduling.
+          title: 'Boundaries',
+          url: '/scope-config',
+          icon: Fence,
+          permission: Permission.ScopeRead,
+          module: 'scope_config',
+        },
+        {
+          // Threats per crown jewel, and the attacker profiles they are
+          // modelled against (THREAT_MODEL_SECTION_TABS, two modules).
+          title: 'Threat model',
           url: '/threat-model',
           icon: Crosshair,
-          permission: Permission.AssetsRead,
-          module: 'threat_model',
-        },
-        {
-          title: 'Relationships',
-          url: '/relationships/suggestions',
-          icon: Link2,
-          permission: Permission.AssetsRead,
-          module: 'relationships',
-        },
-        {
-          title: 'Compliance',
-          url: '/compliance',
-          icon: ClipboardCheck,
-          permission: Permission.ComplianceFrameworksRead,
-          module: 'compliance',
+          sections: THREAT_MODEL_SECTION_TABS,
         },
       ],
     },
@@ -244,6 +209,15 @@ export const sidebarData: SidebarData = {
           permission: Permission.SensorsRead,
           module: 'sensors',
         },
+        // What is exposed, summarised from the inventory below (moved from
+        // Scoping: it is a Discovery output, not a scoping decision).
+        {
+          title: 'Attack surface',
+          url: '/attack-surface',
+          icon: Target,
+          permission: Permission.AssetsRead,
+          module: 'attack_surface',
+        },
         // ----------------------------------------
         // ASSET INVENTORY
         // Module: assets (core - available in all plans)
@@ -260,7 +234,7 @@ export const sidebarData: SidebarData = {
         // WHAT CHANGED (change detection)
         // Discovery, not Scoping: it is the delta of the inventory above (assets
         // that appeared, disappeared or became internet-facing), fed by the
-        // same scans. Scoping > Attack Surface decides what matters; this shows
+        // same scans. Scoping decides what matters; this shows
         // what moved. Same permission + module as the inventory it reads.
         // ----------------------------------------
         {
@@ -269,6 +243,23 @@ export const sidebarData: SidebarData = {
           icon: History,
           permission: Permission.AssetsRead,
           module: 'assets',
+        },
+        // Groups organise the inventory into scan targets and RBAC scopes;
+        // relationship suggestions curate the asset graph. Both are Discovery
+        // (moved from Scoping).
+        {
+          title: 'Asset Groups',
+          url: '/asset-groups',
+          icon: FolderKanban,
+          permission: Permission.AssetGroupsRead,
+          module: 'assets',
+        },
+        {
+          title: 'Relationships',
+          url: '/relationships/suggestions',
+          icon: Link2,
+          permission: Permission.AssetsRead,
+          module: 'relationships',
         },
         // /assets opens on the full, filterable list; the category cards are a
         // view switch on the same page (?view=categories). /assets/all redirects.
@@ -558,6 +549,15 @@ export const sidebarData: SidebarData = {
           icon: FileText,
           permission: Permission.ReportsRead,
           module: 'reports',
+        },
+        {
+          // Framework control assessment is governance reporting, not a CTEM
+          // stage (moved from Scoping).
+          title: 'Compliance',
+          url: '/compliance',
+          icon: ClipboardCheck,
+          permission: Permission.ComplianceFrameworksRead,
+          module: 'compliance',
         },
       ],
     },

@@ -5,14 +5,16 @@ import type { ColumnDef } from '@tanstack/react-table'
 import useSWR from 'swr'
 import { Main } from '@/components/layout'
 import {
-  PageHeader,
   DataTable,
   DataTableColumnHeader,
   DataTableRowActions,
-  StackedCell,
+  GatedSectionTabs,
   MetricStrip,
+  PageHeader,
+  StackedCell,
   type MetricStripItem,
 } from '@/features/shared'
+import { BUSINESS_CONTEXT_SECTION_TABS } from '@/config/section-tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -401,6 +403,11 @@ export default function BusinessServicesPage() {
           </Button>
         </Can>
       </PageHeader>
+      <GatedSectionTabs
+        tabs={BUSINESS_CONTEXT_SECTION_TABS}
+        label="Business context sections"
+        className="mt-4 mb-0"
+      />
 
       <MetricStrip className="mt-5" loading={isLoading} items={metrics} />
 

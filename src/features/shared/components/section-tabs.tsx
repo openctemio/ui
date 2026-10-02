@@ -13,6 +13,14 @@ export interface SectionTab {
   icon?: React.ElementType
   /** Optional: also mark active when the pathname starts with this prefix. */
   matchPrefix?: string
+  /**
+   * Module the tab's route needs. Tabs of one section can belong to different
+   * modules (Business context: Crown jewels | Services | Units); render those
+   * strips with `GatedSectionTabs`, which hides a tab whose module is off.
+   */
+  module?: string
+  /** Permission the tab's route needs (ANY of them when an array). */
+  permission?: string | string[]
 }
 
 interface SectionTabsProps {
