@@ -55,6 +55,8 @@ export interface SensorHealthReason {
     | 'version_unsupported'
     | 'no_tools'
     | 'error_reported'
+    | 'content_stale'
+    | 'content_refresh_failed'
     | (string & {})
   severity: 'warning' | 'critical'
   message: string
@@ -80,6 +82,93 @@ export interface SensorProtocol {
   user_agent: string
   seen_at: string
   deprecated: boolean
+}
+
+/**
+ * Scanner content (api RFC-031): the data a tool scans with (trivy's
+ * vulnerability DB, the nuclei templates, the semgrep rules), as the sensor
+ * last reported it, with the staleness the API computed from the tenant's
+ * content policy.
+ */
+export type SensorContentName =
+  'trivy-db' | 'trivy-java-db' | 'nuclei-templates' | 'semgrep-rules' | (string & {})
+
+export interface SensorContent {
+  /** The tool the content belongs to ("trivy"). */
+  tool: string
+  name: SensorContentName
+  /** Release tag, DB build time or bundle digest prefix; "" when none. */
+  version: string
+  /** When the content was published (staleness is measured from it). */
+  updated_at?: string | null
+  /** When this sensor installed it. */
+  fetched_at?: string | null
+  source?: string
+  /** "sha256:..." */
+  digest?: string
+  /** false: the tool fetches it by itself on each scan (not controlled). */
+  managed: boolean
+  /** The last refresh failure; the sensor keeps the version above. */
+  error?: string
+  age_seconds?: number | null
+  /** The policy's limit; 0 or absent = no limit. */
+  max_age_hours?: number | null
+  stale: boolean
+  /** The version the policy pins ("" = newest). */
+  pinned_version?: string
+  /** The sensor runs another version than the pinned one. */
+  pin_mismatch?: boolean
+}
+
+/** One content kind's policy. */
+export interface ContentPin {
+  max_age_hours?: number
+  /** A DB digest ("sha256:...") or a template tag ("v10.4.9"); "" = newest. */
+  version?: string
+  /** semgrep-rules only: registry rulesets; empty = semgrep's own per-scan fetch. */
+  rulesets?: string[]
+}
+
+export interface ContentPolicy {
+  refresh_interval_hours?: number
+  content: Partial<Record<SensorContentName, ContentPin>>
+}
+
+/** GET /api/v1/sensors/content-policy */
+export interface ContentPolicyResponse {
+  policy: ContentPolicy
+  defaults: ContentPolicy
+  updated_at: string | null
+  updated_by: string | null
+}
+
+/** PUT /api/v1/sensors/content-policy */
+export interface UpdateContentPolicyRequest {
+  policy: ContentPolicy
+  apply_now: boolean
+}
+
+export interface UpdateContentPolicyResponse {
+  policy: ContentPolicy
+  commands_created: number
+  skipped: number
+}
+
+/** POST /api/v1/sensors/{id}/content/refresh and /sensors/content/refresh */
+export interface RefreshContentRequest {
+  /** Empty = all managed content. */
+  content: SensorContentName[]
+  force: boolean
+}
+
+export interface RefreshSensorContentResponse {
+  command_id: string
+  already_pending: boolean
+}
+
+export interface RefreshFleetContentResponse {
+  commands_created: number
+  skipped: number
 }
 
 // Sensor capabilities
@@ -168,6 +257,10 @@ export interface Sensor {
   is_platform_sensor?: boolean
   /** Protocol telemetry (RFC-029); absent on APIs without it. */
   protocol?: SensorProtocol | null
+  /** Scanner content (RFC-031); absent on APIs without it. */
+  content?: SensorContent[]
+  /** The sensor accepts refresh_content commands (it manages content). */
+  content_refresh_supported?: boolean
 }
 
 /** A job dispatched to a sensor (GET /api/v1/commands). */
