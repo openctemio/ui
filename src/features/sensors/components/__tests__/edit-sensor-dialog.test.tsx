@@ -98,6 +98,15 @@ describe('EditSensorDialog', () => {
     api.zones.value = []
   })
 
+  it('opens with focus on Name, not on the close button', () => {
+    const { dialog } = renderDialog()
+    const name = within(dialog).getByRole('textbox', { name: 'Name' }) as HTMLInputElement
+    expect(name).toHaveFocus()
+    // Caret at the end, the name is not selected.
+    expect(name.selectionStart).toBe(name.value.length)
+    expect(name.selectionEnd).toBe(name.value.length)
+  })
+
   it('has an Enabled switch and no Revoked status option', () => {
     const { dialog } = renderDialog()
     expect(within(dialog).getByRole('switch', { name: 'Enabled' })).toBeChecked()
