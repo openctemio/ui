@@ -49,9 +49,20 @@ import { cn } from '@/lib/utils'
 import { SensorAuditLog } from './sensor-audit-log'
 import { SensorContentSection } from './sensor-content-section'
 import { SensorStateBadge } from './sensor-state-badge'
-import { ProtocolTag, PROTOCOL_V1_SUNSET, PROTOCOL_V2_SENSOR_VERSION } from './sensor-cells'
+import {
+  ProtocolTag,
+  PROTOCOL_V1_SUNSET,
+  PROTOCOL_V2_SENSOR_VERSION,
+  SensorToolList,
+} from './sensor-cells'
 import { SensorInstallSnippets } from './sensor-install-snippets'
 import { SENSOR_TYPE_LABELS } from './sensor-type-icon'
+import {
+  capacityLabel,
+  hasReportedTools,
+  sensorCapacity,
+  sensorToolRows,
+} from '../lib/capabilities'
 import { formatDurationShort } from '../lib/format'
 import type { ReleaseChannel } from '../lib/fleet'
 import {
@@ -252,7 +263,7 @@ function SensorJobs({ sensor }: { sensor: Sensor }) {
       <p className="text-sm text-muted-foreground tabular-nums">
         {isOneShotSensor(sensor)
           ? 'A CI sensor runs its own scans.'
-          : `${sensor.current_jobs ?? 0} running of ${sensor.max_concurrent_jobs} slots.`}{' '}
+          : `${sensor.current_jobs ?? 0} running of ${sensorCapacity(sensor).effective} slots (${capacityLabel(sensor)}).`}{' '}
         {sensor.total_scans.toLocaleString()} scans, {sensor.total_findings.toLocaleString()}{' '}
         findings in total.
       </p>
@@ -532,12 +543,22 @@ export function SensorDetailSheet({
                     <span className="tabular-nums">
                       {isOneShotSensor(sensor)
                         ? 'one-shot CI runs'
-                        : `${sensor.current_jobs ?? 0} running · ${sensor.max_concurrent_jobs} slots`}
+                        : `${sensor.current_jobs ?? 0} running · ${sensorCapacity(sensor).effective} slots (${capacityLabel(sensor)})`}
                       {' · '}
                       {sensor.total_scans.toLocaleString()} scans,{' '}
                       {sensor.total_findings.toLocaleString()} findings in total
                     </span>
                   </Kv>
+                  {!isOneShotSensor(sensor) && (
+                    <Kv label="Tools">
+                      <SensorToolList rows={sensorToolRows(sensor)} />
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
+                        {hasReportedTools(sensor)
+                          ? `As the sensor reported${sensor.reported?.os ? ` (${sensor.reported.os}/${sensor.reported.arch ?? ''})` : ''}; scans go only to tools it has installed and its limit allows.`
+                          : 'Set on the sensor; the sensor has not reported its tools.'}
+                      </span>
+                    </Kv>
+                  )}
                   {sensor.protocol && (
                     <Kv label="Protocol">
                       {protocolV1 ? (

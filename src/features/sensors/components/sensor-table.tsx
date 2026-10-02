@@ -30,6 +30,7 @@ import {
 } from './sensor-cells'
 import { SensorMobileCard } from './sensor-mobile-card'
 import { SensorContentCell } from './sensor-content-cells'
+import { dispatchTools, toolsNotInstalled } from '../lib/capabilities'
 import { worstContentState } from '../lib/content'
 import { normalizeSensorVersion } from '../lib/sensor-version'
 import { sensorState, SENSOR_STATES, type FleetThresholds } from '../lib/sensor-state'
@@ -190,10 +191,15 @@ export function SensorTable({
       {
         id: 'tools',
         meta: { label: 'Tools' },
-        accessorFn: (a) => (a.tools ?? []).join(', '),
+        accessorFn: (a) => dispatchTools(a).join(', '),
         enableSorting: false,
         header: 'Tools',
-        cell: ({ row }) => <SensorToolsCell tools={row.original.tools} />,
+        cell: ({ row }) => (
+          <SensorToolsCell
+            tools={dispatchTools(row.original)}
+            missing={toolsNotInstalled(row.original)}
+          />
+        ),
       },
       {
         id: 'content',

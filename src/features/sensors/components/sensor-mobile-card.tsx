@@ -7,6 +7,7 @@ import type { Sensor } from '@/lib/api/sensor-types'
 
 import { SensorStateBadge } from './sensor-state-badge'
 import { ProtocolTag } from './sensor-cells'
+import { sensorCapacity } from '../lib/capabilities'
 import { CONTENT_STATE_META, worstContentState } from '../lib/content'
 import { formatDurationShort, keyExpiry } from '../lib/format'
 import { isOneShotSensor, sensorState, type FleetThresholds } from '../lib/sensor-state'
@@ -45,7 +46,7 @@ export function SensorMobileCard({
     facts.push({ text: `${formatDistanceStrict(new Date(sensor.last_seen_at), now)} ago` })
   }
   if (!isOneShotSensor(sensor) && state !== 'disabled' && state !== 'revoked') {
-    facts.push({ text: `${sensor.current_jobs ?? 0}/${sensor.max_concurrent_jobs} jobs` })
+    facts.push({ text: `${sensor.current_jobs ?? 0}/${sensorCapacity(sensor).effective} jobs` })
   }
   const v = normalizeSensorVersion(sensor.version)
   const vs = sensorVersionStatus(sensor, channel.latest, channel.min)

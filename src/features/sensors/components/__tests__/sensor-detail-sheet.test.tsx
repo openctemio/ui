@@ -109,6 +109,44 @@ describe('SensorDetailSheet', () => {
     expect(within(health).getByText(/v0.4.2, the latest release/)).toBeInTheDocument()
   })
 
+  it('shows the reported tools with versions, missing ones, and the capacity', () => {
+    open({
+      sensor: {
+        ...sensor,
+        tools: ['nuclei', 'semgrep'],
+        reported: {
+          tools: [
+            { name: 'semgrep', version: '1.90.0', installed: true },
+            { name: 'nuclei', installed: false },
+          ],
+          capabilities: ['semgrep', 'sast'],
+          max_concurrent_jobs: 3,
+          os: 'linux',
+          arch: 'amd64',
+          reported_at: new Date(now).toISOString(),
+        },
+        effective: {
+          tools: ['semgrep'],
+          capabilities: ['semgrep', 'sast'],
+          max_concurrent_jobs: 3,
+        },
+        capability_mismatch: { tools_not_installed: ['nuclei'] },
+      },
+    })
+    expect(screen.getByText('1.90.0')).toBeInTheDocument()
+    expect(screen.getByText('not installed')).toBeInTheDocument()
+    expect(screen.getByText(/As the sensor reported \(linux\/amd64\)/)).toBeInTheDocument()
+    expect(screen.getByText(/1 running · 3 slots \(reported 3 · limit 8\)/)).toBeInTheDocument()
+    const health = screen.getByRole('list', { name: 'Health' })
+    expect(within(health).getByText(/Set but not installed: nuclei/)).toBeInTheDocument()
+  })
+
+  it('shows the set tools when the sensor reports none', () => {
+    open()
+    expect(screen.getByText(/the sensor has not reported its tools/)).toBeInTheDocument()
+    expect(screen.getByText(/1 running · 8 slots \(limit 8\)/)).toBeInTheDocument()
+  })
+
   it('shows protocol v1 as deprecated with the upgrade deadline in the runtime section', () => {
     open()
     expect(
