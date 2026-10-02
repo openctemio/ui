@@ -11,6 +11,7 @@ import { getErrorMessage } from '@/lib/api/error-handler'
 import { refreshSensorContent } from '@/lib/api/sensor-content-hooks'
 import type { Sensor, SensorContent } from '@/lib/api/sensor-types'
 import { copyToClipboard } from '@/lib/clipboard'
+import { redactUrlQueries } from '@/lib/redact-url'
 import { cn } from '@/lib/utils'
 
 import { SensorTag } from './sensor-cells'
@@ -24,7 +25,6 @@ import {
   contentState,
   contentVersionDate,
   formatHours,
-  shortContentError,
   shortDigest,
 } from '../lib/content'
 import { formatDurationShort } from '../lib/format'
@@ -163,11 +163,9 @@ function ContentRow({ c, now }: { c: SensorContent; now: number }) {
       ) : (
         <p className="mt-1 text-xs text-muted-foreground">Content {UNMANAGED_TEXT}.</p>
       )}
-      {c.error && (
-        <p className="mt-1 text-xs break-words text-destructive">
-          Last refresh failed: {shortContentError(c.error)}
-        </p>
-      )}
+      {/* A plain line on the row; the error itself is under Details. The
+          API reports no time for the failure, so none is shown. */}
+      {c.error && <p className="mt-1 text-xs text-destructive">Last refresh failed</p>}
       {hasDetails && (
         <details className="group mt-1 text-xs text-muted-foreground">
           <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-sm select-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden">
@@ -201,7 +199,9 @@ function ContentRow({ c, now }: { c: SensorContent; now: number }) {
             {c.error && (
               <>
                 <dt>Error</dt>
-                <dd className="font-mono break-all text-destructive">{c.error}</dd>
+                <dd className="font-mono break-all text-destructive">
+                  {redactUrlQueries(c.error)}
+                </dd>
               </>
             )}
           </dl>
