@@ -29,6 +29,7 @@ import { OptionsStep } from './options-step'
 import { ScheduleStep } from './schedule-step'
 import { DEFAULT_NEW_SCAN, type NewScanFormData, type ScheduleFrequency } from '../../types'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { notifyScannerConfigWarnings } from '../../lib/scanner-config-warnings'
 import { useCreateScanConfig, invalidateScanConfigsCache } from '@/lib/api/scan-hooks'
 import type {
   CreateScanConfigRequest,
@@ -297,6 +298,7 @@ export function NewScanDialog({ open, onOpenChange, onSubmit }: NewScanDialogPro
       if (!scanConfig) {
         throw new Error('Failed to create scan configuration')
       }
+      notifyScannerConfigWarnings(scanConfig)
 
       createdConfigIdRef.current = scanConfig.id
 

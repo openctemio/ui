@@ -445,13 +445,9 @@ function RunnerSetupDialog({
             HTTPS to OpenCTEM only — no inbound).
           </li>
           <li>
-            Register it with a bootstrap token and the <code>tenable</code> capability:
-            <pre className="bg-muted mt-1 overflow-x-auto rounded-md p-2 text-xs">
-              {`openctem-runner register \\
-  --server <openctem-url> \\
-  --bootstrap-token <token> \\
-  --capability tenable`}
-            </pre>
+            Add a sensor for it under <strong>Settings → Sensors</strong> and copy its API key.
+            Start the runner with the platform URL and that key (<code>API_URL</code>,{' '}
+            <code>API_KEY</code>); the sensor&apos;s install instructions show the exact command.
           </li>
           <li>
             Configure the local Tenable credentials on the runner (kept in your environment, never
