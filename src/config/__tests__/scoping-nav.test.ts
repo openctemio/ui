@@ -48,6 +48,7 @@ describe('Scoping rows', () => {
   it('are the scoping artifacts, cycle first, with no nested sections', () => {
     expect(group('Scoping').items.filter(isCollapsible)).toEqual([])
     expect(links('Scoping').map((i) => [i.title, i.url])).toEqual([
+      ['Overview', '/scoping'],
       ['Cycles', '/cycles'],
       ['Business context', '/crown-jewels'],
       ['Boundaries', '/scope-config'],
@@ -92,8 +93,16 @@ describe('Scoping rows', () => {
     }
   })
 
+  it('the header opens the Overview, which needs only assets:read', () => {
+    expect(group('Scoping').url).toBe('/scoping')
+    const overview = row('Scoping', 'Overview')
+    expect(overview.module).toBeUndefined()
+    expect(matchRoutePermission('/scoping')).toEqual({ permission: overview.permission })
+    expect(pageExists('/scoping')).toBe(true)
+  })
+
   it('labels are translated in en and vi', () => {
-    for (const r of links('Scoping')) {
+    for (const r of links('Scoping').filter((l) => l.title !== 'Overview')) {
       const key = `nav.item.${r.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
       expect((en as Record<string, string>)[key], key).toBe(r.title)
       expect((vi as Record<string, string>)[key], key).toBeTruthy()
