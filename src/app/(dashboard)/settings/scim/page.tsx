@@ -10,6 +10,7 @@ import {
   DataTable,
   DataTableColumnHeader,
   ErrorState,
+  GatedButton,
   MetricStrip,
   type MetricStripItem,
 } from '@/features/shared'
@@ -17,7 +18,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -225,35 +225,19 @@ function TokenActionsCell({
 
   return (
     <div className="text-right">
-      {isActive(t) && canRevoke && (
-        <Button
+      {isActive(t) && (
+        <GatedButton
           variant="ghost"
           size="icon"
+          allowed={canRevoke}
+          reason={SCIM_OWNER_ONLY_REASON}
           onClick={() => setRevokeOpen(true)}
-          title="Revoke"
+          title={canRevoke ? 'Revoke' : undefined}
           aria-label={`Revoke ${t.name}`}
           className="text-destructive hover:text-destructive"
         >
           <Ban className="h-4 w-4" />
-        </Button>
-      )}
-      {isActive(t) && !canRevoke && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span tabIndex={0} className="inline-flex" aria-label={SCIM_OWNER_ONLY_REASON}>
-              <Button
-                variant="ghost"
-                size="icon"
-                disabled
-                aria-label={`Revoke ${t.name}`}
-                className="text-destructive"
-              >
-                <Ban className="h-4 w-4" />
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>{SCIM_OWNER_ONLY_REASON}</TooltipContent>
-        </Tooltip>
+        </GatedButton>
       )}
       <ConfirmDialog
         open={revokeOpen}
@@ -271,26 +255,11 @@ function TokenActionsCell({
 
 /** "Generate token" — enabled for the owner, disabled with the reason for administrators. */
 function GenerateTokenButton({ canMint, onClick }: { canMint: boolean; onClick: () => void }) {
-  if (canMint) {
-    return (
-      <Button size="sm" onClick={onClick}>
-        <Plus className="me-2 h-4 w-4" />
-        Generate token
-      </Button>
-    )
-  }
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span tabIndex={0} className="inline-flex" aria-label={SCIM_OWNER_ONLY_REASON}>
-          <Button size="sm" disabled>
-            <Plus className="me-2 h-4 w-4" />
-            Generate token
-          </Button>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{SCIM_OWNER_ONLY_REASON}</TooltipContent>
-    </Tooltip>
+    <GatedButton size="sm" allowed={canMint} reason={SCIM_OWNER_ONLY_REASON} onClick={onClick}>
+      <Plus className="me-2 h-4 w-4" />
+      Generate token
+    </GatedButton>
   )
 }
 

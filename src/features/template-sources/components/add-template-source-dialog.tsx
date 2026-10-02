@@ -7,6 +7,8 @@ import { z } from 'zod'
 import { Loader2, GitBranch, Database, Globe, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { credentialBindError } from '../lib/credential-bind-error'
+import { CredentialBindAlert } from './credential-bind-alert'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -103,6 +105,8 @@ export function AddTemplateSourceDialog({
   onSuccess,
 }: AddTemplateSourceDialogProps) {
   const [sourceType, setSourceType] = useState<SourceType>('git')
+  // A 403 CREDENTIAL_BIND_FORBIDDEN (api#674), shown in the form.
+  const [bindError, setBindError] = useState<string | null>(null)
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -171,12 +175,19 @@ export function AddTemplateSourceDialog({
       onOpenChange(false)
       onSuccess?.()
     } catch (err) {
+      const bind = credentialBindError(err)
+      if (bind) {
+        setBindError(bind)
+        form.setError('credential_id', { type: 'server', message: bind })
+        return
+      }
       toast.error(getErrorMessage(err, 'Failed to create source'))
     }
   }
 
   const handleClose = (isOpen: boolean) => {
     if (!isOpen) {
+      setBindError(null)
       form.reset()
       setSourceType('git')
     }
@@ -614,6 +625,7 @@ export function AddTemplateSourceDialog({
               )}
             />
 
+            {bindError && <CredentialBindAlert message={bindError} />}
             <DialogFooter>
               <Button
                 type="button"

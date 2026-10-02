@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { DataTableRowActions, RelativeTime, SeverityBadge } from '@/features/shared'
 import { ExposureThreatPills } from './exposure-enrichment'
+import { APPROVE_REQUIRED_REASON } from './exposure-state-actions'
 import {
   Check,
   X,
@@ -104,6 +105,11 @@ interface ExposureColumnHandlers {
   onMarkFalsePositive: (exposure: ExposureEvent) => void
   onReactivate: (exposure: ExposureEvent) => void
   onViewDetails: (exposure: ExposureEvent) => void
+  /**
+   * Whether the user holds findings:approve. Accept risk and False positive
+   * need it (api#675); without it they show disabled, with the reason.
+   */
+  canApprove?: boolean
 }
 
 /**
@@ -225,11 +231,15 @@ export function getExposureColumns(handlers: ExposureColumnHandlers): ColumnDef<
                         label: 'Accept risk',
                         icon: AlertTriangle,
                         onClick: () => handlers.onAccept(exposure),
+                        disabled: handlers.canApprove === false,
+                        disabledReason: APPROVE_REQUIRED_REASON,
                       },
                       {
                         label: 'False positive',
                         icon: X,
                         onClick: () => handlers.onMarkFalsePositive(exposure),
+                        disabled: handlers.canApprove === false,
+                        disabledReason: APPROVE_REQUIRED_REASON,
                       },
                     ]
                   : [
