@@ -425,6 +425,9 @@ export interface FindingApiFilters {
   epss_min?: number
   /** Restrict to a specific set of finding IDs (e.g. a remediation task's linked findings). */
   finding_ids?: string[]
+  /** One finding group's rows (group by CVE / type). Sent as `cve_ids` / `finding_types`. */
+  cve_ids?: string[]
+  finding_types?: string[]
   /** Sort spec, e.g. 'priority_class,severity,-created_at'. */
   sort?: string
   page?: number

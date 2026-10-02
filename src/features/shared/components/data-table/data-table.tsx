@@ -52,6 +52,16 @@ import {
   X,
   Inbox,
 } from 'lucide-react'
+import {
+  GroupHeaderContent,
+  groupRowsForDisplay,
+  groupSortedRowModel,
+  rowsForServerGroups,
+  useGroupExpansion,
+  type DataTableRowGroups,
+} from './data-table-groups'
+
+export { groupRowsForDisplay, rowsForServerGroups, type DataTableRowGroups }
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -151,47 +161,17 @@ interface DataTableProps<TData, TValue> {
    */
   initialColumnVisibility?: VisibilityState
   /**
-   * Client-side row groups: a full-width header row before each group's rows
-   * (the rows of the current page, in group order). Groups follow `order`,
-   * then first appearance. For a server-paginated table, group on the server.
+   * Grouped list: a full-width header row before each group's rows, in one
+   * table (see "Grouped lists" in docs/ui-style-contract.md). Client groups
+   * follow `order`, then first appearance, and a client-paginated table pages
+   * through the rows group by group. Server groups (`groups`) render a header
+   * for each listed group and paginate the groups themselves.
    */
   rowGroups?: DataTableRowGroups<TData>
-}
-
-export interface DataTableRowGroups<TData> {
-  /** The group a row belongs to. */
-  getKey: (row: TData) => string
-  /** Group order by key; keys not listed follow in order of appearance. */
-  order?: string[]
-  /** The header row's content for a group and its rows on this page. */
-  renderHeader: (key: string, rows: TData[]) => React.ReactNode
-}
-
-/**
- * Rows partitioned by group (stable within a group), in group order.
- * Exported for tests.
- */
-export function groupRowsForDisplay<R>(
-  rows: R[],
-  getKey: (row: R) => string,
-  order: string[] = []
-): { key: string; rows: R[] }[] {
-  const groups = new Map<string, R[]>()
-  for (const row of rows) {
-    const k = getKey(row)
-    const list = groups.get(k)
-    if (list) list.push(row)
-    else groups.set(k, [row])
-  }
-  const rank = new Map(order.map((k, i) => [k, i]))
-  const seen = [...groups.keys()]
-  seen.sort((a, b) => {
-    const ra = rank.get(a) ?? Number.MAX_SAFE_INTEGER
-    const rb = rank.get(b) ?? Number.MAX_SAFE_INTEGER
-    if (ra !== rb) return ra - rb
-    return seen.indexOf(a) - seen.indexOf(b)
-  })
-  return seen.map((key) => ({ key, rows: groups.get(key) ?? [] }))
+  /** What the pagination counts ("Showing 1 - 20 of 57 groups"). Default "results". */
+  paginationNoun?: string
+  /** Label of the page-size select. Default "Rows per page". */
+  pageSizeLabel?: string
 }
 
 /** Skeleton rows shown in an empty body while `isLoading`. */
@@ -360,6 +340,8 @@ export function DataTable<TData, TValue>({
   isLoading = false,
   initialColumnVisibility,
   rowGroups,
+  paginationNoun = 'results',
+  pageSizeLabel = 'Rows per page',
 }: DataTableProps<TData, TValue>) {
   // Cards replace the table on phones. Decided in JS rather than by hiding one
   // with CSS, so only one of the two is ever rendered.
@@ -372,6 +354,9 @@ export function DataTable<TData, TValue>({
   const measureEdges = React.useCallback(() => {
     const el = tableWrapRef.current?.querySelector<HTMLElement>('[data-slot="table-container"]')
     if (!el) return
+    // Group headers span the visible frame, not the scrolling table, so their
+    // name and actions stay in view while the rows scroll sideways.
+    tableWrapRef.current?.style.setProperty('--dt-frame', `${el.clientWidth}px`)
     const x = Math.abs(el.scrollLeft)
     const next = { start: x > 0, end: el.scrollWidth - el.clientWidth - x > 1 }
     setHiddenEdges((prev) => (prev.start === next.start && prev.end === next.end ? prev : next))
@@ -385,6 +370,12 @@ export function DataTable<TData, TValue>({
   )
   const [rowSelection, setRowSelection] = React.useState({})
   const [globalFilter, setGlobalFilter] = React.useState('')
+  const rowGroupsRef = React.useRef(rowGroups)
+  rowGroupsRef.current = rowGroups
+  const [sortedRowModel] = React.useState(() =>
+    groupSortedRowModel<TData>(getSortedRowModel(), () => rowGroupsRef.current)
+  )
+  const groupExpansion = useGroupExpansion(rowGroups)
 
   const table = useReactTable({
     data,
@@ -408,7 +399,7 @@ export function DataTable<TData, TValue>({
       ? { manualSorting: true, manualFiltering: true }
       : {
           getPaginationRowModel: getPaginationRowModel(),
-          getSortedRowModel: getSortedRowModel(),
+          getSortedRowModel: sortedRowModel,
           getFilteredRowModel: getFilteredRowModel(),
         }),
     onColumnVisibilityChange: setColumnVisibility,
@@ -418,13 +409,26 @@ export function DataTable<TData, TValue>({
     manualPagination,
     // Prefer rowCount (tanstack derives pageCount); fall back to explicit pageCount.
     ...(manualPagination ? (rowCount != null ? { rowCount } : { pageCount: pageCount ?? -1 }) : {}),
-    onPaginationChange: manualPagination
-      ? (updater) => {
-          const current = pagination ?? { pageIndex: 0, pageSize }
-          const next = typeof updater === 'function' ? updater(current) : updater
-          onPaginationChange?.(next)
+    // Only under manual pagination. Passing `onPaginationChange: undefined`
+    // otherwise overrides tanstack's own state updater (options are spread over
+    // its defaults), which left every client-paginated table stuck on page 1:
+    // Next, Last and the page-size select did nothing.
+    ...(manualPagination
+      ? {
+          onPaginationChange: (
+            updater:
+              | { pageIndex: number; pageSize: number }
+              | ((old: { pageIndex: number; pageSize: number }) => {
+                  pageIndex: number
+                  pageSize: number
+                })
+          ) => {
+            const current = pagination ?? { pageIndex: 0, pageSize }
+            const next = typeof updater === 'function' ? updater(current) : updater
+            onPaginationChange?.(next)
+          },
         }
-      : undefined,
+      : {}),
     state: {
       sorting,
       columnFilters,
@@ -504,9 +508,29 @@ export function DataTable<TData, TValue>({
 
   // Rows of this page in display order: one pseudo-group without rowGroups.
   const pageRows = table.getRowModel().rows
-  const displayGroups = rowGroups
-    ? groupRowsForDisplay(pageRows, (r) => rowGroups.getKey(r.original), rowGroups.order)
-    : [{ key: 'all', rows: pageRows }]
+  const displayGroups = !rowGroups
+    ? [{ key: 'all', rows: pageRows }]
+    : rowGroups.groups
+      ? rowsForServerGroups(pageRows, (r) => rowGroups.getKey(r.original), rowGroups.groups)
+      : groupRowsForDisplay(pageRows, (r) => rowGroups.getKey(r.original), rowGroups.order)
+  // Client groups: every row of each group across pages, for the header's counts.
+  const wholeGroups = new Map<string, TData[]>()
+  if (rowGroups && !rowGroups.groups && !manualPagination) {
+    for (const r of table.getPrePaginationRowModel().rows) {
+      const k = rowGroups.getKey(r.original)
+      const list = wholeGroups.get(k)
+      if (list) list.push(r.original)
+      else wholeGroups.set(k, [r.original])
+    }
+  }
+  // Server groups render their headers before any of their rows are loaded.
+  const hasBody = pageRows.length > 0 || (rowGroups?.groups?.length ?? 0) > 0
+  const canSelectGroups = table.getAllLeafColumns().some((c) => c.id === 'select')
+  const groupDomId = React.useId()
+  const groupIds = (key: string) => {
+    const safe = `${groupDomId}-${encodeURIComponent(key).replace(/%/g, '_')}`
+    return { header: `${safe}-h`, rows: `${safe}-r` }
+  }
 
   const selectedCount = table.getFilteredSelectedRowModel().rows.length
   const totalCount = table.getFilteredRowModel().rows.length
@@ -619,34 +643,72 @@ export function DataTable<TData, TValue>({
 
       {phoneCards && (
         <div className="divide-y rounded-md border">
-          {table.getRowModel().rows.length ? (
-            displayGroups.map((group) => (
-              <React.Fragment key={`group-${group.key}`}>
-                {rowGroups && (
-                  <div
-                    data-slot="row-group-header"
-                    className="bg-muted/50 px-3 py-2 text-xs text-muted-foreground"
-                  >
-                    {rowGroups.renderHeader(
+          {hasBody ? (
+            displayGroups.map((group) => {
+              const expanded = groupExpansion.isExpanded(group.key)
+              const ids = groupIds(group.key)
+              const footer =
+                rowGroups && expanded
+                  ? rowGroups.renderFooter?.(
                       group.key,
                       group.rows.map((r) => r.original)
-                    )}
-                  </div>
-                )}
-                {group.rows.map((row) =>
-                  mobileRow ? (
-                    <div key={row.id}>{mobileRow(row.original)}</div>
-                  ) : (
-                    <AutoMobileCard
-                      key={row.id}
-                      row={row}
-                      labels={mobileLabels}
-                      onRowClick={onRowClick}
-                    />
-                  )
-                )}
-              </React.Fragment>
-            ))
+                    )
+                  : null
+              const loading =
+                rowGroups && expanded && group.rows.length === 0 && rowGroups.isGroupLoading
+                  ? rowGroups.isGroupLoading(group.key)
+                  : false
+              return (
+                <div
+                  key={`group-${group.key}`}
+                  role={rowGroups ? 'group' : undefined}
+                  aria-labelledby={rowGroups ? ids.header : undefined}
+                  className="divide-y"
+                >
+                  {rowGroups && (
+                    <div
+                      data-slot="row-group-header"
+                      className="bg-muted/50 px-3 py-2 text-xs text-muted-foreground"
+                    >
+                      <GroupHeaderContent
+                        rowGroups={rowGroups}
+                        groupKey={group.key}
+                        rows={group.rows}
+                        groupRows={wholeGroups.get(group.key)}
+                        expanded={expanded}
+                        onToggle={() => groupExpansion.toggle(group.key)}
+                        canSelect={canSelectGroups && !mobileRow}
+                        controlsId={ids.rows}
+                        headerId={ids.header}
+                      />
+                    </div>
+                  )}
+                  {expanded && (
+                    <div id={ids.rows} className="divide-y">
+                      {group.rows.map((row) =>
+                        mobileRow ? (
+                          <div key={row.id}>{mobileRow(row.original)}</div>
+                        ) : (
+                          <AutoMobileCard
+                            key={row.id}
+                            row={row}
+                            labels={mobileLabels}
+                            onRowClick={onRowClick}
+                          />
+                        )
+                      )}
+                      {loading && (
+                        <div aria-busy="true" aria-label="Loading" className="space-y-2 px-3 py-3">
+                          <Skeleton className="h-4 w-2/3" />
+                          <Skeleton className="h-3 w-1/3" />
+                        </div>
+                      )}
+                      {footer && <div className="px-3 py-2 text-xs">{footer}</div>}
+                    </div>
+                  )}
+                </div>
+              )
+            })
           ) : isLoading ? (
             <div aria-busy="true" aria-label="Loading">
               {Array.from({ length: LOADING_ROWS }).map((_, i) => (
@@ -694,75 +756,143 @@ export function DataTable<TData, TValue>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows?.length ? (
-              displayGroups.map((group) => (
-                <React.Fragment key={`group-${group.key}`}>
+          {hasBody ? (
+            displayGroups.map((group, gi) => {
+              const expanded = groupExpansion.isExpanded(group.key)
+              const ids = groupIds(group.key)
+              const loading =
+                rowGroups && expanded && group.rows.length === 0 && rowGroups.isGroupLoading
+                  ? rowGroups.isGroupLoading(group.key)
+                  : false
+              const footer =
+                rowGroups && expanded
+                  ? rowGroups.renderFooter?.(
+                      group.key,
+                      group.rows.map((r) => r.original)
+                    )
+                  : null
+              return (
+                // One tbody per group: a native row group, named by its header.
+                <TableBody
+                  key={`group-${group.key}`}
+                  id={rowGroups ? ids.rows : undefined}
+                  aria-labelledby={rowGroups ? ids.header : undefined}
+                  className={cn(gi < displayGroups.length - 1 && '[&_tr:last-child]:border-b')}
+                >
                   {rowGroups && (
                     <TableRow data-slot="row-group-header" className="hover:bg-transparent">
                       <TableCell
                         colSpan={table.getVisibleLeafColumns().length}
                         className="bg-muted/50 py-2 text-xs text-muted-foreground"
                       >
-                        {rowGroups.renderHeader(
-                          group.key,
-                          group.rows.map((r) => r.original)
-                        )}
+                        <div className="sticky start-2 w-[calc(var(--dt-frame,100%)-1rem)] max-w-full">
+                          <GroupHeaderContent
+                            rowGroups={rowGroups}
+                            groupKey={group.key}
+                            rows={group.rows}
+                            groupRows={wholeGroups.get(group.key)}
+                            expanded={expanded}
+                            onToggle={() => groupExpansion.toggle(group.key)}
+                            canSelect={canSelectGroups}
+                            controlsId={ids.rows}
+                            headerId={ids.header}
+                          />
+                        </div>
                       </TableCell>
                     </TableRow>
                   )}
-                  {group.rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      data-state={row.getIsSelected() && 'selected'}
-                      className={cn('group/row', onRowClick && 'cursor-pointer hover:bg-muted/50')}
-                      onClick={(e) => {
-                        const target = e.target as HTMLElement
-                        // React bubbles events out of portals: a click inside a row's
-                        // open menu, or a dialog opened from it, reaches this handler
-                        // although it is not in the row's DOM. Only real row clicks count.
-                        if (!e.currentTarget.contains(target)) return
-                        // Nor clicks on the row's own controls.
-                        const isInteractiveElement = target.closest(INTERACTIVE_SELECTOR)
+                  {expanded &&
+                    group.rows.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        data-state={row.getIsSelected() && 'selected'}
+                        className={cn(
+                          'group/row',
+                          onRowClick && 'cursor-pointer hover:bg-muted/50'
+                        )}
+                        onClick={(e) => {
+                          const target = e.target as HTMLElement
+                          // React bubbles events out of portals: a click inside a row's
+                          // open menu, or a dialog opened from it, reaches this handler
+                          // although it is not in the row's DOM. Only real row clicks count.
+                          if (!e.currentTarget.contains(target)) return
+                          // Nor clicks on the row's own controls.
+                          const isInteractiveElement = target.closest(INTERACTIVE_SELECTOR)
 
-                        if (!isInteractiveElement && onRowClick) {
-                          onRowClick(row.original)
-                        }
-                      }}
-                    >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} {...pinnedProps(cell.column.id)}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
+                          if (!isInteractiveElement && onRowClick) {
+                            onRowClick(row.original)
+                          }
+                        }}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id} {...pinnedProps(cell.column.id)}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  {loading &&
+                    Array.from({ length: 2 }).map((_, i) => (
+                      <TableRow
+                        key={`group-loading-${i}`}
+                        aria-busy="true"
+                        data-loading-row=""
+                        className="hover:bg-transparent"
+                      >
+                        {table.getVisibleLeafColumns().map((column) => (
+                          <TableCell key={column.id}>
+                            <Skeleton
+                              className={cn(
+                                'h-4',
+                                column.id === 'select' ? 'w-4' : 'w-full max-w-40'
+                              )}
+                            />
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  {footer && (
+                    <TableRow data-slot="row-group-footer" className="hover:bg-transparent">
+                      <TableCell
+                        colSpan={table.getVisibleLeafColumns().length}
+                        className="py-1.5 text-xs text-muted-foreground"
+                      >
+                        <div className="sticky start-2 w-[calc(var(--dt-frame,100%)-1rem)] max-w-full">
+                          {footer}
+                        </div>
+                      </TableCell>
                     </TableRow>
-                  ))}
-                </React.Fragment>
-              ))
-            ) : isLoading ? (
-              Array.from({ length: LOADING_ROWS }).map((_, i) => (
-                <TableRow key={`loading-${i}`} aria-busy="true" data-loading-row="">
-                  {table.getVisibleLeafColumns().map((column) => (
-                    <TableCell key={column.id}>
-                      <Skeleton
-                        className={cn('h-4', column.id === 'select' ? 'w-4' : 'w-full max-w-40')}
-                      />
-                    </TableCell>
-                  ))}
+                  )}
+                </TableBody>
+              )
+            })
+          ) : (
+            <TableBody>
+              {isLoading ? (
+                Array.from({ length: LOADING_ROWS }).map((_, i) => (
+                  <TableRow key={`loading-${i}`} aria-busy="true" data-loading-row="">
+                    {table.getVisibleLeafColumns().map((column) => (
+                      <TableCell key={column.id}>
+                        <Skeleton
+                          className={cn('h-4', column.id === 'select' ? 'w-4' : 'w-full max-w-40')}
+                        />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-48 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Inbox className="h-10 w-10 text-muted-foreground/50" />
+                      <p className="text-sm font-medium">{emptyMessage}</p>
+                      <p className="text-xs text-muted-foreground">{emptyDescription}</p>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-48 text-center">
-                  <div className="flex flex-col items-center justify-center gap-2">
-                    <Inbox className="h-10 w-10 text-muted-foreground/50" />
-                    <p className="text-sm font-medium">{emptyMessage}</p>
-                    <p className="text-xs text-muted-foreground">{emptyDescription}</p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
+              )}
+            </TableBody>
+          )}
         </Table>
       </div>
 
@@ -785,7 +915,7 @@ export function DataTable<TData, TValue>({
                 <span className="font-medium">{end}</span>
                 {' of '}
                 <span className="font-medium">{total}</span>
-                {' results'}
+                {` ${paginationNoun}`}
               </div>
             )
           })()}
@@ -794,7 +924,7 @@ export function DataTable<TData, TValue>({
           <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 sm:gap-4">
             {/* Page size selector */}
             <div className="hidden sm:flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Rows per page</span>
+              <span className="text-sm text-muted-foreground">{pageSizeLabel}</span>
               <Select
                 value={`${table.getState().pagination.pageSize}`}
                 onValueChange={(value) => {
