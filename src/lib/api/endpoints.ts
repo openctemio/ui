@@ -1083,6 +1083,13 @@ export const sensorEndpoints = {
       limit: query.limit,
     })}`,
 
+  /** The sensor's current manifest (RFC-033, sensors:read); 404 before the first. */
+  manifest: (sensorId: string) => `${API_BASE.SENSORS}/${sensorId}/manifest`,
+
+  /** The sensor's manifest versions, most recently current first (RFC-033). */
+  manifests: (sensorId: string, limit = 50) =>
+    `${API_BASE.SENSORS}/${sensorId}/manifests${buildQueryString({ limit })}`,
+
   /** The tenant's scanner content policy (RFC-031): GET, PUT with sensors:write. */
   contentPolicy: () => `${API_BASE.SENSORS}/content-policy`,
 

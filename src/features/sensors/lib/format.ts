@@ -44,3 +44,18 @@ export function formatBytes(bytes: number): string {
   }
   return `${v.toFixed(v < 10 ? 1 : 0)} ${units[i]}`
 }
+
+/** "5m ago", "just now"; "—" for an unreadable time. */
+export function agoShort(iso: string, now: number): string {
+  const t = new Date(iso).getTime()
+  if (Number.isNaN(t)) return '—'
+  if (t >= now - 1000) return 'just now'
+  return `${formatDurationShort((now - t) / 1000)} ago`
+}
+
+/** The local date and time of an RFC 3339 time, for a tooltip. */
+export function exactTime(iso: string | null | undefined): string | undefined {
+  if (!iso) return undefined
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? undefined : d.toLocaleString()
+}
