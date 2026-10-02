@@ -88,14 +88,15 @@ import { SLA_STATUS_LABELS, type SLAStatus } from '@/features/repositories/types
 import { formatDueRelative } from '@/features/sla/lib/sla'
 import { AssigneeSelect } from '@/features/findings/components/assignee-select'
 import {
-  FindingGroupsTab,
+  FindingGroupsTable,
   GROUP_BY_DIMENSIONS,
-} from '@/features/findings/components/finding-groups-tab'
+} from '@/features/findings/components/finding-groups-table'
+import { AutoAssignDialog } from '@/features/findings/components/auto-assign-dialog'
 import type { GroupByDimension } from '@/features/findings/api/use-finding-groups'
 import { MarkFixedDialog } from '@/features/findings/components/mark-fixed-dialog'
 import { CreateTicketDialog } from '@/features/findings/components/create-ticket-dialog'
 import { LinkFindingsToRemediationDialog } from '@/features/remediation/components/link-findings-dialog'
-import { PendingReviewTab } from '@/features/findings/components/pending-review-tab'
+import { VerifyGroupActions } from '@/features/findings/components/verify-group-actions'
 import { type FindingGroup } from '@/features/findings/api/use-finding-groups'
 import {
   useFindingsApi,
@@ -111,6 +112,7 @@ import { copyToClipboard } from '@/lib/clipboard'
 import { getErrorMessage } from '@/lib/api/error-handler'
 import { post, csrfFetch } from '@/lib/api/client'
 import { usePermissions } from '@/context/permission-provider'
+import { Permission } from '@/lib/permissions'
 import { useModuleEnabled } from '@/features/integrations/api/use-tenant-modules'
 import { findingAssetType } from '@/features/findings/lib/finding-asset-type'
 import { FINDINGS_LIST_HIDDEN_STATUSES } from '@/features/findings/lib/list-defaults'
@@ -374,11 +376,12 @@ function FindingsContent() {
   // Selected finding IDs, lifted from the DataTable via onSelectionChange. The
   // table owns its checkbox state internally; previously nothing synced it out
   // so selectedCount was always 0 and the bulk-action bar never appeared.
-  const [selectedFindingIds, setSelectedFindingIds] = useState<string[]>([])
+  const [selectedFindings, setSelectedFindings] = useState<Finding[]>([])
+  const selectedFindingIds = useMemo(() => selectedFindings.map((f) => f.id), [selectedFindings])
   // Bumped to clear the table's own checkbox state along with ours.
   const [selectionEpoch, setSelectionEpoch] = useState(0)
   const clearSelection = useCallback(() => {
-    setSelectedFindingIds([])
+    setSelectedFindings([])
     setSelectionEpoch((e) => e + 1)
   }, [])
   // Filters live in the URL so a view can be linked to. "The criticals from our
@@ -474,11 +477,18 @@ function FindingsContent() {
     if (tabParam === 'pending') setViewParam('verify')
     if (tabParam) setTabParam('')
   }, [tabParam, setTabParam, setGroupParam, setViewParam])
-  const groupBy = GROUP_BY_DIMENSIONS.some((d) => d.value === groupParam)
+  const groupBy = (GROUP_BY_DIMENSIONS as string[]).includes(groupParam)
     ? (groupParam as GroupByDimension)
     : null
   const verifyView = viewParam === 'verify'
   const [, setAssetParam] = useUrlFilter('assetId', '')
+  // A CVE group's "View": the list narrowed to that CVE (search does not match
+  // the CVE id, so it cannot stand in for this).
+  const [cveParam, setCveParam] = useUrlFilter('cve', '')
+  // Bumped after a change, so the grouped view reloads its groups and rows.
+  const [groupsReloadKey, setGroupsReloadKey] = useState(0)
+  const [autoAssignOpen, setAutoAssignOpen] = useState(false)
+  const [hasUnassignedGroup, setHasUnassignedGroup] = useState(false)
   const [sortParam, setSortParam] = useUrlFilter('sort', '')
   const sorting = useMemo<SortingState>(() => parseSortParam(sortParam), [sortParam])
   const handleSortingChange = useCallback(
@@ -575,6 +585,7 @@ function FindingsContent() {
     if (assetIdFilter) filters.asset_id = assetIdFilter
     if (sourceIdFilter) filters.source_id = sourceIdFilter
     if (scanIdFilter) filters.scan_id = scanIdFilter
+    if (cveParam) filters.cve_ids = [cveParam]
     if (severities.length > 0) filters.severities = severities
     if (statuses.length > 0) {
       filters.statuses = statuses as NonNullable<FindingApiFilters['statuses']>
@@ -603,6 +614,7 @@ function FindingsContent() {
     assetIdFilter,
     sourceIdFilter,
     scanIdFilter,
+    cveParam,
     severities,
     statuses,
     sourceFilter,
@@ -625,6 +637,9 @@ function FindingsContent() {
     assetIdFilter,
     sourceIdFilter,
     scanIdFilter,
+    cveParam,
+    groupParam,
+    viewParam,
     severities.join(),
     statuses.join(),
     sourceFilter.join(),
@@ -662,8 +677,13 @@ function FindingsContent() {
     data: findingsResponse,
     error,
     isLoading: findingsLoading,
-    mutate: mutateFindings,
+    mutate: mutateFindingsList,
   } = useFindingsApi(apiFilters, { keepPreviousData: true })
+  // Every refresh after a change also reloads the grouped view's groups and rows.
+  const mutateFindings = useCallback(() => {
+    setGroupsReloadKey((k) => k + 1)
+    return mutateFindingsList()
+  }, [mutateFindingsList])
 
   // Headline numbers all come from /findings/stats — no per-number list
   // requests (those pushed a single page load past the per-user read limit).
@@ -719,10 +739,6 @@ function FindingsContent() {
   }, [findingStats])
 
   const selectedCount = selectedFindingIds.length
-  const selectedFindings = useMemo(
-    () => findings.filter((f) => selectedFindingIds.includes(f.id)),
-    [selectedFindingIds, findings]
-  )
 
   const clearFilters = () => {
     router.push('/findings')
@@ -1515,8 +1531,8 @@ function FindingsContent() {
       <SelectContent align="end">
         <SelectItem value="none">Group</SelectItem>
         {GROUP_BY_DIMENSIONS.map((d) => (
-          <SelectItem key={d.value} value={d.value}>
-            {GROUP_BY_LABELS[d.value]}
+          <SelectItem key={d} value={d}>
+            {GROUP_BY_LABELS[d]}
           </SelectItem>
         ))}
       </SelectContent>
@@ -1582,31 +1598,109 @@ function FindingsContent() {
     kevActive ||
     reachableActive ||
     slaFilter.length > 0
-  const standaloneToolbar = (
-    <div className="flex flex-wrap items-center gap-2">
-      {filterButtons}
-      {listOnlyFilterOn && (
-        <span className="text-xs text-muted-foreground">
-          Search, priority, KEV and SLA filters apply to the ungrouped list.
-        </span>
-      )}
-      <div className="ms-auto flex items-center gap-2">
-        {groupBySelect}
-        {refreshButton}
+  // Phone layout of a finding row (list and grouped views alike).
+  const mobileRow = (f: Finding) => (
+    <button
+      type="button"
+      onClick={() => handleRowClick(f)}
+      className="flex w-full items-start gap-3 px-3 py-3 text-start transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <SeverityBadge severity={f.severity} className="mt-0.5 shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-2 text-sm font-medium">{f.title}</p>
+        {(f.cve || f.scanner) && (
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {f.cve && <span className="font-mono">{f.cve}</span>}
+            {f.cve && f.scanner && ' · '}
+            {f.scanner}
+          </p>
+        )}
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {f.priorityClass && <PriorityClassBadge priorityClass={f.priorityClass} />}
+          <FindingStatusBadge status={f.status} />
+          {f.isInKev && (
+            <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">
+              KEV
+            </Badge>
+          )}
+        </div>
       </div>
-    </div>
+      <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+    </button>
   )
 
-  // "View" on a group opens the list filtered to it — where the dimension maps
+  const listOnlyNote = listOnlyFilterOn && (
+    <span className="text-xs text-muted-foreground">
+      Search, priority, KEV and SLA filters apply to the ungrouped list.
+    </span>
+  )
+
+  // "View" on a group opens the list filtered to it, where the dimension maps
   // to a list filter. Other dimensions get no View button (not a dead one).
   const viewableGroup =
     groupBy === 'cve_id' || groupBy === 'severity' || groupBy === 'source' || groupBy === 'asset_id'
-  const viewGroup = (key: string) => {
+  const viewGroup = (group: FindingGroup) => {
+    const key = group.group_key
     setGroupParam('')
-    if (groupBy === 'cve_id') setSearchQuery(key)
+    if (groupBy === 'cve_id') setCveParam(key)
     else if (groupBy === 'severity') setSeverityParam([key])
     else if (groupBy === 'source') setSourceFilter([key])
     else if (groupBy === 'asset_id') setAssetParam(key)
+  }
+
+  // Mark fixed works on a CVE's or an asset's in-progress findings (the
+  // fix-applied action filters by CVE or asset only).
+  const canMarkFixed = hasPermission(Permission.FindingsFixApply)
+  const groupActions = (group: FindingGroup) => (
+    <>
+      {viewableGroup && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2"
+          onClick={() => viewGroup(group)}
+          aria-label={`View the findings of ${group.label}`}
+        >
+          View
+        </Button>
+      )}
+      {canMarkFixed &&
+        (group.group_type === 'cve' || group.group_type === 'asset') &&
+        (group.stats?.in_progress ?? 0) > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2"
+            onClick={() => setMarkFixedGroup(group)}
+          >
+            Mark fixed
+          </Button>
+        )}
+    </>
+  )
+  const canVerify = hasPermission(Permission.FindingsVerify)
+  const verifyActions = (group: FindingGroup) =>
+    canVerify ? <VerifyGroupActions group={group} onDone={refreshAfterDrawerChange} /> : null
+
+  // Grouped by severity or source, every row would repeat its group's value.
+  const groupColumnId = groupBy === 'severity' ? 'severity' : groupBy === 'source' ? 'source' : ''
+  const groupedColumns = groupColumnId
+    ? columns.filter(
+        (c) => c.id !== groupColumnId && !('accessorKey' in c && c.accessorKey === groupColumnId)
+      )
+    : columns
+  const groupedProps = {
+    columns: groupedColumns,
+    toRow: transformApiToUiFinding,
+    pagination,
+    onPaginationChange: setPagination,
+    pageSizeOptions: PAGE_SIZES,
+    onRowClick: handleRowClick,
+    onSelectionChange: setSelectedFindings,
+    // A new grouping or view starts with nothing selected.
+    resetSelectionKey: `${selectionEpoch}|${groupParam}|${viewParam}`,
+    mobileRow,
+    reloadKey: groupsReloadKey,
   }
 
   // Filters that arrive from elsewhere (an asset, a source, a scan) are context,
@@ -1615,6 +1709,7 @@ function FindingsContent() {
     assetIdFilter && { key: 'asset', label: `Asset ${assetIdFilter.slice(0, 8)}…` },
     sourceIdFilter && { key: 'source', label: `Source ${sourceIdFilter.slice(0, 8)}…` },
     scanIdFilter && { key: 'scan', label: `Scan ${scanIdFilter.slice(0, 8)}…` },
+    cveParam && { key: 'cve', label: cveParam },
   ].filter(Boolean) as { key: string; label: string }[]
 
   return (
@@ -1684,33 +1779,68 @@ function FindingsContent() {
               )}
 
               {verifyView ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => setViewParam('')}>
-                      <ArrowLeft className="me-2 h-4 w-4" />
-                      All findings
-                    </Button>
-                    <span className="text-sm text-muted-foreground">
-                      Fixes awaiting verification, grouped by CVE
-                    </span>
-                  </div>
-                  <PendingReviewTab />
-                </div>
+                <FindingGroupsTable
+                  {...groupedProps}
+                  dimension="cve_id"
+                  statuses="fix_applied"
+                  renderGroupActions={verifyActions}
+                  toolbarStart={
+                    <>
+                      <Button variant="ghost" size="sm" onClick={() => setViewParam('')}>
+                        <ArrowLeft className="me-2 h-4 w-4" />
+                        All findings
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        Fixes awaiting verification, by CVE
+                      </span>
+                    </>
+                  }
+                  toolbarEnd={refreshButton}
+                  emptyMessage="No fixes awaiting verification"
+                  emptyDescription="Fixes that owners mark as applied wait here for a verifier."
+                />
               ) : groupBy ? (
-                <div className="space-y-3">
-                  {standaloneToolbar}
-                  <FindingGroupsTab
-                    dimension={groupBy}
-                    filters={{
-                      severities: severities.join(',') || undefined,
-                      statuses: statuses.join(',') || undefined,
-                      sources: sourceFilter.join(',') || undefined,
-                      assignedToMe: mineActive,
-                    }}
-                    onMarkFixed={(group) => setMarkFixedGroup(group)}
-                    onViewFindings={viewableGroup ? viewGroup : undefined}
-                  />
-                </div>
+                <FindingGroupsTable
+                  {...groupedProps}
+                  dimension={groupBy}
+                  filters={{
+                    severities: severities.join(',') || undefined,
+                    statuses: statuses.join(',') || undefined,
+                    sources: sourceFilter.join(',') || undefined,
+                    assignedToMe: mineActive,
+                  }}
+                  renderGroupActions={groupActions}
+                  onViewGroup={viewableGroup ? viewGroup : undefined}
+                  onGroupsLoaded={(groups) =>
+                    setHasUnassignedGroup(groups.some((g) => g.group_key === 'unassigned'))
+                  }
+                  toolbarStart={
+                    <>
+                      {filterButtons}
+                      {listOnlyNote}
+                    </>
+                  }
+                  toolbarEnd={
+                    <>
+                      {groupBy === 'owner_id' && hasUnassignedGroup && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-9"
+                          onClick={() => setAutoAssignOpen(true)}
+                        >
+                          <UserPlus className="h-4 w-4 sm:me-2" />
+                          <span className="hidden sm:inline">Assign to asset owners</span>
+                        </Button>
+                      )}
+                      {groupBySelect}
+                      {refreshButton}
+                    </>
+                  }
+                  emptyDescription={
+                    activeCount > 0 ? 'Try removing a filter or clearing them all.' : undefined
+                  }
+                />
               ) : !findingsResponse && findingsLoading ? (
                 <FindingsTableSkeleton />
               ) : (
@@ -1728,39 +1858,9 @@ function FindingsContent() {
                   pageSizeOptions={PAGE_SIZES}
                   sorting={sorting}
                   onSortingChange={handleSortingChange}
-                  onSelectionChange={(rows) => setSelectedFindingIds(rows.map((f) => f.id))}
+                  onSelectionChange={setSelectedFindings}
                   resetSelectionKey={selectionEpoch}
-                  mobileRow={(f) => (
-                    <button
-                      type="button"
-                      onClick={() => handleRowClick(f)}
-                      className="flex w-full items-start gap-3 px-3 py-3 text-start transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <SeverityBadge severity={f.severity} className="mt-0.5 shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="line-clamp-2 text-sm font-medium">{f.title}</p>
-                        {(f.cve || f.scanner) && (
-                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                            {f.cve && <span className="font-mono">{f.cve}</span>}
-                            {f.cve && f.scanner && ' · '}
-                            {f.scanner}
-                          </p>
-                        )}
-                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                          {f.priorityClass && (
-                            <PriorityClassBadge priorityClass={f.priorityClass} />
-                          )}
-                          <FindingStatusBadge status={f.status} />
-                          {f.isInKev && (
-                            <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">
-                              KEV
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
-                    </button>
-                  )}
+                  mobileRow={mobileRow}
                   showSelectionCount={false}
                   emptyMessage="No findings match these filters"
                   emptyDescription={
@@ -1848,6 +1948,12 @@ function FindingsContent() {
           }}
         />
       )}
+
+      <AutoAssignDialog
+        open={autoAssignOpen}
+        onOpenChange={setAutoAssignOpen}
+        onSuccess={() => mutateFindings()}
+      />
 
       {/* Create Jira Ticket Dialog */}
       {ticketFinding && (
