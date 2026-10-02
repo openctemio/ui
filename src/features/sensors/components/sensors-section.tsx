@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
-import { Plus, RadioTower, Loader2, Search, Download, Trash2, Ban } from 'lucide-react'
-import { ScanZonesPanel } from '@/features/scan-zones'
+import { useState, useMemo, useCallback, useEffect } from 'react'
+import { Plus, RadioTower, Loader2, Search, Download, Trash2, Ban, Layers } from 'lucide-react'
 import { toast } from 'sonner'
-import { getErrorMessage } from '@/lib/api/error-handler'
 
+import { ScanZonesPanel } from '@/features/scan-zones'
+import { getErrorMessage } from '@/lib/api/error-handler'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -26,9 +26,11 @@ import {
 } from '@/components/ui/alert-dialog'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { RefreshButton, TableSkeleton } from '@/components/list-page-parts'
-import { useUrlFilter } from '@/hooks/use-url-param'
+import { useUrlFilter, useUrlFilterList } from '@/hooks/use-url-param'
 import { useNow } from '@/hooks/use-now'
+import { exportToCsv } from '@/hooks/use-csv-export'
 import { Can, Permission, useHasPermission } from '@/lib/permissions'
+import { cn } from '@/lib/utils'
 
 import { AddSensorDialog } from './add-sensor-dialog'
 import { EditSensorDialog } from './edit-sensor-dialog'
@@ -36,6 +38,8 @@ import { RegenerateKeyDialog } from './regenerate-key-dialog'
 import { SensorConfigDialog } from './sensor-config-dialog'
 import { SensorDetailSheet } from './sensor-detail-sheet'
 import { SensorTable } from './sensor-table'
+import { FleetHealthStrip } from './fleet-health-strip'
+import { SensorFacetPanel } from './sensor-facet-panel'
 import {
   useAllSensors,
   useTenantSensorStats,
@@ -46,38 +50,33 @@ import {
   useRevokeSensor,
   invalidateSensorsCache,
 } from '@/lib/api/sensor-hooks'
-import type { Sensor, SensorRole, SensorState } from '@/lib/api/sensor-types'
-import { sensorRoleOf } from '@/lib/api/sensor-types'
+import { useScanZones } from '@/lib/api/scan-zone-hooks'
+import type { Sensor, SensorRole, SensorState, SensorVersionStatus } from '@/lib/api/sensor-types'
+import { Tabs, TabsCount, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { PlatformSensorsLink } from '@/features/platform'
+import { BulkActionBar, EmptyState, ErrorState, FilterSheet, PageHeader } from '@/features/shared'
+
 import {
-  canTakeJobs,
   DEFAULT_FLEET_THRESHOLDS,
   SENSOR_STATE_META,
   SENSOR_STATES,
   sensorState,
   type FleetThresholds,
 } from '../lib/sensor-state'
-import { Tabs, TabsCount, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { PlatformStatsCard } from '@/features/platform'
+import { normalizeSensorVersion, sensorVersionStatus } from '../lib/sensor-version'
 import {
-  BulkActionBar,
-  EmptyState,
-  ErrorState,
-  MetricStrip,
-  PageHeader,
-  type MetricStripItem,
-} from '@/features/shared'
+  activeFilterCount,
+  filterSensors,
+  groupSensors,
+  summarizeFleet,
+  tenantSensors,
+  type FleetFilters,
+  type FleetGroupBy,
+  type ReleaseChannel,
+  type SensorModeFilter,
+  type SensorProtocolFilter,
+} from '../lib/fleet'
 
-type ModeFilter = 'all' | 'daemon' | 'standalone'
-/**
- * Discovery → Sensors tabs: one per role the data supports today (RFC-023 §9.3
- * R0), plus the scan zones those sensors serve (RFC-023 §7).
- */
-type RoleTab = 'all' | 'scanners' | 'collectors'
-type SensorsTab = RoleTab | 'zones'
-const ROLE_OF_TAB: Record<Exclude<RoleTab, 'all'>, SensorRole> = {
-  scanners: 'scanner',
-  collectors: 'collector',
-}
 type SensorTypeFilter = 'runner' | 'worker' | 'collector' | 'sensor'
 
 interface SensorsSectionProps {
@@ -87,53 +86,57 @@ interface SensorsSectionProps {
   description?: string
 }
 
-interface SensorStats {
-  total: number
-  online: number
-  offline: number
-  idle: number
-  activeJobs: number
-  byMode: {
-    daemon: number
-    standalone: number
+const ROLES: SensorRole[] = ['scanner', 'collector']
+const VERSION_STATUSES: SensorVersionStatus[] = [
+  'latest',
+  'update_available',
+  'unsupported',
+  'unknown',
+]
+const MODES: SensorModeFilter[] = ['daemon', 'ci']
+const PROTOCOLS: SensorProtocolFilter[] = ['v2', 'v1', 'unknown']
+const GROUP_LABELS: Record<Exclude<FleetGroupBy, 'none'>, string> = {
+  zone: 'Zone',
+  role: 'Role',
+  version: 'Version',
+}
+
+/** Old single-value links (?status=, ?tab=scanners, ?mode=collector) keep working. */
+function legacyStates(status: string): SensorState[] {
+  switch (status) {
+    case '':
+    case 'all':
+      return []
+    case 'online':
+      return ['online', 'degraded']
+    case 'offline':
+      return ['stale', 'offline', 'never_connected']
+    case 'error':
+      return ['degraded']
+    default:
+      return (SENSOR_STATES as string[]).includes(status) ? [status as SensorState] : []
   }
 }
 
-/**
- * Online counts what can take work (online or degraded); offline what should
- * be connected and is not (stale, offline, never connected). CI runners
- * between runs are idle, not offline. Counted over the whole fleet the table
- * shows, so the numbers and the rows agree.
- */
-function calculateStats(sensors: Sensor[], thresholds: FleetThresholds, now: number): SensorStats {
-  let online = 0
-  let offline = 0
-  let idle = 0
-  let activeJobs = 0
-  for (const s of sensors) {
-    const state = sensorState(s, now, thresholds)
-    if (state === 'online' || state === 'degraded') online++
-    else if (state === 'stale' || state === 'offline' || state === 'never_connected') offline++
-    else if (state === 'idle') idle++
-    if (canTakeJobs(s, now, thresholds)) activeJobs += s.current_jobs ?? 0
-  }
-  return {
-    total: sensors.length,
-    online,
-    offline,
-    idle,
-    activeJobs,
-    byMode: {
-      daemon: sensors.filter((w) => w.execution_mode === 'daemon').length,
-      standalone: sensors.filter((w) => w.execution_mode === 'standalone').length,
-    },
-  }
+/** "Live · updated 3s ago": the list refreshes every 15s while the tab is visible. */
+function LiveIndicator({ updatedAt, now }: { updatedAt: number | null; now: number }) {
+  if (!updatedAt) return null
+  const secs = Math.max(0, Math.round((now - updatedAt) / 1000))
+  return (
+    <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:inline-flex">
+      <span aria-hidden className="relative flex size-2">
+        <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-60 motion-reduce:hidden" />
+        <span className="relative inline-flex size-2 rounded-full bg-success" />
+      </span>
+      Live · updated {secs < 5 ? 'just now' : `${secs}s ago`}
+    </span>
+  )
 }
 
 export function SensorsSection({
   typeFilter,
   title = 'Sensors',
-  description = 'Sensors (formerly Agents) run your scans and collect data. Add one, then deploy it with its API key.',
+  description = 'The scanners and collectors that run inside your networks and report back to the platform.',
 }: SensorsSectionProps) {
   // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -144,36 +147,92 @@ export function SensorsSection({
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false)
   const [revokeDialogOpen, setRevokeDialogOpen] = useState(false)
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+  const [zoneCreateOpen, setZoneCreateOpen] = useState(false)
 
   // Selected sensor for dialogs. The drawer follows the live list (and re-reads
   // GET /sensors/{id}), so it never shows a snapshot from when it was opened.
   const [selectedSensorSnapshot, setSelectedSensor] = useState<Sensor | null>(null)
 
-  // View and filter states
-  // Filters and search live in the URL so a filtered view can be shared.
-  const [modeParam, setModeFilter] = useUrlFilter('mode', 'all')
-  const [tabParam, setTabParam] = useUrlFilter('tab', 'all')
-  const [statusFilter, setStatusFilter] = useUrlFilter('status', 'all')
+  // Filters, search and grouping live in the URL so a view can be shared.
+  const [tabParam, setTabParam] = useUrlFilter('tab', '')
   const [searchQuery, setSearchQuery] = useUrlFilter('q', '')
-  // Collectors used to be a value of the mode filter; a link or bookmark
-  // carrying ?mode=collector now opens the Collectors tab.
-  const legacyCollectorMode = modeParam === 'collector'
-  const activeMode = (legacyCollectorMode ? 'all' : modeParam) as ModeFilter
-  const activeRoleTab: RoleTab = legacyCollectorMode
-    ? 'collectors'
-    : tabParam in ROLE_OF_TAB
-      ? (tabParam as RoleTab)
-      : 'all'
+  const [roleParam, setRoleParam] = useUrlFilterList('role')
+  const [stateParam, setStateParam] = useUrlFilterList('state')
+  const [versionParam, setVersionParam] = useUrlFilterList('version')
+  const [modeParam, setModeParam] = useUrlFilterList('mode')
+  const [protocolParam, setProtocolParam] = useUrlFilterList('protocol')
+  const [attentionParam, setAttentionParam] = useUrlFilter('attention', '')
+  const [groupParam, setGroupParam] = useUrlFilter('group', '')
+  // Pre-redesign links: ?status=online, ?tab=scanners|collectors, ?mode=collector.
+  const [legacyStatus, setLegacyStatus] = useUrlFilter('status', '')
+
   const canReadZones = useHasPermission(Permission.ScanZonesRead)
-  const zonesTab = !legacyCollectorMode && tabParam === 'zones' && canReadZones && !typeFilter
-  const activeTab: SensorsTab = zonesTab ? 'zones' : activeRoleTab
-  const [zoneCreateOpen, setZoneCreateOpen] = useState(false)
-  const setRoleTab = useCallback(
-    (next: string) => {
-      if (legacyCollectorMode) setModeFilter('all')
-      setTabParam(next)
+  const zonesTab = tabParam === 'zones' && canReadZones && !typeFilter
+
+  const filters = useMemo<FleetFilters>(() => {
+    const roles = roleParam.filter((r): r is SensorRole => (ROLES as string[]).includes(r))
+    if (roles.length === 0 && tabParam === 'scanners') roles.push('scanner')
+    if (roles.length === 0 && (tabParam === 'collectors' || modeParam.includes('collector'))) {
+      roles.push('collector')
+    }
+    const states = stateParam.filter((s): s is SensorState =>
+      (SENSOR_STATES as string[]).includes(s)
+    )
+    const modes = modeParam
+      .map((m) => (m === 'standalone' ? 'ci' : m))
+      .filter((m): m is SensorModeFilter => (MODES as string[]).includes(m))
+    return {
+      q: searchQuery,
+      roles,
+      states: states.length ? states : legacyStates(legacyStatus),
+      versions: versionParam.filter((v): v is SensorVersionStatus =>
+        (VERSION_STATUSES as string[]).includes(v)
+      ),
+      modes,
+      protocols: protocolParam.filter((p): p is SensorProtocolFilter =>
+        (PROTOCOLS as string[]).includes(p)
+      ),
+      attention: attentionParam === '1',
+    }
+  }, [
+    protocolParam,
+    roleParam,
+    stateParam,
+    versionParam,
+    modeParam,
+    attentionParam,
+    searchQuery,
+    tabParam,
+    legacyStatus,
+  ])
+
+  // Writing any facet drops the legacy single-value params it replaces.
+  const clearLegacy = useCallback(() => {
+    if (legacyStatus) setLegacyStatus('')
+    if (tabParam === 'scanners' || tabParam === 'collectors') setTabParam('')
+  }, [legacyStatus, setLegacyStatus, tabParam, setTabParam])
+
+  const setFilters = useCallback(
+    (next: FleetFilters) => {
+      clearLegacy()
+      setRoleParam(next.roles)
+      setStateParam(next.states)
+      setVersionParam(next.versions)
+      setModeParam(next.modes)
+      setProtocolParam(next.protocols)
+      setAttentionParam(next.attention ? '1' : '')
     },
-    [legacyCollectorMode, setModeFilter, setTabParam]
+    [
+      clearLegacy,
+      setRoleParam,
+      setStateParam,
+      setVersionParam,
+      setModeParam,
+      setProtocolParam,
+      setAttentionParam,
+    ]
   )
 
   // Row selection (owned by the table; mirrored here for the bulk-action bar)
@@ -187,6 +246,11 @@ export function SensorsSection({
   // API data: the whole fleet (every page), refreshed every 15s.
   const { data: sensorsData, error, isLoading, mutate } = useAllSensors()
   const sensors: Sensor[] = useMemo(() => sensorsData?.items ?? [], [sensorsData?.items])
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null)
+  useEffect(() => {
+    if (sensorsData) setUpdatedAt(Date.now())
+  }, [sensorsData])
+
   const selectedSensor = useMemo(
     () =>
       selectedSensorSnapshot
@@ -195,7 +259,7 @@ export function SensorsSection({
     [sensors, selectedSensorSnapshot]
   )
 
-  // The state ladder thresholds the API uses (defaults until stats arrive).
+  // Ladder thresholds and the release channel the API uses.
   const { data: tenantSensorStats } = useTenantSensorStats()
   const thresholds = useMemo<FleetThresholds>(
     () => ({
@@ -206,6 +270,17 @@ export function SensorsSection({
     }),
     [tenantSensorStats?.online_window_seconds, tenantSensorStats?.offline_after_seconds]
   )
+  const channel = useMemo<ReleaseChannel>(
+    () => ({
+      latest: normalizeSensorVersion(tenantSensorStats?.latest_version),
+      min: normalizeSensorVersion(tenantSensorStats?.min_version),
+    }),
+    [tenantSensorStats?.latest_version, tenantSensorStats?.min_version]
+  )
+
+  // Zones, for grouping and the coverage metric.
+  const { data: zonesData } = useScanZones(canReadZones && !typeFilter)
+  const zones = useMemo(() => zonesData?.data ?? [], [zonesData?.data])
 
   // Mutations. Each takes the target sensor's id when triggered: the row
   // handlers below select a sensor and trigger in the same call, so a hook
@@ -216,65 +291,72 @@ export function SensorsSection({
   const { trigger: deactivateSensorTrigger } = useDeactivateSensor()
   const { trigger: revokeSensorTrigger } = useRevokeSensor()
 
-  // Apply type filter first if provided
-  const typeFilteredSensors = useMemo(() => {
-    if (!typeFilter) return sensors
-    return sensors.filter((a) => a.type === typeFilter)
+  // The tenant's own sensors (platform sensors have their own page); the
+  // /runners page shows one type.
+  const scopedSensors = useMemo(() => {
+    const own = tenantSensors(sensors)
+    return typeFilter ? own.filter((a) => a.type === typeFilter) : own
   }, [sensors, typeFilter])
 
-  const roleCounts = useMemo(() => {
-    const counts: Record<SensorRole, number> = { scanner: 0, collector: 0 }
-    for (const s of typeFilteredSensors) counts[sensorRoleOf(s.type)]++
-    return counts
-  }, [typeFilteredSensors])
-
-  const stats = useMemo(
-    () => calculateStats(typeFilteredSensors, thresholds, now),
-    [typeFilteredSensors, thresholds, now]
+  const summary = useMemo(
+    () => summarizeFleet(scopedSensors, now, thresholds, channel, zones),
+    [scopedSensors, now, thresholds, channel, zones]
   )
 
-  // Filter sensors based on tab, status, and search
-  const filteredSensors = useMemo(() => {
-    let result = [...typeFilteredSensors]
+  const filteredSensors = useMemo(
+    () => filterSensors(scopedSensors, filters, now, thresholds, channel),
+    [scopedSensors, filters, now, thresholds, channel]
+  )
 
-    // Filter by role tab, then execution mode
-    if (activeRoleTab !== 'all') {
-      const role = ROLE_OF_TAB[activeRoleTab]
-      result = result.filter((a) => sensorRoleOf(a.type) === role)
-    }
-    if (activeMode === 'daemon') {
-      result = result.filter((a) => a.execution_mode === 'daemon')
-    } else if (activeMode === 'standalone') {
-      result = result.filter((a) => a.execution_mode === 'standalone')
-    }
+  const groupBy: FleetGroupBy =
+    groupParam === 'role' || groupParam === 'version' || (groupParam === 'zone' && zones.length)
+      ? (groupParam as FleetGroupBy)
+      : 'none'
 
-    // Filter by state (the same ladder the Status column shows)
-    if (statusFilter !== 'all') {
-      const wanted: SensorState[] =
-        statusFilter === 'online'
-          ? ['online', 'degraded']
-          : statusFilter === 'error' // links from before the state ladder
-            ? ['degraded']
-            : statusFilter === 'offline'
-              ? ['stale', 'offline', 'never_connected']
-              : [statusFilter as SensorState]
-      result = result.filter((a) => wanted.includes(sensorState(a, now, thresholds)))
+  const groups = useMemo(
+    () => groupSensors(filteredSensors, groupBy, zones),
+    [filteredSensors, groupBy, zones]
+  )
+  const rowGroups = useMemo(() => {
+    if (groupBy === 'none') return undefined
+    const keyOf = new Map<string, string>()
+    for (const g of groups) for (const s of g.sensors) keyOf.set(s.id, g.key)
+    const byKey = new Map(groups.map((g) => [g.key, g]))
+    return {
+      getKey: (s: Sensor) => keyOf.get(s.id) ?? '',
+      order: groups.map((g) => g.key),
+      renderHeader: (key: string, rows: Sensor[]) => {
+        const g = byKey.get(key)
+        if (!g) return null
+        const online = rows.filter((s) => {
+          const st = sensorState(s, now, thresholds)
+          return st === 'online' || st === 'degraded'
+        }).length
+        const zoneGap = g.zone && online === 0
+        return (
+          <span className="flex flex-wrap items-center gap-x-1.5">
+            <span className="font-medium text-foreground">{g.label}</span>
+            {g.zone && g.zone.ranges.length > 0 && (
+              <span className="font-mono">· {g.zone.ranges.slice(0, 2).join(', ')}</span>
+            )}
+            <span>
+              · {rows.length} {rows.length === 1 ? 'sensor' : 'sensors'}
+            </span>
+            {zoneGap ? (
+              <span className="text-destructive">· no online sensor, scans here will wait</span>
+            ) : (
+              <span>· {online} online</span>
+            )}
+            {key === '__none__' && groupBy === 'zone' && (
+              <span>· takes jobs that no zone claims</span>
+            )}
+          </span>
+        )
+      },
     }
+  }, [groupBy, groups, now, thresholds])
 
-    // Filter by search
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      result = result.filter(
-        (a) =>
-          a.name.toLowerCase().includes(query) ||
-          a.description?.toLowerCase().includes(query) ||
-          a.hostname?.toLowerCase().includes(query) ||
-          a.ip_address?.toLowerCase().includes(query)
-      )
-    }
-
-    return result
-  }, [typeFilteredSensors, activeRoleTab, activeMode, statusFilter, searchQuery, thresholds, now])
+  const roleCount = scopedSensors.length
 
   // Handlers
   const handleRefresh = useCallback(async () => {
@@ -354,15 +436,12 @@ export function SensorsSection({
       setSelectedSensor(sensor)
       try {
         const updatedSensor = await activateSensorTrigger(sensor.id)
-        toast.success(`Sensor "${sensor.name}" activated`)
+        toast.success(`Sensor "${sensor.name}" enabled`)
         await invalidateSensorsCache()
         await mutate()
-        // Update selectedSensor with the response from API
-        if (updatedSensor) {
-          setSelectedSensor(updatedSensor)
-        }
+        if (updatedSensor) setSelectedSensor(updatedSensor)
       } catch (err) {
-        toast.error(getErrorMessage(err, 'Failed to activate sensor'))
+        toast.error(getErrorMessage(err, 'Failed to enable sensor'))
       }
     },
     [activateSensorTrigger, mutate]
@@ -373,15 +452,12 @@ export function SensorsSection({
       setSelectedSensor(sensor)
       try {
         const updatedSensor = await deactivateSensorTrigger(sensor.id)
-        toast.success(`Sensor "${sensor.name}" deactivated`)
+        toast.success(`Sensor "${sensor.name}" disabled`)
         await invalidateSensorsCache()
         await mutate()
-        // Update selectedSensor with the response from API
-        if (updatedSensor) {
-          setSelectedSensor(updatedSensor)
-        }
+        if (updatedSensor) setSelectedSensor(updatedSensor)
       } catch (err) {
-        toast.error(getErrorMessage(err, 'Failed to deactivate sensor'))
+        toast.error(getErrorMessage(err, 'Failed to disable sensor'))
       }
     },
     [deactivateSensorTrigger, mutate]
@@ -404,10 +480,7 @@ export function SensorsSection({
       await invalidateSensorsCache()
       await mutate()
       setRevokeDialogOpen(false)
-      // Update selectedSensor with the response from API
-      if (updatedSensor) {
-        setSelectedSensor(updatedSensor)
-      }
+      if (updatedSensor) setSelectedSensor(updatedSensor)
     } catch (err) {
       toast.error(getErrorMessage(err, 'Failed to revoke sensor'))
     } finally {
@@ -416,111 +489,111 @@ export function SensorsSection({
   }, [selectedSensor, revokeSensorTrigger, mutate])
 
   const handleExport = useCallback(() => {
-    const csv = [
-      ['Name', 'Type', 'Status', 'Mode', 'Scans', 'Findings', 'Last Seen'].join(','),
-      ...sensors.map((w) =>
-        [
-          w.name,
-          w.type,
-          w.status,
-          w.execution_mode,
-          w.total_scans,
-          w.total_findings,
-          w.last_seen_at || 'Never',
-        ].join(',')
-      ),
-    ].join('\n')
+    exportToCsv(
+      filteredSensors,
+      [
+        { header: 'Name', accessor: (s) => s.name },
+        {
+          header: 'Status',
+          accessor: (s) => SENSOR_STATE_META[sensorState(s, now, thresholds)].label,
+        },
+        { header: 'Type', accessor: (s) => s.type },
+        { header: 'Mode', accessor: (s) => s.execution_mode },
+        { header: 'Version', accessor: (s) => normalizeSensorVersion(s.version) ?? '' },
+        {
+          header: 'Version status',
+          accessor: (s) => sensorVersionStatus(s, channel.latest, channel.min),
+        },
+        { header: 'Hostname', accessor: (s) => s.hostname ?? '' },
+        { header: 'IP address', accessor: (s) => s.ip_address ?? '' },
+        { header: 'Current jobs', accessor: (s) => s.current_jobs ?? 0 },
+        { header: 'Max jobs', accessor: (s) => s.max_concurrent_jobs },
+        { header: 'Outbox pending', accessor: (s) => s.outbox?.pending_count ?? '' },
+        { header: 'Key expires', accessor: (s) => s.key_expires_at ?? '' },
+        { header: 'Tools', accessor: (s) => (s.tools ?? []).join(' ') },
+        { header: 'Last heartbeat', accessor: (s) => s.last_seen_at ?? '' },
+        { header: 'Scans', accessor: (s) => s.total_scans },
+        { header: 'Findings', accessor: (s) => s.total_findings },
+      ],
+      'sensors'
+    )
+  }, [filteredSensors, now, thresholds, channel])
 
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'sensors.csv'
-    link.click()
-    URL.revokeObjectURL(url)
-    toast.success('Sensors exported')
-  }, [sensors])
+  const toggleAttention = () => setFilters({ ...filters, attention: !filters.attention })
+  const updatesActive =
+    filters.versions.length === 2 &&
+    filters.versions.includes('update_available') &&
+    filters.versions.includes('unsupported')
+  const toggleUpdates = () =>
+    setFilters({
+      ...filters,
+      versions: updatesActive ? [] : ['update_available', 'unsupported'],
+    })
+  const toggleZoneGrouping = () => setGroupParam(groupBy === 'zone' ? '' : 'zone')
+  const protocolV1Active = filters.protocols.length === 1 && filters.protocols[0] === 'v1'
+  const toggleProtocolV1 = () =>
+    setFilters({ ...filters, protocols: protocolV1Active ? [] : ['v1'] })
 
-  // Each status metric toggles the matching status filter.
-  const toggleStatus = (value: string) => setStatusFilter(statusFilter === value ? 'all' : value)
-  const metrics: MetricStripItem[] = [
-    { key: 'total', label: 'Sensors', value: stats.total },
-    {
-      key: 'online',
-      label: 'Online',
-      value: stats.online,
-      onClick: () => toggleStatus('online'),
-      active: statusFilter === 'online',
-    },
-    {
-      key: 'offline',
-      label: 'Offline',
-      value: stats.offline,
-      onClick: () => toggleStatus('offline'),
-      active: statusFilter === 'offline',
-    },
-    {
-      key: 'idle',
-      label: 'Idle (CI)',
-      value: stats.idle,
-      onClick: () => toggleStatus('idle'),
-      active: statusFilter === 'idle',
-    },
-    { key: 'jobs', label: 'Active jobs', value: stats.activeJobs },
-  ]
+  const filterCount = activeFilterCount(filters)
+  const facetPanel = (
+    <SensorFacetPanel
+      filters={filters}
+      onChange={setFilters}
+      activeCount={filterCount}
+      hasChannel={!!channel.latest || !!channel.min}
+      hasProtocolInfo={summary.hasProtocolInfo}
+    />
+  )
 
   const toolbarStart = (
     <>
       <div className="relative min-w-0 flex-1 sm:max-w-sm">
         <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search name, host or IP…"
+          placeholder="Search name, host, IP, version or tool…"
           aria-label="Search sensors"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="h-9 ps-9"
         />
       </div>
-      <Select value={activeMode} onValueChange={setModeFilter}>
-        <SelectTrigger className="h-9 w-[150px]" aria-label="Mode">
-          <SelectValue placeholder="All modes" />
+      <Select value={groupBy} onValueChange={(v) => setGroupParam(v === 'none' ? '' : v)}>
+        <SelectTrigger className="h-9 w-auto gap-2 sm:min-w-36" aria-label="Group sensors">
+          <Layers className="h-4 w-4 text-muted-foreground" />
+          <span className="hidden sm:inline">
+            <SelectValue />
+          </span>
         </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All modes ({stats.total})</SelectItem>
-          <SelectItem value="daemon">Daemon ({stats.byMode.daemon})</SelectItem>
-          <SelectItem value="standalone">CI/CD ({stats.byMode.standalone})</SelectItem>
-        </SelectContent>
-      </Select>
-      <Select value={statusFilter} onValueChange={setStatusFilter}>
-        <SelectTrigger className="h-9 w-[140px]" aria-label="Status">
-          <SelectValue placeholder="All statuses" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All statuses</SelectItem>
-          {SENSOR_STATES.map((state) => (
-            <SelectItem key={state} value={state}>
-              {SENSOR_STATE_META[state].label}
-            </SelectItem>
-          ))}
+        <SelectContent align="end">
+          <SelectItem value="none">No grouping</SelectItem>
+          {zones.length > 0 && <SelectItem value="zone">{GROUP_LABELS.zone}</SelectItem>}
+          <SelectItem value="role">{GROUP_LABELS.role}</SelectItem>
+          <SelectItem value="version">{GROUP_LABELS.version}</SelectItem>
         </SelectContent>
       </Select>
     </>
   )
 
-  const hasFilter =
-    !!searchQuery || activeMode !== 'all' || activeRoleTab !== 'all' || statusFilter !== 'all'
+  const toolbarEnd = (
+    <>
+      <LiveIndicator updatedAt={updatedAt} now={now} />
+      <RefreshButton onClick={handleRefresh} loading={isLoading} />
+    </>
+  )
+
+  const fleetEmpty = !isLoading && !error && scopedSensors.length === 0
 
   let body: React.ReactNode
   if (error) {
     body = <ErrorState title="sensors" error={error} onRetry={handleRefresh} />
   } else if (isLoading) {
     body = <TableSkeleton rows={5} />
-  } else if (typeFilteredSensors.length === 0 && !hasFilter) {
+  } else if (fleetEmpty) {
     body = (
       <EmptyState
         icon={RadioTower}
-        title="No sensors"
-        description="Create a sensor to start scanning and collecting data."
+        title="No sensors yet"
+        description="A sensor runs inside your network, scans what the platform cannot reach and sends the results back over HTTPS."
         action={
           <Can permission={Permission.SensorsWrite}>
             <Button size="sm" onClick={() => setAddDialogOpen(true)}>
@@ -545,11 +618,24 @@ export function SensorsSection({
         resetSelectionKey={selectionEpoch}
         thresholds={thresholds}
         now={now}
+        channel={channel}
+        rowGroups={rowGroups}
+        filterToggle={{
+          open: filtersOpen,
+          onToggle: () => setFiltersOpen((o) => !o),
+          onOpenSheet: () => setFilterSheetOpen(true),
+          activeCount: filterCount,
+          controlsId: 'sensor-filters',
+        }}
         toolbarStart={toolbarStart}
-        toolbarEnd={<RefreshButton onClick={handleRefresh} loading={isLoading} />}
+        toolbarEnd={toolbarEnd}
       />
     )
   }
+
+  const onlineWindow = thresholds.onlineWindowSeconds
+  const offlineAfter = thresholds.offlineAfterSeconds
+  const secondsLabel = (s: number) => (s % 60 === 0 && s >= 60 ? `${s / 60} min` : `${s}s`)
 
   return (
     <>
@@ -563,7 +649,15 @@ export function SensorsSection({
           </Can>
         ) : (
           <>
-            <Button variant="outline" size="sm" onClick={handleExport}>
+            {/* Shared platform sensors have their own page, linked only where
+                the tenant has them (the same condition the old card used). */}
+            {!typeFilter && <PlatformSensorsLink />}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              disabled={filteredSensors.length === 0}
+            >
               <Download className="h-4 w-4" />
               Export
             </Button>
@@ -577,19 +671,19 @@ export function SensorsSection({
         )}
       </PageHeader>
 
-      {!typeFilter && (
-        <Tabs value={activeTab} onValueChange={setRoleTab} className="mt-4">
+      {!typeFilter && canReadZones && (
+        <Tabs
+          value={zonesTab ? 'zones' : 'sensors'}
+          onValueChange={(v) => setTabParam(v === 'zones' ? 'zones' : '')}
+          className="mt-4"
+        >
           <TabsList>
-            <TabsTrigger value="all">
-              All <TabsCount value={isLoading ? null : typeFilteredSensors.length} />
+            <TabsTrigger value="sensors">
+              Sensors <TabsCount value={isLoading ? null : roleCount} />
             </TabsTrigger>
-            <TabsTrigger value="scanners">
-              Scanners <TabsCount value={isLoading ? null : roleCounts.scanner} />
+            <TabsTrigger value="zones">
+              Scan zones <TabsCount value={zonesData ? zones.length : null} />
             </TabsTrigger>
-            <TabsTrigger value="collectors">
-              Collectors <TabsCount value={isLoading ? null : roleCounts.collector} />
-            </TabsTrigger>
-            {canReadZones && <TabsTrigger value="zones">Scan zones</TabsTrigger>}
           </TabsList>
         </Tabs>
       )}
@@ -598,15 +692,65 @@ export function SensorsSection({
         <ScanZonesPanel createOpen={zoneCreateOpen} onCreateOpenChange={setZoneCreateOpen} />
       ) : (
         <>
-          <MetricStrip className="mt-5" loading={isLoading} items={metrics} />
+          {!fleetEmpty && (
+            <FleetHealthStrip
+              className="mt-5"
+              loading={isLoading}
+              summary={summary}
+              channel={channel}
+              attentionActive={filters.attention}
+              onToggleAttention={toggleAttention}
+              updatesActive={updatesActive}
+              onToggleUpdates={toggleUpdates}
+              zoneGroupingActive={groupBy === 'zone'}
+              onToggleZoneGrouping={toggleZoneGrouping}
+              protocolV1Active={protocolV1Active}
+              onToggleProtocolV1={toggleProtocolV1}
+            />
+          )}
 
-          <div className="mt-5">{body}</div>
-
-          {/* Cloud-hosted platform sensors: capacity and queue, separate from the
-              tenant's own sensors listed above, so it follows the table. */}
-          <PlatformStatsCard className="mt-5" />
+          <div className="mt-5 flex items-start">
+            {/* The facet panel, as on Findings: a floating card beside the
+                table from lg up, a sheet below. */}
+            {!fleetEmpty && !error && (
+              <div
+                inert={!filtersOpen}
+                className={cn(
+                  'sticky top-4 hidden shrink-0 overflow-hidden transition-[width,margin-inline-end,opacity] duration-300 ease-in-out motion-reduce:transition-none lg:block',
+                  filtersOpen ? 'me-5 w-60 opacity-100' : 'me-0 w-0 opacity-0'
+                )}
+              >
+                <aside
+                  id="sensor-filters"
+                  aria-label="Sensor filters"
+                  className="flex max-h-[calc(100svh-7.5rem)] w-60 flex-col rounded-xl border bg-card p-4 shadow-sm"
+                >
+                  {facetPanel}
+                </aside>
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              {body}
+              {!fleetEmpty && !error && !isLoading && (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Online: heartbeat within {secondsLabel(onlineWindow)} · Stale:{' '}
+                  {secondsLabel(onlineWindow)} to {secondsLabel(offlineAfter)} · Offline: over{' '}
+                  {secondsLabel(offlineAfter)} · Idle (CI): a CI sensor between runs
+                </p>
+              )}
+            </div>
+          </div>
         </>
       )}
+
+      <FilterSheet
+        open={filterSheetOpen}
+        onOpenChange={setFilterSheetOpen}
+        title="Sensor filters"
+        resultLabel={`Show ${filteredSensors.length} ${filteredSensors.length === 1 ? 'sensor' : 'sensors'}`}
+      >
+        {facetPanel}
+      </FilterSheet>
 
       <Can permission={Permission.SensorsDelete}>
         <BulkActionBar count={selectedIds.length} onClear={clearSelection} noun="sensors selected">
@@ -648,7 +792,7 @@ export function SensorsSection({
           <SensorConfigDialog
             open={configDialogOpen}
             onOpenChange={setConfigDialogOpen}
-            sensor={selectedSensor!}
+            sensor={selectedSensor}
           />
 
           <SensorDetailSheet
@@ -723,7 +867,7 @@ export function SensorsSection({
                   </ul>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Use <strong>Deactivate</strong> for temporary suspension.
+                  Use <strong>Disable</strong> for temporary suspension.
                 </p>
               </div>
             </AlertDialogDescription>
@@ -741,7 +885,7 @@ export function SensorsSection({
               }}
               disabled={isRevoking}
             >
-              Deactivate
+              Disable
             </Button>
             <Button
               variant="destructive"

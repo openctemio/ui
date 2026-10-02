@@ -150,6 +150,48 @@ interface DataTableProps<TData, TValue> {
    * that most rows do not report. Keyed by column id.
    */
   initialColumnVisibility?: VisibilityState
+  /**
+   * Client-side row groups: a full-width header row before each group's rows
+   * (the rows of the current page, in group order). Groups follow `order`,
+   * then first appearance. For a server-paginated table, group on the server.
+   */
+  rowGroups?: DataTableRowGroups<TData>
+}
+
+export interface DataTableRowGroups<TData> {
+  /** The group a row belongs to. */
+  getKey: (row: TData) => string
+  /** Group order by key; keys not listed follow in order of appearance. */
+  order?: string[]
+  /** The header row's content for a group and its rows on this page. */
+  renderHeader: (key: string, rows: TData[]) => React.ReactNode
+}
+
+/**
+ * Rows partitioned by group (stable within a group), in group order.
+ * Exported for tests.
+ */
+export function groupRowsForDisplay<R>(
+  rows: R[],
+  getKey: (row: R) => string,
+  order: string[] = []
+): { key: string; rows: R[] }[] {
+  const groups = new Map<string, R[]>()
+  for (const row of rows) {
+    const k = getKey(row)
+    const list = groups.get(k)
+    if (list) list.push(row)
+    else groups.set(k, [row])
+  }
+  const rank = new Map(order.map((k, i) => [k, i]))
+  const seen = [...groups.keys()]
+  seen.sort((a, b) => {
+    const ra = rank.get(a) ?? Number.MAX_SAFE_INTEGER
+    const rb = rank.get(b) ?? Number.MAX_SAFE_INTEGER
+    if (ra !== rb) return ra - rb
+    return seen.indexOf(a) - seen.indexOf(b)
+  })
+  return seen.map((key) => ({ key, rows: groups.get(key) ?? [] }))
 }
 
 /** Skeleton rows shown in an empty body while `isLoading`. */
@@ -317,6 +359,7 @@ export function DataTable<TData, TValue>({
   mobileCards = true,
   isLoading = false,
   initialColumnVisibility,
+  rowGroups,
 }: DataTableProps<TData, TValue>) {
   // Cards replace the table on phones. Decided in JS rather than by hiding one
   // with CSS, so only one of the two is ever rendered.
@@ -459,6 +502,12 @@ export function DataTable<TData, TValue>({
     setRowSelection({})
   }, [resetSelectionKey])
 
+  // Rows of this page in display order: one pseudo-group without rowGroups.
+  const pageRows = table.getRowModel().rows
+  const displayGroups = rowGroups
+    ? groupRowsForDisplay(pageRows, (r) => rowGroups.getKey(r.original), rowGroups.order)
+    : [{ key: 'all', rows: pageRows }]
+
   const selectedCount = table.getFilteredSelectedRowModel().rows.length
   const totalCount = table.getFilteredRowModel().rows.length
 
@@ -571,20 +620,33 @@ export function DataTable<TData, TValue>({
       {phoneCards && (
         <div className="divide-y rounded-md border">
           {table.getRowModel().rows.length ? (
-            table
-              .getRowModel()
-              .rows.map((row) =>
-                mobileRow ? (
-                  <div key={row.id}>{mobileRow(row.original)}</div>
-                ) : (
-                  <AutoMobileCard
-                    key={row.id}
-                    row={row}
-                    labels={mobileLabels}
-                    onRowClick={onRowClick}
-                  />
-                )
-              )
+            displayGroups.map((group) => (
+              <React.Fragment key={`group-${group.key}`}>
+                {rowGroups && (
+                  <div
+                    data-slot="row-group-header"
+                    className="bg-muted/50 px-3 py-2 text-xs text-muted-foreground"
+                  >
+                    {rowGroups.renderHeader(
+                      group.key,
+                      group.rows.map((r) => r.original)
+                    )}
+                  </div>
+                )}
+                {group.rows.map((row) =>
+                  mobileRow ? (
+                    <div key={row.id}>{mobileRow(row.original)}</div>
+                  ) : (
+                    <AutoMobileCard
+                      key={row.id}
+                      row={row}
+                      labels={mobileLabels}
+                      onRowClick={onRowClick}
+                    />
+                  )
+                )}
+              </React.Fragment>
+            ))
           ) : isLoading ? (
             <div aria-busy="true" aria-label="Loading">
               {Array.from({ length: LOADING_ROWS }).map((_, i) => (
@@ -634,31 +696,48 @@ export function DataTable<TData, TValue>({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  className={cn('group/row', onRowClick && 'cursor-pointer hover:bg-muted/50')}
-                  onClick={(e) => {
-                    const target = e.target as HTMLElement
-                    // React bubbles events out of portals: a click inside a row's
-                    // open menu, or a dialog opened from it, reaches this handler
-                    // although it is not in the row's DOM. Only real row clicks count.
-                    if (!e.currentTarget.contains(target)) return
-                    // Nor clicks on the row's own controls.
-                    const isInteractiveElement = target.closest(INTERACTIVE_SELECTOR)
+              displayGroups.map((group) => (
+                <React.Fragment key={`group-${group.key}`}>
+                  {rowGroups && (
+                    <TableRow data-slot="row-group-header" className="hover:bg-transparent">
+                      <TableCell
+                        colSpan={table.getVisibleLeafColumns().length}
+                        className="bg-muted/50 py-2 text-xs text-muted-foreground"
+                      >
+                        {rowGroups.renderHeader(
+                          group.key,
+                          group.rows.map((r) => r.original)
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {group.rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && 'selected'}
+                      className={cn('group/row', onRowClick && 'cursor-pointer hover:bg-muted/50')}
+                      onClick={(e) => {
+                        const target = e.target as HTMLElement
+                        // React bubbles events out of portals: a click inside a row's
+                        // open menu, or a dialog opened from it, reaches this handler
+                        // although it is not in the row's DOM. Only real row clicks count.
+                        if (!e.currentTarget.contains(target)) return
+                        // Nor clicks on the row's own controls.
+                        const isInteractiveElement = target.closest(INTERACTIVE_SELECTOR)
 
-                    if (!isInteractiveElement && onRowClick) {
-                      onRowClick(row.original)
-                    }
-                  }}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} {...pinnedProps(cell.column.id)}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
+                        if (!isInteractiveElement && onRowClick) {
+                          onRowClick(row.original)
+                        }
+                      }}
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} {...pinnedProps(cell.column.id)}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
                   ))}
-                </TableRow>
+                </React.Fragment>
               ))
             ) : isLoading ? (
               Array.from({ length: LOADING_ROWS }).map((_, i) => (
