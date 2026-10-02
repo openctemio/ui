@@ -32,7 +32,8 @@ import { exportToCsv } from '@/hooks/use-csv-export'
 import { Can, Permission, useHasPermission } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 
-import { AddSensorDialog } from './add-sensor-dialog'
+import { InstallSensorDialog } from './install-sensor-dialog'
+import { SensorInstallFlow } from './sensor-install-flow'
 import { EditSensorDialog } from './edit-sensor-dialog'
 import { RegenerateKeyDialog } from './regenerate-key-dialog'
 import { SensorDetailSheet } from './sensor-detail-sheet'
@@ -167,6 +168,7 @@ export function SensorsSection({
   const [legacyStatus, setLegacyStatus] = useUrlFilter('status', '')
 
   const canReadZones = useHasPermission(Permission.ScanZonesRead)
+  const canWriteSensors = useHasPermission(Permission.SensorsWrite)
   const zonesTab = tabParam === 'zones' && canReadZones && !typeFilter
 
   const filters = useMemo<FleetFilters>(() => {
@@ -581,19 +583,15 @@ export function SensorsSection({
   } else if (isLoading) {
     body = <TableSkeleton rows={5} />
   } else if (fleetEmpty) {
-    body = (
+    // No sensors yet: the page is the install flow (admins), or says who can
+    // install one (everyone else).
+    body = canWriteSensors ? (
+      <SensorInstallFlow title="Install your first sensor" onOpen={handleViewSensor} />
+    ) : (
       <EmptyState
         icon={RadioTower}
         title="No sensors yet"
-        description="A sensor runs inside your network, scans what the platform cannot reach and sends the results back over HTTPS."
-        action={
-          <Can permission={Permission.SensorsWrite}>
-            <Button size="sm" onClick={() => setAddDialogOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Add sensor
-            </Button>
-          </Can>
-        }
+        description="A sensor runs inside your network, scans what the platform cannot reach and sends the results back over HTTPS. An organization admin can install one."
       />
     )
   } else {
@@ -656,7 +654,7 @@ export function SensorsSection({
             <Can permission={Permission.SensorsWrite}>
               <Button size="sm" onClick={() => setAddDialogOpen(true)}>
                 <Plus className="h-4 w-4" />
-                Add sensor
+                Install sensor
               </Button>
             </Can>
           </>
@@ -758,12 +756,15 @@ export function SensorsSection({
         </BulkActionBar>
       </Can>
 
-      {/* Dialogs - Only render AddSensorDialog when open to avoid loading tools/capabilities on page load */}
+      {/* Mounted only while open: it loads tools and zones. */}
       {addDialogOpen && (
-        <AddSensorDialog
+        <InstallSensorDialog
           open={addDialogOpen}
           onOpenChange={setAddDialogOpen}
-          onSuccess={handleRefresh}
+          onOpen={(s) => {
+            setAddDialogOpen(false)
+            handleViewSensor(s)
+          }}
         />
       )}
 
