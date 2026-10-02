@@ -5,6 +5,7 @@ import type { SensorContent } from '@/lib/api/sensor-types'
 import {
   contentAgeText,
   contentByTool,
+  contentCheckedText,
   contentCheckSummary,
   contentLabel,
   contentProblemText,
@@ -61,6 +62,15 @@ describe('formatting', () => {
     expect(contentAgeText(item({ age_seconds: 3 * 86400 }), NOW)).toBe('3d old')
     expect(contentAgeText(item({ age_seconds: null }), NOW)).toBe('1d old')
     expect(contentAgeText(item({ updated_at: null, fetched_at: null }), NOW)).toBeNull()
+  })
+
+  it('says when the sensor last checked', () => {
+    expect(contentCheckedText(item(), NOW)).toBeNull()
+    expect(contentCheckedText(item({ checked_at: null }), NOW)).toBeNull()
+    expect(contentCheckedText(item({ checked_at: 'garbage' }), NOW)).toBeNull()
+    expect(contentCheckedText(item({ checked_at: '2026-10-04T23:30:00Z' }), NOW)).toBe(
+      'checked 30m ago'
+    )
   })
 
   it('formats limits and digests', () => {

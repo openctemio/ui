@@ -91,6 +91,15 @@ export function contentAgeText(c: SensorContent, now: number): string | null {
   return s == null ? null : `${formatDurationShort(s)} old`
 }
 
+/** "checked 2h ago" from checked_at; null when the sensor did not report it. */
+export function contentCheckedText(c: SensorContent, now: number): string | null {
+  if (!c.checked_at) return null
+  const t = new Date(c.checked_at).getTime()
+  if (Number.isNaN(t)) return null
+  const s = (now - t) / 1000
+  return s < 1 ? 'checked just now' : `checked ${formatDurationShort(s)} ago`
+}
+
 /** "48h" / "7d" for a policy limit in hours. */
 export function formatHours(hours: number | null | undefined): string | null {
   if (!hours || hours <= 0) return null
