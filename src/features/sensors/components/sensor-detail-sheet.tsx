@@ -78,7 +78,12 @@ import {
 import { SensorInstallSnippets } from './sensor-install-snippets'
 import { SensorToolsNotAllowedNotice } from './sensor-tool-review'
 import { SENSOR_TYPE_LABELS } from './sensor-type-icon'
-import { hasReportedTools, sensorCapacity, sensorToolRows } from '../lib/capabilities'
+import {
+  capacityLabel,
+  hasReportedTools,
+  sensorCapacity,
+  sensorToolRows,
+} from '../lib/capabilities'
 import { formatDurationShort } from '../lib/format'
 import type { ReleaseChannel } from '../lib/fleet'
 import {
@@ -499,11 +504,11 @@ function ToolsAndCapacity({
             <span>{cap.effective} at once</span>
             <span
               className="text-xs text-muted-foreground"
-              title="Dispatch uses the lower of what the sensor reports and the limit set on it"
+              title="Dispatch uses the smallest of what the sensor can run now, its operator's cap and your limit"
             >
-              {cap.reported != null
-                ? `sensor reports ${cap.reported} · limit ${cap.limit}`
-                : `limit ${cap.limit}; the sensor reports none`}
+              {cap.reported != null || cap.slots != null
+                ? capacityLabel(sensor)
+                : `your limit ${cap.limit}; the sensor reports none`}
             </span>
           </span>
         </DetailField>
