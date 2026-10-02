@@ -16,13 +16,11 @@ vi.mock('@/context/tenant-provider', () => ({ useTenant: () => ({ currentTenant:
 vi.mock('@/context/websocket-provider', () => ({ useWebSocket: vi.fn() }))
 
 const connected = (isConnected: boolean) =>
-  vi
-    .mocked(useWebSocket)
-    .mockReturnValue({
-      state: isConnected ? 'connected' : 'disconnected',
-      isConnected,
-      reconnect: vi.fn(),
-    })
+  vi.mocked(useWebSocket).mockReturnValue({
+    state: isConnected ? 'connected' : 'disconnected',
+    isConnected,
+    reconnect: vi.fn(),
+  })
 
 const lastRefreshInterval = () => {
   const calls = vi.mocked(useSWR).mock.calls
