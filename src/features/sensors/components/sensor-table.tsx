@@ -6,17 +6,7 @@ import type { ColumnDef } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
-import {
-  Eye,
-  Settings,
-  KeyRound,
-  Trash2,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Power,
-  PowerOff,
-} from 'lucide-react'
+import { Eye, Settings, KeyRound, Trash2, Power, PowerOff } from 'lucide-react'
 import { Permission } from '@/lib/permissions'
 import {
   DataTable,
@@ -27,6 +17,9 @@ import {
 
 import type { Sensor } from '@/lib/api/sensor-types'
 import { SensorTypeIcon, SENSOR_TYPE_LABELS } from './sensor-type-icon'
+import { SensorStateBadge } from './sensor-state-badge'
+import { normalizeSensorVersion } from '../lib/sensor-version'
+import { sensorState, type FleetThresholds } from '../lib/sensor-state'
 
 interface SensorTableProps {
   sensors: Sensor[]
@@ -43,46 +36,15 @@ interface SensorTableProps {
   toolbarStart?: React.ReactNode
   toolbarEnd?: React.ReactNode
   emptyMessage?: string
+  /** State ladder thresholds from GET /sensors/stats. */
+  thresholds?: FleetThresholds
+  /** The current time (useNow). */
+  now: number
 }
 
-/**
- * Admin status first (disabled / revoked), then heartbeat health. Only an
- * error is coloured; online carries a check icon, everything else is muted.
- */
-function SensorStatusBadge({ sensor }: { sensor: Sensor }) {
-  if (sensor.status === 'disabled' || sensor.status === 'revoked') {
-    return (
-      <Badge variant="secondary" className="gap-1">
-        <XCircle className="h-3.5 w-3.5" />
-        {sensor.status === 'disabled' ? 'Disabled' : 'Revoked'}
-      </Badge>
-    )
-  }
-  if (sensor.health === 'error') {
-    return (
-      <Badge variant="destructive" className="gap-1">
-        <AlertCircle className="h-3.5 w-3.5" />
-        Error
-      </Badge>
-    )
-  }
-  if (sensor.health === 'online') {
-    return (
-      <Badge variant="outline" className="gap-1">
-        <CheckCircle className="h-3.5 w-3.5" />
-        Online
-      </Badge>
-    )
-  }
-  return (
-    <Badge variant="secondary" className="gap-1">
-      <XCircle className="h-3.5 w-3.5" />
-      Offline
-    </Badge>
-  )
-}
-
+/** CPU / memory as reported; a sensor that reports nothing shows a dash, not 0%. */
 function UsageCell({ percent }: { percent: number }) {
+  if (!percent) return <span className="text-sm text-muted-foreground">—</span>
   return (
     <div className="flex w-24 items-center gap-2">
       <span className="w-8 text-xs tabular-nums">{percent.toFixed(0)}%</span>
@@ -90,6 +52,13 @@ function UsageCell({ percent }: { percent: number }) {
     </div>
   )
 }
+
+/**
+ * Metrics most sensors do not report yet (CPU, memory, region): off by default,
+ * available under Columns. Showing 0% and an invented "local" for every
+ * sensor said nothing.
+ */
+const HIDDEN_BY_DEFAULT = { cpuUsage: false, memoryUsage: false, region: false }
 
 export function SensorTable({
   sensors,
@@ -104,6 +73,8 @@ export function SensorTable({
   toolbarStart,
   toolbarEnd,
   emptyMessage = 'No sensors match these filters',
+  thresholds,
+  now,
 }: SensorTableProps) {
   const columns = useMemo<ColumnDef<Sensor>[]>(
     () => [
@@ -163,44 +134,61 @@ export function SensorTable({
       },
       {
         id: 'status',
-        accessorFn: (a) => (a.status === 'active' ? a.health : a.status),
+        accessorFn: (a) => sensorState(a, now, thresholds),
         header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-        cell: ({ row }) => <SensorStatusBadge sensor={row.original} />,
+        cell: ({ row }) => (
+          <SensorStateBadge sensor={row.original} now={now} thresholds={thresholds} withLastSeen />
+        ),
       },
       {
         id: 'activeJobs',
-        accessorFn: (a) => a.active_jobs || 0,
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Active jobs" />,
-        cell: ({ getValue }) => <span className="text-sm tabular-nums">{getValue<number>()}</span>,
+        meta: { label: 'Jobs' },
+        // current_jobs is what the API reports; it never sent active_jobs.
+        accessorFn: (a) => a.current_jobs ?? 0,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Jobs" />,
+        cell: ({ row }) => (
+          <span className="text-sm tabular-nums">
+            {row.original.current_jobs ?? 0}
+            <span className="text-muted-foreground"> / {row.original.max_concurrent_jobs}</span>
+          </span>
+        ),
       },
       {
         id: 'cpuUsage',
+        meta: { label: 'CPU' },
         accessorFn: (a) => a.cpu_percent || 0,
         header: ({ column }) => <DataTableColumnHeader column={column} title="CPU" />,
         cell: ({ getValue }) => <UsageCell percent={getValue<number>()} />,
       },
       {
         id: 'memoryUsage',
+        meta: { label: 'Memory' },
         accessorFn: (a) => a.memory_percent || 0,
         header: ({ column }) => <DataTableColumnHeader column={column} title="Memory" />,
         cell: ({ getValue }) => <UsageCell percent={getValue<number>()} />,
       },
       {
         id: 'version',
-        accessorFn: (a) => a.version ?? '',
+        accessorFn: (a) => normalizeSensorVersion(a.version) ?? '',
         enableSorting: false,
         header: 'Version',
-        cell: ({ row }) => (
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {row.original.version ? `v${row.original.version}` : '—'}
+        cell: ({ getValue }) => (
+          <span className="font-mono text-xs text-muted-foreground">
+            {getValue<string>() || '—'}
           </span>
         ),
       },
       {
         id: 'region',
-        accessorFn: (a) => a.region || a.labels?.region || a.labels?.env || 'local',
+        // Only what the sensor reported; nothing invented.
+        accessorFn: (a) => a.region || '',
         header: ({ column }) => <DataTableColumnHeader column={column} title="Region" />,
-        cell: ({ getValue }) => <span className="text-sm">{getValue<string>()}</span>,
+        cell: ({ getValue }) =>
+          getValue<string>() ? (
+            <span className="text-sm">{getValue<string>()}</span>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          ),
       },
       {
         id: 'actions',
@@ -259,6 +247,8 @@ export function SensorTable({
       onDeactivateSensor,
       onDeleteSensor,
       onRegenerateKey,
+      thresholds,
+      now,
     ]
   )
 
@@ -275,6 +265,7 @@ export function SensorTable({
       toolbarStart={toolbarStart}
       toolbarEnd={toolbarEnd}
       emptyMessage={emptyMessage}
+      initialColumnVisibility={HIDDEN_BY_DEFAULT}
     />
   )
 }
