@@ -226,8 +226,7 @@ const VIEW_HEADER: Record<OrganizationSettingsView, { title: string; description
   },
   authentication: {
     title: 'Authentication',
-    description:
-      'How members sign in: two-factor, session length, sign-in restrictions and data scope.',
+    description: 'How members sign in: two-factor, session length and sign-in restrictions.',
   },
 }
 const GENERAL_TABS = ['general', 'storage'] as const
@@ -290,7 +289,8 @@ function HeaderSaveButton({
  * - /settings/general: organization info, branding, localization and file
  *   storage (tabs), and the owner-only danger zone;
  * - /settings/authentication: two-factor, session, e-mail verification,
- *   access restrictions and data scope, plus where SSO is configured.
+ *   access restrictions, plus where SSO is configured. What members without a
+ *   team see is set on /settings/teams (NoTeamAccessCard).
  * Was /settings/tenant with four tabs; its API & Webhooks tab is gone: those
  * fields were stored and read back but nothing in the API acted on them.
  * Outbound webhooks live under Integrations > Notification channels.
@@ -367,7 +367,6 @@ export function OrganizationSettings({ view }: { view: OrganizationSettingsView 
     ip_whitelist: '',
     allowed_domains: '',
     email_verification_mode: 'auto' as 'auto' | 'always' | 'never',
-    restricted_data_scope: false,
   })
 
   const [brandingForm, setBrandingForm] = useState({
@@ -405,7 +404,6 @@ export function OrganizationSettings({ view }: { view: OrganizationSettingsView 
         allowed_domains: (settings.security.allowed_domains || []).join('\n'),
         email_verification_mode:
           (settings.security.email_verification_mode as 'auto' | 'always' | 'never') || 'auto',
-        restricted_data_scope: settings.security.restricted_data_scope || false,
       })
       setBrandingForm({
         primary_color: settings.branding.primary_color || '#3B82F6',
@@ -521,7 +519,6 @@ export function OrganizationSettings({ view }: { view: OrganizationSettingsView 
         ip_whitelist: ipWhitelist,
         allowed_domains: allowedDomains,
         email_verification_mode: securityForm.email_verification_mode,
-        restricted_data_scope: securityForm.restricted_data_scope,
       })
       if (result) {
         mutate(result)
@@ -609,7 +606,7 @@ export function OrganizationSettings({ view }: { view: OrganizationSettingsView 
               <CardHeader>
                 <CardTitle>Sign-in</CardTitle>
                 <CardDescription>
-                  Two-factor, data scope, session length and e-mail verification
+                  Two-factor, session length and e-mail verification
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -628,29 +625,6 @@ export function OrganizationSettings({ view }: { view: OrganizationSettingsView 
                     checked={securityForm.mfa_required}
                     onCheckedChange={(checked) =>
                       setSecurityForm({ ...securityForm, mfa_required: checked })
-                    }
-                    disabled={!canManageSecurityAndAPI}
-                  />
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="tenant-restricted-scope">Restricted data scope</Label>
-                    <p className="text-sm text-muted-foreground" id="tenant-restricted-scope-desc">
-                      Non-admins see only the assets they&apos;re assigned (directly or via a team)
-                      and their findings. When off, a user with no assignment sees everything.
-                      Assign members to teams with their assets before turning this on, or
-                      they&apos;ll see nothing.
-                    </p>
-                  </div>
-                  <Switch
-                    id="tenant-restricted-scope"
-                    aria-describedby="tenant-restricted-scope-desc"
-                    checked={securityForm.restricted_data_scope}
-                    onCheckedChange={(checked) =>
-                      setSecurityForm({ ...securityForm, restricted_data_scope: checked })
                     }
                     disabled={!canManageSecurityAndAPI}
                   />

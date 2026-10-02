@@ -191,7 +191,15 @@ export const settingsNav: SettingsNavGroup[] = [
         url: '/settings/teams',
         icon: FolderKey,
         permission: Permission.GroupsRead,
-        keywords: ['groups', 'data scope', 'assignment rules', 'ownership', 'routing'],
+        keywords: [
+          'groups',
+          'data scope',
+          'assignment rules',
+          'ownership',
+          'routing',
+          'members without a team',
+          'default access',
+        ],
       },
       {
         id: 'roles',
@@ -205,7 +213,7 @@ export const settingsNav: SettingsNavGroup[] = [
       {
         id: 'authentication',
         title: 'Authentication',
-        description: 'Two-factor, session length, sign-in restrictions and data scope.',
+        description: 'Two-factor, session length and sign-in restrictions.',
         url: '/settings/authentication',
         icon: LockKeyhole,
         permission: Permission.TeamUpdate,
