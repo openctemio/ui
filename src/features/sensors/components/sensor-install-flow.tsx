@@ -373,10 +373,14 @@ export function SensorInstallFlow({
 
             {role !== 'collector' && (
               <fieldset className="space-y-2">
-                <legend className="text-sm font-medium">Tools</legend>
+                <legend className="text-sm font-medium">
+                  Limit to tools{' '}
+                  <span className="font-normal text-muted-foreground">(optional)</span>
+                </legend>
                 <p className="text-xs text-muted-foreground">
-                  The scanners in the sensor image this sensor offers. The platform dispatches only
-                  matching scans to it.
+                  The sensor reports which scanners it has installed, and scans go only to those.
+                  The tools selected here narrow that list; clear them all to allow every tool it
+                  reports.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {IMAGE_TOOLS.map((t) => {

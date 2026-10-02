@@ -261,6 +261,46 @@ export interface Sensor {
   content?: SensorContent[]
   /** The sensor accepts refresh_content commands (it manages content). */
   content_refresh_supported?: boolean
+  /**
+   * What the sensor last reported it has (api RFC-029 §4.3.1); null before
+   * its first report, absent on APIs without it. `tools`, `capabilities`
+   * and `max_concurrent_jobs` above are then the administrator's limits.
+   */
+  reported?: SensorReported | null
+  /** What dispatch uses: the report narrowed by the limits. */
+  effective?: SensorEffective
+  /** Limits the report contradicts (a tool set here that is not installed). */
+  capability_mismatch?: SensorCapabilityMismatch | null
+}
+
+/** One tool of a sensor's reported inventory. */
+export interface SensorReportedTool {
+  name: string
+  version?: string
+  installed: boolean
+}
+
+/** A sensor's last capability report; a null list was never reported. */
+export interface SensorReported {
+  tools: SensorReportedTool[] | null
+  capabilities: string[] | null
+  /** The sensor's configured cap on concurrent jobs. */
+  max_concurrent_jobs: number | null
+  os?: string
+  arch?: string
+  reported_at: string | null
+}
+
+/** The tools, capabilities and capacity dispatch uses for a sensor. */
+export interface SensorEffective {
+  tools: string[]
+  capabilities: string[]
+  max_concurrent_jobs: number
+}
+
+export interface SensorCapabilityMismatch {
+  tools_not_installed?: string[]
+  capabilities_not_reported?: string[]
 }
 
 /** A job dispatched to a sensor (GET /api/v1/commands). */
