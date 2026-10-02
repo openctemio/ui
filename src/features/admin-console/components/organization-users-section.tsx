@@ -11,7 +11,7 @@ import {
 } from '@/features/shared'
 import { useOrganizationUsers } from '../api/use-admin-organizations'
 import type { AdminOrganizationUser } from '../types'
-import { AddOrganizationUserDialog } from './add-organization-user-dialog'
+import { CreateFirstOwnerDialog } from './create-first-owner-dialog'
 
 const columns: ColumnDef<AdminOrganizationUser>[] = [
   {
@@ -55,7 +55,11 @@ const columns: ColumnDef<AdminOrganizationUser>[] = [
   },
 ]
 
-/** People in one organization, with "Add user" for operations admins. */
+/**
+ * People in one organization. The platform console only bootstraps an
+ * organization: "Create first owner" appears while it has no active owner;
+ * after that the owner and its administrators add users themselves.
+ */
 export function OrganizationUsersSection({
   tenantId,
   canManage,
@@ -68,6 +72,9 @@ export function OrganizationUsersSection({
 }) {
   const { data, error, isLoading, mutate } = useOrganizationUsers(tenantId)
   const refresh = () => void mutate()
+  const users = data?.data ?? []
+  const hasOwner = users.some((u) => u.role === 'owner' && u.status === 'active')
+  const canBootstrap = canManage && !isLoading && !error && !hasOwner
 
   return (
     <section className="space-y-3">
@@ -75,12 +82,13 @@ export function OrganizationUsersSection({
         <div className="space-y-1">
           <h2 className="text-base font-semibold">Users</h2>
           <p className="text-sm text-muted-foreground">
-            People with an account in this organization. Users cannot register themselves; add them
-            here or let the organization&apos;s owners add them.
+            {hasOwner
+              ? "People with an account in this organization. The organization's owner and administrators invite or create users; the platform console only creates an organization's first owner."
+              : 'This organization has no owner yet. Create its first owner; they add everyone else.'}
           </p>
         </div>
-        {canManage && (
-          <AddOrganizationUserDialog
+        {canBootstrap && (
+          <CreateFirstOwnerDialog
             tenantId={tenantId}
             onCreated={() => {
               refresh()
@@ -94,7 +102,7 @@ export function OrganizationUsersSection({
       ) : (
         <DataTable
           columns={columns}
-          data={data?.data ?? []}
+          data={users}
           getRowId={(u) => u.user_id}
           isLoading={isLoading}
           showSearch={false}

@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { Can, Permission, usePermissions } from '@/lib/permissions'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -273,25 +274,29 @@ function KeyRowActions({ k, onChanged }: { k: APIKey; onChanged: () => void }) {
   return (
     <div className="flex justify-end gap-1">
       {isActive(k) && (
+        <Can permission={Permission.ApiKeysWrite}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleRevoke}
+            disabled={revoking}
+            title="Revoke"
+          >
+            <Ban className="h-4 w-4 text-warning" />
+          </Button>
+        </Can>
+      )}
+      <Can permission={Permission.ApiKeysDelete}>
         <Button
           variant="ghost"
           size="icon"
-          onClick={handleRevoke}
-          disabled={revoking}
-          title="Revoke"
+          onClick={() => setDeleteOpen(true)}
+          title="Delete"
+          className="text-destructive hover:text-destructive"
         >
-          <Ban className="h-4 w-4 text-orange-500" />
+          <Trash2 className="h-4 w-4" />
         </Button>
-      )}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setDeleteOpen(true)}
-        title="Delete"
-        className="text-red-500 hover:text-red-600"
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
+      </Can>
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
@@ -326,6 +331,11 @@ function LoadingSkeleton() {
 
 export default function APIKeysPage() {
   const { data, error, isLoading, mutate } = useApiKeys()
+  // Owners and administrators see every key of the organization; anyone else
+  // gets only their own keys from the API, and cannot mint or revoke keys.
+  const { can, isAdmin } = usePermissions()
+  const canGenerate = can(Permission.ApiKeysWrite)
+  const ownKeysOnly = !isAdmin()
   const [genOpen, setGenOpen] = useState(false)
   const [newKey, setNewKey] = useState('')
 
@@ -421,10 +431,12 @@ export default function APIKeysPage() {
   return (
     <Main>
       <PageHeader title="API keys" description="Keys for scripts and tools that call the API.">
-        <Button size="sm" onClick={() => setGenOpen(true)}>
-          <Plus className="me-2 h-4 w-4" />
-          Generate API Key
-        </Button>
+        {canGenerate && (
+          <Button size="sm" onClick={() => setGenOpen(true)}>
+            <Plus className="me-2 h-4 w-4" />
+            Generate API Key
+          </Button>
+        )}
       </PageHeader>
 
       <div className="mt-6 grid gap-4 md:grid-cols-4">
@@ -458,7 +470,9 @@ export default function APIKeysPage() {
             API Key Management
           </CardTitle>
           <CardDescription>
-            Each key is scoped to specific permissions and can be set to expire automatically.
+            {ownKeysOnly
+              ? 'Your own keys. Owners and administrators see and manage every key in the organization.'
+              : 'Each key is scoped to specific permissions and can be set to expire automatically.'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -466,13 +480,19 @@ export default function APIKeysPage() {
             <EmptyState
               icon={KeyRound}
               title="No API keys yet"
-              description="Generate a scoped key for programmatic access to the API."
+              description={
+                canGenerate
+                  ? 'Generate a scoped key for programmatic access to the API.'
+                  : 'Ask an owner or administrator if you need a key.'
+              }
               card={false}
               action={
-                <Button size="sm" onClick={() => setGenOpen(true)}>
-                  <Plus className="me-2 h-4 w-4" />
-                  Generate API Key
-                </Button>
+                canGenerate ? (
+                  <Button size="sm" onClick={() => setGenOpen(true)}>
+                    <Plus className="me-2 h-4 w-4" />
+                    Generate API Key
+                  </Button>
+                ) : undefined
               }
             />
           ) : (

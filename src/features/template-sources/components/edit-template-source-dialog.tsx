@@ -1,12 +1,14 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Loader2, KeyRound } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/error-handler'
+import { credentialBindError } from '../lib/credential-bind-error'
+import { CredentialBindAlert } from './credential-bind-alert'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -102,8 +104,12 @@ export function EditTemplateSourceDialog({
   const credentials = credentialsData?.items ?? []
 
   // Reset form when source changes
+  // A 403 CREDENTIAL_BIND_FORBIDDEN (api#674), shown in the form.
+  const [bindError, setBindError] = useState<string | null>(null)
+
   useEffect(() => {
     if (source && open) {
+      setBindError(null)
       form.reset({
         name: source.name,
         description: source.description || '',
@@ -171,6 +177,12 @@ export function EditTemplateSourceDialog({
       onOpenChange(false)
       onSuccess?.()
     } catch (err) {
+      const bind = credentialBindError(err)
+      if (bind) {
+        setBindError(bind)
+        form.setError('credential_id', { type: 'server', message: bind })
+        return
+      }
       toast.error(getErrorMessage(err, 'Failed to update source'))
     }
   }
@@ -560,6 +572,7 @@ export function EditTemplateSourceDialog({
               )}
             />
 
+            {bindError && <CredentialBindAlert message={bindError} />}
             <DialogFooter>
               <Button
                 type="button"

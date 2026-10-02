@@ -8,6 +8,7 @@ import {
   DataTable,
   DataTableColumnHeader,
   DataTableRowActions,
+  DisabledMenuItem,
   MetricStrip,
 } from '@/features/shared'
 import { Button } from '@/components/ui/button'
@@ -86,6 +87,8 @@ import {
   SetupLinkDialog,
   issueSetupLink,
   type SetupLinkTarget,
+  isPeerAdminLocked,
+  PEER_ADMIN_LOCK_REASON,
 } from '@/features/organization'
 import { PendingSetupBadge } from '@/features/shared'
 import { useUserRoles, useRoles, useSetUserRoles, type Role } from '@/features/access-control'
@@ -97,8 +100,24 @@ const MemberRolesContext = createContext<MemberRolesMap>(new Map())
 import { fetcherWithOptions } from '@/lib/api/client'
 import { tenantEndpoints } from '@/lib/api/endpoints'
 import { getErrorMessage } from '@/lib/api/error-handler'
-import { Can, Permission } from '@/lib/permissions'
+import { Can, Permission, usePermissions } from '@/lib/permissions'
+import { useUser } from '@/stores/auth-store'
 import { MemberMfaBadge } from '@/features/organization/components/member-mfa-badge'
+
+/**
+ * The management actions of an administrator row, disabled for a caller who
+ * is not the owner, each explaining why on hover or focus.
+ */
+function PeerAdminLockedItems() {
+  return (
+    <>
+      <DropdownMenuSeparator />
+      <DisabledMenuItem label="Change roles" icon={Pencil} reason={PEER_ADMIN_LOCK_REASON} />
+      <DisabledMenuItem label="Suspend" icon={Ban} reason={PEER_ADMIN_LOCK_REASON} />
+      <DisabledMenuItem label="Remove member" icon={Trash2} reason={PEER_ADMIN_LOCK_REASON} />
+    </>
+  )
+}
 
 // Tab values for the status filter on the members table. Pending
 // invitations live in their own section (not in the members list), so
@@ -419,6 +438,11 @@ function EditUserRolesDialog({
 export default function UsersPage() {
   const { currentTenant } = useTenant()
   const tenantSlug = currentTenant?.slug
+  // Peer administrators are the owner's to manage (the API answers 403 to
+  // anyone else); their rows show the actions disabled, with the reason.
+  const { isOwner } = usePermissions()
+  const currentUser = useUser()
+  const caller = { isOwner: isOwner(), userId: currentUser?.id }
 
   // API Hooks - includeRoles: true to get RBAC roles in single API call (avoids N+1)
   const {
@@ -611,7 +635,8 @@ export default function UsersPage() {
       enableHiding: false,
       cell: ({ row }) => {
         const member = row.original
-        const isOwner = member.role === 'owner'
+        const isOwnerRow = member.role === 'owner'
+        const locked = isPeerAdminLocked(member, caller)
 
         return (
           <DropdownMenu>
@@ -630,7 +655,12 @@ export default function UsersPage() {
                 <Eye className="me-2 h-4 w-4" />
                 View details
               </DropdownMenuItem>
-              {!isOwner && (
+              {!isOwnerRow && locked && (
+                <Can permission={Permission.MembersManage} minRole="admin">
+                  <PeerAdminLockedItems />
+                </Can>
+              )}
+              {!isOwnerRow && !locked && (
                 <>
                   <Can permission={Permission.RolesAssign}>
                     <DropdownMenuItem
@@ -1092,7 +1122,7 @@ export default function UsersPage() {
                 <UserRolesDetailCard
                   userId={selectedMember.user_id}
                   onManageRoles={
-                    selectedMember.role !== 'owner'
+                    selectedMember.role !== 'owner' && !isPeerAdminLocked(selectedMember, caller)
                       ? () => {
                           // Set pending edit and close sheet - effect will open dialog
                           setPendingRolesEdit(selectedMember)
@@ -1113,7 +1143,14 @@ export default function UsersPage() {
 
               {/* Footer Actions */}
               <Can permission={Permission.MembersManage} minRole="admin">
-                {selectedMember.role !== 'owner' && (
+                {selectedMember.role !== 'owner' && isPeerAdminLocked(selectedMember, caller) && (
+                  <div className="px-6 py-4 border-t bg-muted/30">
+                    <p className="text-center text-xs text-muted-foreground">
+                      {PEER_ADMIN_LOCK_REASON}
+                    </p>
+                  </div>
+                )}
+                {selectedMember.role !== 'owner' && !isPeerAdminLocked(selectedMember, caller) && (
                   <div className="px-6 py-4 border-t bg-muted/30">
                     <Button
                       variant="ghost"

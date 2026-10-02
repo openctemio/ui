@@ -17,6 +17,8 @@ export {
   ExposureActionDialog,
   ExposureQuickActions,
   ExposureBulkActions,
+  APPROVE_REQUIRED_REASON,
+  useCanApproveExposures,
 } from './exposure-state-actions'
 
 export {
